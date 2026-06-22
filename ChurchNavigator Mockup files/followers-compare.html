@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Followers — dark band vs white</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14142B;--muted:#6B7280;--line:#ECECF2;--purple:#7C3AED;--purple-2:#A855F7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Montserrat",system-ui,sans-serif;background:#f4f4f7;color:var(--ink);padding:34px 16px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto}
+  .ver-label{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:34px 0 12px}
+  .ver-label span{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,var(--purple),var(--purple-2));font-size:13px}
+  .ver-label:first-child{margin-top:0}
+  .stage{border-radius:22px;overflow:hidden;box-shadow:0 24px 50px -22px rgba(20,20,43,.4);background:#fff}
+
+  /* ---- shared hero (mimics church detail page) ---- */
+  .hero{position:relative;height:300px}
+  .hero img{width:100%;height:100%;object-fit:cover}
+  .hero .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,20,43,.2) 0%,transparent 35%,rgba(20,20,43,.85) 100%)}
+  .hero .content{position:absolute;left:0;right:0;bottom:0;padding:24px 26px;z-index:2}
+  .hero .logo{width:58px;height:58px;border-radius:15px;border:2.5px solid rgba(255,255,255,.85);display:grid;place-items:center;
+    font-weight:800;color:#fff;font-size:24px;background:linear-gradient(135deg,var(--purple),var(--purple-2));margin-bottom:12px}
+  .hero .badges{display:flex;gap:7px;margin-bottom:10px}
+  .hero .badge{font-size:11.5px;font-weight:700;color:#fff;background:rgba(255,255,255,.16);backdrop-filter:blur(8px);
+    padding:5px 12px;border-radius:30px;border:1px solid rgba(255,255,255,.22)}
+  .hero h1{font-size:30px;font-weight:800;color:#fff;letter-spacing:-.02em;text-shadow:0 2px 24px rgba(0,0,0,.4)}
+
+  /* ---- followers component ---- */
+  .followers{display:flex;flex-wrap:wrap;gap:9px}
+  .fol{display:inline-flex;align-items:center;gap:8px;border-radius:30px;padding:5px 14px 5px 5px}
+  .fol-ic{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
+  .fol-ic svg{width:15px;height:15px}
+  .fol b{font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1}
+  .ig{background:linear-gradient(135deg,#F58529,#DD2A7B 55%,#8134AF)}
+  .fb{background:#1877F2}.yt{background:#FF0000}.tw{background:#000}
+
+  /* Version 1: DARK BAND — followers sit on a cinematic strip under the hero */
+  .band-dark{background:linear-gradient(120deg,#1E1B3A,#2E1065 60%,#3B1A6B);padding:18px 26px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .band-dark .label{font-size:12px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em}
+  .band-dark .fol{background:#fff;box-shadow:0 4px 14px -6px rgba(0,0,0,.5)}
+  .band-dark .fol b{color:var(--ink)}
+
+  /* Version 2: ON WHITE — followers sit on a white strip under the hero */
+  .band-white{background:#fff;padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line)}
+  .band-white .label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .band-white .fol{background:#fff;border:1px solid var(--line);box-shadow:0 3px 10px -6px rgba(20,20,43,.3)}
+  .band-white .fol b{color:var(--ink)}
+
+  @media(max-width:560px){
+    .hero h1{font-size:23px}.band-dark,.band-white{flex-direction:column;align-items:flex-start}
+    .band-dark .label,.band-white .label{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- VERSION 1 : DARK BAND -->
+  <div class="ver-label"><span>1</span>Dark band — under the hero</div>
+  <div class="stage">
+    <div class="hero">
+      <img src="https://images.unsplash.com/photo-1438032005730-c779502df39b?auto=format&fit=crop&w=1400&q=80" alt="">
+      <div class="shade"></div>
+      <div class="content">
+        <div class="logo">GC</div>
+        <div class="badges"><span class="badge">✦ Pentecostal</span><span class="badge">Shoreditch, London</span></div>
+        <h1>Grace Covenant Cathedral</h1>
+      </div>
+    </div>
+    <div class="band-dark">
+      <span class="label">Followers</span>
+      <div class="followers" id="dark"></div>
+    </div>
+  </div>
+
+  <!-- VERSION 2 : ON WHITE -->
+  <div class="ver-label"><span>2</span>On white — under the hero</div>
+  <div class="stage">
+    <div class="hero">
+      <img src="https://images.unsplash.com/photo-1438032005730-c779502df39b?auto=format&fit=crop&w=1400&q=80" alt="">
+      <div class="shade"></div>
+      <div class="content">
+        <div class="logo">GC</div>
+        <div class="badges"><span class="badge">✦ Pentecostal</span><span class="badge">Shoreditch, London</span></div>
+        <h1>Grace Covenant Cathedral</h1>
+      </div>
+    </div>
+    <div class="band-white">
+      <span class="label">Followers</span>
+      <div class="followers" id="white"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const ICONS={
+  instagram:'<path d="M12 7.3a4.7 4.7 0 1 0 0 9.4 4.7 4.7 0 0 0 0-9.4zm0 7.7a3 3 0 1 1 0-6 3 3 0 0 1 0 6zM17.5 6a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2zM12 4.2c2.5 0 2.8 0 3.8.05 2.5.1 3.7 1.3 3.8 3.8.05 1 .05 1.3.05 3.8s0 2.8-.05 3.8c-.1 2.5-1.3 3.7-3.8 3.8-1 .05-1.3.05-3.8.05s-2.8 0-3.8-.05c-2.5-.1-3.7-1.3-3.8-3.8C4.3 14.8 4.3 14.5 4.3 12s0-2.8.05-3.8c.1-2.5 1.3-3.7 3.8-3.8 1-.05 1.3-.05 3.8-.05z" fill="#fff"/>',
+  facebook:'<path d="M13.5 21v-7h2.3l.4-2.8h-2.7V9.4c0-.8.2-1.3 1.4-1.3h1.4V5.6c-.3 0-1.1-.1-2-.1-2 0-3.4 1.2-3.4 3.5v1.9H8.5V14h2.4v7h2.6z" fill="#fff"/>',
+  youtube:'<path d="M21.6 8.2c-.2-.9-.8-1.5-1.7-1.7C18.3 6 12 6 12 6s-6.3 0-7.9.5c-.9.2-1.5.8-1.7 1.7C2 9.8 2 12 2 12s0 2.2.4 3.8c.2.9.8 1.5 1.7 1.7 1.6.5 7.9.5 7.9.5s6.3 0 7.9-.5c.9-.2 1.5-.8 1.7-1.7.4-1.6.4-3.8.4-3.8s0-2.2-.4-3.8zM10 15V9l5.2 3-5.2 3z" fill="#fff"/>',
+  twitter:'<path d="M17.5 5h2.4l-5.2 6 6.2 8h-4.9l-3.8-5-4.4 5H5.4l5.6-6.4L4.7 5h5l3.5 4.6L17.5 5z" fill="#fff"/>'
+};
+const CLS={instagram:'ig',facebook:'fb',youtube:'yt',twitter:'tw'};
+const followers={instagram:'48.2K',facebook:'31.5K',youtube:'22.7K',twitter:'9.4K'};
+function render(id){
+  document.getElementById(id).innerHTML=['instagram','facebook','youtube','twitter']
+    .filter(p=>followers[p])
+    .map(p=>`<div class="fol"><span class="fol-ic ${CLS[p]}"><svg viewBox="0 0 24 24">${ICONS[p]}</svg></span><b>${followers[p]}</b></div>`).join('');
+}
+render('dark');render('white');
+</script>
+</body>
+</html>

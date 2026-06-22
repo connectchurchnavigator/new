@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ekklesia — Church Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.5.0/dist/tabler-icons.min.css"/>
+<style>
+:root{
+  --ek-grad:linear-gradient(135deg,#f43f5e 0%,#7c3aed 100%);
+  --ek-grad-soft:linear-gradient(135deg,rgba(244,63,94,.12),rgba(124,58,237,.12));
+  --ek-coral:#f43f5e; --ek-purple:#7c3aed; --ek-purple-dark:#6d28d9;
+  --ek-ink:#0f0f1a; --ek-gray:#6b7280; --ek-gray-light:#9ca3af;
+  --ek-border:#e9e9ef; --ek-surface:#f5f3ff; --ek-bg:#f7f7fb;
+  --shadow-sm:0 1px 3px rgba(15,15,26,.05);
+  --shadow:0 10px 30px -12px rgba(15,15,26,.15);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--ek-bg);color:var(--ek-ink);-webkit-font-smoothing:antialiased}
+a{text-decoration:none;color:inherit}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+.app{display:flex;min-height:100vh}
+
+/* Sidebar */
+.sidebar{width:248px;background:#fff;border-right:1px solid var(--ek-border);padding:22px 16px;display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:20}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 22px}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:var(--ek-grad);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(124,58,237,.3)}
+.brand-mark i{color:#fff;font-size:18px}
+.brand-name{font-size:18px;font-weight:800;letter-spacing:-.02em}
+.nav-label{font-size:10px;font-weight:700;color:var(--ek-gray-light);letter-spacing:.08em;text-transform:uppercase;padding:14px 10px 8px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:11px;font-size:13.5px;font-weight:600;color:var(--ek-gray);width:100%;text-align:left;transition:.15s;position:relative}
+.nav-item i{font-size:18px}
+.nav-item:hover{background:#faf9ff;color:var(--ek-ink)}
+.nav-item.active{background:var(--ek-surface);color:var(--ek-purple-dark)}
+.nav-item.active::before{content:'';position:absolute;left:-16px;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:var(--ek-grad)}
+.nav-badge{margin-left:auto;font-size:10px;font-weight:800;color:#fff;background:var(--ek-coral);padding:2px 7px;border-radius:20px}
+.sidebar-foot{margin-top:auto;padding:14px 10px 4px;border-top:1px solid var(--ek-border)}
+.sidebar-foot .verify{display:flex;gap:9px;align-items:flex-start;font-size:11.5px;color:var(--ek-gray);background:#fffbeb;border:1px solid #fde68a;border-radius:11px;padding:11px}
+.sidebar-foot .verify i{color:#d97706;font-size:15px;flex-shrink:0;margin-top:1px}
+
+/* Main */
+.main{flex:1;margin-left:248px;min-width:0}
+.topbar{position:sticky;top:0;z-index:15;background:rgba(247,247,251,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--ek-border);padding:14px 32px;display:flex;align-items:center;gap:18px}
+.topbar h1{font-size:18px;font-weight:800;letter-spacing:-.02em}
+.topbar .sub{font-size:12px;color:var(--ek-gray);margin-top:1px}
+.spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;padding:9px 15px;border-radius:11px;transition:.15s}
+.btn-primary{background:var(--ek-grad);color:#fff;box-shadow:0 6px 18px -6px rgba(124,58,237,.5)}
+.btn-primary:hover{transform:translateY(-1px)}
+.btn-ghost{background:#fff;border:1.5px solid var(--ek-border);color:var(--ek-ink)}
+.btn-ghost:hover{border-color:var(--ek-purple)}
+.avatar{width:38px;height:38px;border-radius:11px;background:var(--ek-grad);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;flex-shrink:0}
+.content{padding:28px 32px 60px;max-width:1180px}
+.view{display:none;animation:fade .35s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* Cards */
+.card{background:#fff;border:1px solid var(--ek-border);border-radius:18px;box-shadow:var(--shadow-sm)}
+.card-pad{padding:22px}
+.grid{display:grid;gap:18px}
+.card-h{display:flex;align-items:center;gap:9px;margin-bottom:4px}
+.card-h i{font-size:18px;color:var(--ek-purple)}
+.card-title{font-size:15px;font-weight:800}
+.card-sub{font-size:12.5px;color:var(--ek-gray);margin-bottom:18px}
+.eyebrow{font-size:11px;font-weight:800;color:var(--ek-gray-light);letter-spacing:.06em;text-transform:uppercase}
+
+/* Stat tiles */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.stat{background:#fff;border:1px solid var(--ek-border);border-radius:16px;padding:18px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden}
+.stat .ic{width:36px;height:36px;border-radius:10px;background:var(--ek-grad-soft);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.stat .ic i{font-size:18px;color:var(--ek-purple)}
+.stat .val{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.stat .lbl{font-size:12.5px;color:var(--ek-gray);margin-top:5px;font-weight:500}
+.trend{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;margin-top:9px;padding:3px 8px;border-radius:20px}
+.trend.up{color:#15803d;background:#f0fdf4}
+.trend.down{color:#b91c1c;background:#fef2f2}
+
+/* Completeness ring */
+.ring-wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.ring{position:relative;width:120px;height:120px;flex-shrink:0}
+.ring svg{transform:rotate(-90deg)}
+.ring .pct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .pct b{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.ring .pct span{font-size:10px;color:var(--ek-gray);font-weight:600}
+.todo{display:flex;flex-direction:column;gap:9px;flex:1;min-width:240px}
+.todo-item{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:12px;border:1px solid var(--ek-border)}
+.todo-item.done{background:#f0fdf4;border-color:#bbf7d0}
+.todo-item .tick{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
+.todo-item.done .tick{background:#16a34a;color:#fff}
+.todo-item.todo .tick{background:var(--ek-surface);color:var(--ek-purple);border:1.5px dashed #c4b5fd}
+.todo-item .t{flex:1;font-size:13px;font-weight:600}
+.todo-item .t small{display:block;font-weight:500;color:var(--ek-gray);font-size:11px;margin-top:1px}
+.todo-item .add{font-size:12px;font-weight:700;color:#fff;background:var(--ek-purple);padding:6px 12px;border-radius:8px}
+.todo-item.done .gain{font-size:11px;font-weight:700;color:#16a34a}
+
+/* Manage list */
+.manage{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.manage a{display:flex;align-items:center;gap:13px;padding:15px;border-radius:14px;border:1px solid var(--ek-border);transition:.15s}
+.manage a:hover{border-color:var(--ek-purple);background:#faf9ff;transform:translateY(-1px)}
+.manage .mi{width:40px;height:40px;border-radius:11px;background:var(--ek-grad-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.manage .mi i{font-size:19px;color:var(--ek-purple)}
+.manage .mt{font-size:13.5px;font-weight:700}
+.manage .ms{font-size:11.5px;color:var(--ek-gray);margin-top:2px}
+.manage .arr{margin-left:auto;color:var(--ek-gray-light);font-size:16px}
+
+/* bars */
+.bar-row{display:flex;align-items:center;gap:12px;margin-bottom:13px}
+.bar-row .bl{font-size:13px;font-weight:600;width:104px;flex-shrink:0;display:flex;align-items:center;gap:7px}
+.bar-track{flex:1;height:9px;background:#f1f0f5;border-radius:6px;overflow:hidden}
+.bar-fill{height:100%;border-radius:6px;background:var(--ek-grad)}
+.bar-row .bv{font-size:12.5px;font-weight:700;color:var(--ek-gray);width:44px;text-align:right}
+
+/* donut legend */
+.legend{display:flex;flex-direction:column;gap:11px}
+.legend .li{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600}
+.legend .dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.legend .lv{margin-left:auto;color:var(--ek-gray);font-weight:700}
+
+/* table */
+.vtable{width:100%;border-collapse:collapse}
+.vtable th{text-align:left;font-size:11px;font-weight:700;color:var(--ek-gray-light);text-transform:uppercase;letter-spacing:.04em;padding:0 12px 12px}
+.vtable td{padding:12px;border-top:1px solid var(--ek-border);font-size:13px}
+.vtable tr:hover td{background:#faf9ff}
+.vname{display:flex;align-items:center;gap:10px;font-weight:600}
+.vav{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:11px;flex-shrink:0}
+.pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-block}
+.pill.new{color:#1d4ed8;background:#eff6ff}
+.pill.ret{color:#6d28d9;background:#f5f3ff}
+.pill.reg{color:#15803d;background:#f0fdf4}
+.pill.risk{color:#b45309;background:#fffbeb}
+.pill.lapsed{color:#6b7280;background:#f3f4f6}
+
+/* AI insights */
+.ai-insights{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:22px}
+.ai-card{border-radius:16px;padding:17px;border:1px solid var(--ek-border);background:#fff;position:relative;overflow:hidden}
+.ai-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px}
+.ai-card.warn::before{background:#d97706}.ai-card.good::before{background:#16a34a}.ai-card.info::before{background:var(--ek-purple)}
+.ai-card .ai-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.ai-card .ai-ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ai-card.warn .ai-ic{background:#fffbeb;color:#d97706}.ai-card.good .ai-ic{background:#f0fdf4;color:#16a34a}.ai-card.info .ai-ic{background:var(--ek-surface);color:var(--ek-purple)}
+.ai-card .ai-tag{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--ek-gray-light)}
+.ai-card .ai-t{font-size:14px;font-weight:800;line-height:1.3}
+.ai-card .ai-s{font-size:12px;color:var(--ek-gray);margin:5px 0 12px;line-height:1.5}
+.ai-card .ai-cta{font-size:12px;font-weight:700;color:var(--ek-purple-dark);display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.ai-card .ai-cta:hover{gap:8px}
+
+/* lifecycle */
+.lifecycle{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:stretch}
+.lc-stage{flex:1;min-width:115px;border:1px solid var(--ek-border);border-radius:14px;padding:14px}
+.lc-stage .lc-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:9px}
+.lc-stage .lc-v{font-size:24px;font-weight:800;letter-spacing:-.02em}
+.lc-stage .lc-l{font-size:12px;color:var(--ek-gray);font-weight:600;margin-top:2px}
+.lc-arrow{display:flex;align-items:center;color:var(--ek-gray-light);font-size:18px}
+.lc-flags{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap}
+.lc-flag{flex:1;min-width:200px;display:flex;align-items:center;gap:11px;border-radius:13px;padding:13px 15px}
+.lc-flag.risk{background:#fffbeb;border:1px solid #fde68a}.lc-flag.lapsed{background:#f9fafb;border:1px solid var(--ek-border)}
+.lc-flag .lf-ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lc-flag.risk .lf-ic{background:#fef3c7;color:#d97706}.lc-flag.lapsed .lf-ic{background:#eef0f3;color:#6b7280}
+.lc-flag .lf-v{font-size:21px;font-weight:800;line-height:1}
+.lc-flag .lf-l{font-size:12.5px;font-weight:700}.lc-flag .lf-n{font-size:11px;color:var(--ek-gray)}
+
+/* attendance strip */
+.attn{display:inline-flex;gap:3px}
+.attn span{width:11px;height:11px;border-radius:3px;background:#eef0f3}
+.attn span.on{background:var(--ek-purple)}
+
+/* heatmap */
+.heat{display:grid;grid-template-columns:70px repeat(7,1fr);gap:5px;align-items:center}
+.heat .hl{font-size:11px;color:var(--ek-gray);font-weight:600}
+.heat .hd{font-size:10px;color:var(--ek-gray-light);text-align:center;font-weight:700;padding-bottom:2px}
+.heat .cell{height:26px;border-radius:6px}
+
+.followup-btn{font-size:11.5px;font-weight:700;color:#fff;background:var(--ek-purple);padding:6px 11px;border-radius:8px}
+@media(max-width:1000px){.ai-insights{grid-template-columns:1fr}}
+
+/* QR */
+.qr-box{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.qr-img{width:130px;height:130px;border-radius:14px;border:1px solid var(--ek-border);padding:8px;background:#fff;flex-shrink:0}
+.qr-img img{width:100%;height:100%}
+
+.section-gap{margin-top:22px}
+.two-col{display:grid;grid-template-columns:1.55fr 1fr;gap:18px}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.badge-status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:4px 11px;border-radius:20px}
+.badge-pub{color:#15803d;background:#f0fdf4}
+.badge-unv{color:#b45309;background:#fffbeb;border:1px solid #fde68a}
+
+.mobile-menu{display:none}
+
+/* slide-over drawer */
+.drawer-scrim{position:fixed;inset:0;background:rgba(15,15,26,.35);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:.25s;z-index:50}
+.drawer-scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:480px;max-width:92vw;background:#fff;box-shadow:-20px 0 50px -20px rgba(15,15,26,.3);transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);z-index:51;display:flex;flex-direction:column}
+.drawer.open{transform:none}
+.drawer-head{display:flex;align-items:center;gap:12px;padding:20px 24px;border-bottom:1px solid var(--ek-border)}
+.drawer-head .dh-ic{width:38px;height:38px;border-radius:11px;background:var(--ek-grad-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.drawer-head .dh-ic i{font-size:19px;color:var(--ek-purple)}
+.drawer-head h3{font-size:16px;font-weight:800}
+.drawer-head .dh-s{font-size:12px;color:var(--ek-gray)}
+.drawer-x{margin-left:auto;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--ek-gray);cursor:pointer;font-size:18px}
+.drawer-x:hover{background:#f3f4f6}
+.drawer-body{flex:1;overflow-y:auto;padding:22px 24px}
+.drawer-foot{display:flex;gap:10px;padding:16px 24px;border-top:1px solid var(--ek-border)}
+.drawer-foot .btn{flex:1;justify-content:center}
+.df-field{margin-bottom:16px}
+.df-field label{display:block;font-size:12.5px;font-weight:700;margin-bottom:7px}
+.df-field input,.df-field select,.df-field textarea{width:100%;font-family:inherit;font-size:13.5px;padding:11px 13px;border:1.5px solid var(--ek-border);border-radius:11px;background:#fff;color:var(--ek-ink);outline:none;transition:.15s}
+.df-field input:focus,.df-field select:focus,.df-field textarea:focus{border-color:var(--ek-purple)}
+.df-field textarea{resize:vertical;min-height:90px;line-height:1.6}
+.svc-edit{border:1px solid var(--ek-border);border-radius:13px;padding:14px;margin-bottom:12px;position:relative}
+.svc-edit .se-rm{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--ek-gray);cursor:pointer;font-size:15px}
+.svc-edit .se-rm:hover{background:#fef2f2;color:#dc2626}
+.se-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fmt-toggle{display:flex;gap:6px;margin-top:10px}
+.fmt-toggle button{flex:1;font-size:11.5px;font-weight:700;padding:8px;border-radius:9px;border:1.5px solid var(--ek-border);background:#fff;color:var(--ek-gray);cursor:pointer}
+.fmt-toggle button.on{border-color:transparent;background:var(--ek-grad);color:#fff}
+.add-svc{width:100%;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:700;color:var(--ek-purple-dark);background:#faf9ff;border:1.5px dashed #c4b5fd;padding:11px;border-radius:11px;cursor:pointer}
+@media(max-width:760px){.drawer{width:100vw}}
+
+/* branch switcher */
+.branch-switch{position:relative;cursor:pointer;display:flex;align-items:center;gap:8px;padding:5px 9px;border-radius:11px;transition:.15s}
+.branch-switch:hover{background:#fff}
+.branch-switch h1{display:flex;align-items:center;gap:7px}
+.branch-switch .chev{font-size:16px;color:var(--ek-gray-light)}
+.branch-menu{position:absolute;top:calc(100% + 8px);left:0;width:300px;background:#fff;border:1px solid var(--ek-border);border-radius:15px;box-shadow:var(--shadow);padding:8px;z-index:40;display:none}
+.branch-menu.open{display:block}
+.branch-menu .bm-label{font-size:10px;font-weight:800;color:var(--ek-gray-light);letter-spacing:.06em;text-transform:uppercase;padding:8px 10px 6px}
+.branch-opt{display:flex;align-items:center;gap:11px;padding:10px;border-radius:11px;transition:.15s}
+.branch-opt:hover{background:#faf9ff}
+.branch-opt .bo-mark{width:32px;height:32px;border-radius:9px;background:var(--ek-grad);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;flex-shrink:0}
+.branch-opt .bo-n{font-size:13.5px;font-weight:700}
+.branch-opt .bo-s{font-size:11.5px;color:var(--ek-gray)}
+.branch-opt.active{background:var(--ek-surface)}
+.branch-opt .bo-tick{margin-left:auto;color:var(--ek-purple)}
+.branch-add{display:flex;align-items:center;gap:9px;padding:11px;border-radius:11px;color:var(--ek-purple-dark);font-weight:700;font-size:13px;border-top:1px solid var(--ek-border);margin-top:6px}
+
+/* branch cards */
+.branch-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.branch-card{border:1px solid var(--ek-border);border-radius:16px;padding:18px;transition:.15s;position:relative}
+.branch-card:hover{border-color:var(--ek-purple);box-shadow:var(--shadow)}
+.branch-card .bc-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.branch-card .bc-mark{width:44px;height:44px;border-radius:12px;background:var(--ek-grad);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;flex-shrink:0}
+.branch-card .bc-n{font-size:15px;font-weight:800;display:flex;align-items:center;gap:7px}
+.branch-card .bc-a{font-size:12px;color:var(--ek-gray);margin-top:2px}
+.branch-card .bc-stats{display:flex;gap:18px;padding:13px 0;border-top:1px solid var(--ek-border);border-bottom:1px solid var(--ek-border);margin-bottom:13px}
+.branch-card .bc-stat .v{font-size:18px;font-weight:800}
+.branch-card .bc-stat .l{font-size:11px;color:var(--ek-gray)}
+.branch-card .bc-foot{display:flex;align-items:center;gap:8px}
+.hq-badge{font-size:9px;font-weight:800;color:var(--ek-purple-dark);background:var(--ek-surface);padding:2px 7px;border-radius:20px;letter-spacing:.03em}
+.branch-add-card{border:1.5px dashed #c4b5fd;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--ek-purple-dark);font-weight:700;cursor:pointer;min-height:180px;background:#faf9ff;transition:.15s}
+.branch-add-card:hover{background:var(--ek-surface);border-color:var(--ek-purple)}
+
+/* leaders & teams */
+.lead-hero{display:flex;gap:18px;align-items:center;padding:18px;border:1px solid var(--ek-border);border-radius:16px;background:linear-gradient(135deg,rgba(244,63,94,.05),rgba(124,58,237,.05))}
+.lead-hero .lh-av{width:74px;height:74px;border-radius:18px;background:var(--ek-grad);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:24px;flex-shrink:0}
+.lead-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+.lead-card{border:1px solid var(--ek-border);border-radius:14px;padding:15px;text-align:center}
+.lead-card .lc-av{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;margin:0 auto 10px}
+.team-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.team-card{display:flex;align-items:center;gap:13px;border:1px solid var(--ek-border);border-radius:14px;padding:15px;transition:.15s}
+.team-card:hover{border-color:var(--ek-purple);background:#faf9ff}
+.team-card .tc-ic{width:44px;height:44px;border-radius:12px;background:var(--ek-grad-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.team-card .tc-ic i{font-size:21px;color:var(--ek-purple)}
+.join-badge{font-size:10px;font-weight:700;color:#15803d;background:#f0fdf4;padding:3px 9px;border-radius:20px}
+.closed-badge{font-size:10px;font-weight:700;color:var(--ek-gray);background:#f3f4f6;padding:3px 9px;border-radius:20px}
+@media(max-width:1000px){.branch-grid{grid-template-columns:1fr}.lead-grid{grid-template-columns:1fr}.team-grid{grid-template-columns:1fr}}
+@media(max-width:1000px){.two-col{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.three-col{grid-template-columns:1fr}}
+@media(max-width:760px){
+  .sidebar{transform:translateX(-100%);transition:.25s;box-shadow:var(--shadow)}
+  .sidebar.open{transform:none}
+  .main{margin-left:0}
+  .content{padding:20px}
+  .topbar{padding:12px 18px}
+  .manage{grid-template-columns:1fr}
+  .mobile-menu{display:inline-flex}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ░░ SIDEBAR ░░ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><i class="ti ti-building-church"></i></div>
+      <div class="brand-name">Ekklesia</div>
+    </div>
+
+    <div class="nav-label">Manage</div>
+    <button class="nav-item active" data-view="overview"><i class="ti ti-layout-dashboard"></i> Overview</button>
+    <button class="nav-item" data-view="listing"><i class="ti ti-edit"></i> My listing</button>
+    <button class="nav-item" data-view="team"><i class="ti ti-users"></i> Pastor &amp; teams</button>
+    <button class="nav-item" data-view="engagement"><i class="ti ti-chart-line"></i> Engagement</button>
+
+    <div class="nav-label">Organisation</div>
+    <button class="nav-item" data-view="branches"><i class="ti ti-building-community"></i> Branches <span class="nav-badge" style="background:var(--ek-purple)">3</span></button>
+
+    <div class="nav-label">Visitors</div>
+    <button class="nav-item" data-view="checkin"><i class="ti ti-qrcode"></i> Check-in <span class="nav-badge">47</span></button>
+    <button class="nav-item" data-view="visitors"><i class="ti ti-users"></i> Visitor insights</button>
+
+    <div class="sidebar-foot">
+      <div class="verify">
+        <i class="ti ti-shield-check"></i>
+        <div><b>Get verified</b> — confirm you manage this church to earn a trust badge. <a href="#" style="color:var(--ek-purple-dark);font-weight:700">Start →</a></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ░░ MAIN ░░ -->
+  <div class="main">
+    <div class="topbar">
+      <button class="btn btn-ghost mobile-menu" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="ti ti-menu-2"></i></button>
+      <div class="branch-switch" onclick="event.stopPropagation();document.getElementById('branch-menu').classList.toggle('open')">
+        <div>
+          <h1><span id="tb-branch">Grace Chapel International</span> <i class="ti ti-chevron-down chev"></i></h1>
+          <div class="sub" id="tb-sub">Ilford branch · United Kingdom · Pentecostal</div>
+        </div>
+        <div class="branch-menu" id="branch-menu">
+          <div class="bm-label">Grace Chapel International · 3 branches</div>
+          <div id="branch-options"></div>
+          <div class="branch-add" onclick="go('branches')"><i class="ti ti-plus"></i> Add or manage branches</div>
+        </div>
+      </div>
+      <div class="spacer"></div>
+      <span class="badge-status badge-pub"><i class="ti ti-circle-filled" style="font-size:8px"></i> Published</span>
+      <span class="badge-status badge-unv"><i class="ti ti-clock"></i> Unverified</span>
+      <a class="btn btn-ghost" href="#" onclick="openPublic();return false"><i class="ti ti-external-link"></i> View public listing</a>
+      <div class="avatar">GC</div>
+    </div>
+
+    <div class="content">
+
+      <!-- ═══ OVERVIEW ═══ -->
+      <section class="view active" id="view-overview">
+
+        <div class="stats" id="stat-tiles"></div>
+
+        <div class="two-col">
+          <!-- Completeness -->
+          <div class="card card-pad">
+            <div class="card-h"><i class="ti ti-rosette-discount-check"></i><div class="card-title">Profile strength</div></div>
+            <div class="card-sub">Complete these to climb search results and earn more visits.</div>
+            <div class="ring-wrap">
+              <div class="ring">
+                <svg width="120" height="120">
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="#f1f0f5" stroke-width="11"/>
+                  <circle id="ring-fill" cx="60" cy="60" r="52" fill="none" stroke="url(#rg)" stroke-width="11" stroke-linecap="round" stroke-dasharray="327" stroke-dashoffset="327"/>
+                  <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f43f5e"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs>
+                </svg>
+                <div class="pct"><b id="ring-pct">0%</b><span>complete</span></div>
+              </div>
+              <div class="todo" id="todo-list"></div>
+            </div>
+          </div>
+
+          <!-- Views chart -->
+          <div class="card card-pad">
+            <div class="card-h"><i class="ti ti-eye"></i><div class="card-title">Profile views</div></div>
+            <div class="card-sub">Last 30 days</div>
+            <div id="views-chart"></div>
+          </div>
+        </div>
+
+        <!-- Manage -->
+        <div class="card card-pad section-gap">
+          <div class="card-h"><i class="ti ti-adjustments"></i><div class="card-title">Manage your listing</div></div>
+          <div class="card-sub">Keep everything fresh — edits go live instantly.</div>
+          <div class="manage">
+            <a href="#" onclick="go('listing');return false"><div class="mi"><i class="ti ti-id-badge-2"></i></div><div><div class="mt">Profile &amp; about</div><div class="ms">Name, denomination, description</div></div><i class="ti ti-chevron-right arr"></i></a>
+            <a href="#" onclick="go('listing');return false"><div class="mi"><i class="ti ti-photo"></i></div><div><div class="mt">Photos</div><div class="ms">Logo, cover &amp; gallery</div></div><i class="ti ti-chevron-right arr"></i></a>
+            <a href="#" onclick="go('listing');return false"><div class="mi"><i class="ti ti-clock-hour-4"></i></div><div><div class="mt">Service times</div><div class="ms">2 services scheduled</div></div><i class="ti ti-chevron-right arr"></i></a>
+            <a href="#" onclick="go('listing');return false"><div class="mi"><i class="ti ti-heart-handshake"></i></div><div><div class="mt">Ministries &amp; languages</div><div class="ms">6 ministries · 3 languages</div></div><i class="ti ti-chevron-right arr"></i></a>
+          </div>
+        </div>
+
+        <!-- Quick check-in + recent visitors -->
+        <div class="two-col section-gap">
+          <div class="card card-pad">
+            <div class="card-h"><i class="ti ti-users-group"></i><div class="card-title">Recent visitors</div></div>
+            <div class="card-sub">From QR check-ins at your services</div>
+            <table class="vtable" id="recent-visitors"></table>
+          </div>
+          <div class="card card-pad">
+            <div class="card-h"><i class="ti ti-qrcode"></i><div class="card-title">Visitor check-in</div></div>
+            <div class="card-sub">Display this QR at your welcome desk</div>
+            <div class="qr-box">
+              <div class="qr-img"><img src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=https://ekklesia.app/checkin/grace-chapel-intl&color=7c3aed" alt="Check-in QR"/></div>
+              <div>
+                <div style="font-size:30px;font-weight:800;letter-spacing:-.02em">47</div>
+                <div style="font-size:12.5px;color:var(--ek-gray);margin-bottom:14px">check-ins this week</div>
+                <a class="btn btn-primary" href="#" onclick="go('checkin');return false"><i class="ti ti-device-tablet"></i> Open check-in screen</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ MY LISTING ═══ -->
+      <section class="view" id="view-listing">
+        <div class="card card-pad">
+          <div class="card-h"><i class="ti ti-edit"></i><div class="card-title">Edit your listing</div></div>
+          <div class="card-sub">Every change publishes immediately to your public page.</div>
+          <div class="manage" style="grid-template-columns:repeat(2,1fr)" id="listing-cards"></div>
+        </div>
+
+        <div class="card card-pad section-gap">
+          <div class="card-h"><i class="ti ti-photo"></i><div class="card-title">Photos</div></div>
+          <div class="card-sub">Listings with a cover photo get 3× more visits.</div>
+          <div class="three-col" id="photo-slots"></div>
+        </div>
+      </section>
+
+      <!-- ═══ PASTOR & TEAMS ═══ -->
+      <section class="view" id="view-team">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+          <div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Pastor &amp; teams</div>
+          <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--ek-purple-dark);background:var(--ek-surface);padding:5px 11px;border-radius:20px"><i class="ti ti-eye"></i> Shown on your public listing</span>
+        </div>
+        <div style="font-size:12.5px;color:var(--ek-gray);margin-bottom:20px">Ilford branch · visitors see who leads and which teams they can join.</div>
+
+        <!-- Leadership -->
+        <div class="card card-pad">
+          <div class="card-h"><i class="ti ti-user-star"></i><div class="card-title">Leadership</div></div>
+          <div class="card-sub">Your lead pastor and ministry leaders.</div>
+          <div id="lead-hero"></div>
+          <div class="lead-grid" id="lead-grid"></div>
+          <button onclick="editLeader(-1)" style="margin-top:14px;display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--ek-purple-dark);background:#fff;border:1.5px dashed #c4b5fd;padding:10px 16px;border-radius:11px;cursor:pointer;width:100%;justify-content:center"><i class="ti ti-plus"></i> Add a leader</button>
+        </div>
+
+        <!-- Teams -->
+        <div class="card card-pad section-gap">
+          <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+            <div>
+              <div class="card-h"><i class="ti ti-users-group"></i><div class="card-title">Ministry teams</div></div>
+              <div class="card-sub" style="margin-bottom:0">Teams people can serve on or join. "Open to join" shows a button on your listing.</div>
+            </div>
+            <div style="flex:1"></div>
+            <button style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#fff;background:var(--ek-purple);padding:9px 15px;border-radius:10px;cursor:pointer"><i class="ti ti-plus"></i> Add team</button>
+          </div>
+          <div class="team-grid" id="team-grid"></div>
+        </div>
+      </section>
+
+      <!-- ═══ BRANCHES ═══ -->
+      <section class="view" id="view-branches">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px">
+          <div>
+            <div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Branches</div>
+            <div style="font-size:12.5px;color:var(--ek-gray);margin-top:2px">One account · <span id="br-count">3</span> branch listings under Grace Chapel International</div>
+          </div>
+          <div style="flex:1"></div>
+          <button onclick="alert('Demo: this would start the Add Your Church flow for a new branch.')" class="btn btn-primary"><i class="ti ti-plus"></i> Add a branch</button>
+        </div>
+
+        <div class="stats" id="br-tiles"></div>
+
+        <div class="branch-grid" id="branch-grid"></div>
+      </section>
+
+      <!-- ═══ ENGAGEMENT ═══ -->
+      <section class="view" id="view-engagement">
+        <div class="stats" id="eng-tiles"></div>
+        <div class="two-col">
+          <div class="card card-pad">
+            <div class="card-h"><i class="ti ti-chart-area-line"></i><div class="card-title">Views &amp; follows</div></div>
+            <div class="card-sub">Last 30 days</div>
+            <div id="eng-chart"></div>
+          </div>
+          <div class="card card-pad">
+            <div class="card-h"><i class="ti ti-route"></i><div class="card-title">How people find you</div></div>
+            <div class="card-sub">Traffic sources this month</div>
+            <div id="sources" style="margin-top:6px"></div>
+          </div>
+        </div>
+        <div class="card card-pad section-gap">
+          <div class="card-h"><i class="ti ti-search"></i><div class="card-title">Top search terms</div></div>
+          <div class="card-sub">What people typed before landing on your listing</div>
+          <div id="search-terms" style="margin-top:6px"></div>
+        </div>
+      </section>
+
+      <!-- ═══ CHECK-IN ═══ -->
+      <section class="view" id="view-checkin">
+        <div class="two-col">
+          <div class="card card-pad">
+            <div class="card-h"><i class="ti ti-qrcode"></i><div class="card-title">Your check-in QR</div></div>
+            <div class="card-sub">Print it or show it on a tablet at your welcome desk. First-time visitors scan to say hello.</div>
+            <div class="qr-box">
+              <div class="qr-img"><img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https://ekklesia.app/checkin/grace-chapel-intl&color=7c3aed" alt="Check-in QR"/></div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <a class="btn btn-primary" href="#"><i class="ti ti-download"></i> Download QR poster</a>
+                <a class="btn btn-ghost" href="#"><i class="ti ti-device-tablet"></i> Open kiosk mode</a>
+                <a class="btn btn-ghost" href="#"><i class="ti ti-copy"></i> Copy check-in link</a>
+              </div>
+            </div>
+          </div>
+          <div class="card card-pad">
+            <div class="card-h"><i class="ti ti-message-2-heart"></i><div class="card-title">Welcome follow-up</div></div>
+            <div class="card-sub">Auto-send a warm message after a first check-in</div>
+            <div id="followup" style="display:flex;flex-direction:column;gap:11px;margin-top:4px"></div>
+          </div>
+        </div>
+        <div class="card card-pad section-gap">
+          <div class="card-h"><i class="ti ti-list-check"></i><div class="card-title">Recent check-ins</div></div>
+          <div class="card-sub">47 this week · 18 first-time visitors</div>
+          <table class="vtable" id="checkin-table"></table>
+        </div>
+      </section>
+
+      <!-- ═══ VISITORS ═══ -->
+      <section class="view" id="view-visitors">
+
+        <!-- header row with privacy badge -->
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px">
+          <div>
+            <div style="font-size:20px;font-weight:800;letter-spacing:-.02em">Visitor insights</div>
+            <div style="font-size:12.5px;color:var(--ek-gray);margin-top:2px">Grace Chapel International · <span id="vi-count">12</span> people tracked</div>
+          </div>
+          <div style="flex:1"></div>
+          <span style="display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;padding:7px 13px;border-radius:20px"><i class="ti ti-lock"></i> Owner only · individuals never shown publicly</span>
+        </div>
+
+        <!-- stat tiles -->
+        <div class="stats" id="vi-tiles"></div>
+
+        <!-- AI intelligence callouts -->
+        <div class="eyebrow" style="margin-bottom:12px"><i class="ti ti-sparkles" style="font-size:13px;color:var(--ek-purple)"></i> AI visitor intelligence</div>
+        <div class="ai-insights" id="ai-insights"></div>
+
+        <!-- Journey funnel (6 stages) -->
+        <div class="card card-pad">
+          <div class="card-h"><i class="ti ti-filter"></i><div class="card-title">Journey funnel</div></div>
+          <div class="card-sub">Where everyone is on the path from first visit to leader.</div>
+          <div id="funnel" style="margin-top:14px"></div>
+          <div class="lc-flags" id="lc-flags" style="margin-top:18px"></div>
+        </div>
+
+        <!-- how found + cities -->
+        <div class="two-col section-gap">
+          <div class="card card-pad">
+            <div class="card-h"><i class="ti ti-direction-sign"></i><div class="card-title">How they found us</div></div>
+            <div class="card-sub">Top sources bringing people through the door.</div>
+            <div id="found" style="margin-top:8px"></div>
+          </div>
+          <div class="card card-pad">
+            <div class="card-h"><i class="ti ti-map-2"></i><div class="card-title">Where they're coming from</div></div>
+            <div class="card-sub">Cities &amp; areas your visitors travel from.</div>
+            <div id="cities" style="margin-top:8px"></div>
+          </div>
+        </div>
+
+        <!-- follow-up + new vs returning -->
+        <div class="two-col section-gap">
+          <div class="card card-pad">
+            <div class="card-h"><i class="ti ti-user-heart"></i><div class="card-title">People to follow up</div></div>
+            <div class="card-sub">First-timers who haven't returned &amp; regulars going quiet</div>
+            <table class="vtable" id="followup-table"></table>
+          </div>
+          <div class="card card-pad">
+            <div class="card-h"><i class="ti ti-user-plus"></i><div class="card-title">New vs returning</div></div>
+            <div class="card-sub">Last 90 days</div>
+            <div style="display:flex;align-items:center;gap:18px;margin-top:6px">
+              <div id="donut"></div>
+              <div class="legend" id="donut-legend"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 8-week attendance tracking -->
+        <div class="card card-pad section-gap">
+          <div class="card-h"><i class="ti ti-route"></i><div class="card-title">Attendance tracking</div></div>
+          <div class="card-sub">Each person's attendance over the last 8 weeks · <span style="color:var(--ek-purple);font-weight:700">●</span> attended</div>
+          <table class="vtable" id="tracking-table"></table>
+        </div>
+
+        <!-- All visitors (full table) -->
+        <div class="card card-pad section-gap">
+          <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:16px">
+            <div>
+              <div class="card-h"><i class="ti ti-users-group"></i><div class="card-title">All visitors</div></div>
+              <div class="card-sub" style="margin-bottom:0">Tap a row to view contact details &amp; send a follow-up.</div>
+            </div>
+            <div style="flex:1"></div>
+            <button onclick="exportVisitorsCSV()" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--ek-purple-dark);background:#fff;border:1.5px solid #c4b5fd;padding:8px 14px;border-radius:10px;cursor:pointer"><i class="ti ti-download"></i> Export CSV</button>
+          </div>
+          <div id="stage-filters" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px"></div>
+          <div style="overflow-x:auto"><table class="vtable" id="all-visitors"></table></div>
+        </div>
+
+        <!-- Anonymous traffic analytics -->
+        <div class="eyebrow" style="margin:28px 0 12px"><i class="ti ti-chart-dots" style="font-size:13px;color:var(--ek-purple)"></i> Anonymous listing traffic <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--ek-gray-light)">· aggregate only, no personal data</span></div>
+        <div class="three-col">
+          <div class="card card-pad">
+            <div class="card-h"><i class="ti ti-devices"></i><div class="card-title">Devices</div></div>
+            <div class="card-sub">How people view your listing</div>
+            <div id="devices" style="margin-top:12px"></div>
+          </div>
+          <div class="card card-pad" style="grid-column:span 2">
+            <div class="card-h"><i class="ti ti-clock-hour-9"></i><div class="card-title">When people look you up</div></div>
+            <div class="card-sub">Listing views by day &amp; time — busiest window is Sunday morning</div>
+            <div id="peaktimes" style="margin-top:14px"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ PUBLIC LISTING PREVIEW ═══ -->
+      <section class="view" id="view-public">
+        <div style="display:flex;align-items:center;gap:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:13px;padding:13px 16px;margin-bottom:20px">
+          <i class="ti ti-eye" style="font-size:18px;color:#d97706"></i>
+          <div style="flex:1;font-size:13px;color:#92400e"><b>Preview of your public listing.</b> This is what visitors see — it updates whenever you save changes.</div>
+          <button class="btn btn-ghost" onclick="go('overview')"><i class="ti ti-arrow-left"></i> Back to dashboard</button>
+        </div>
+        <div id="public-body"></div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="drawer-scrim" id="drawer-scrim" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true">
+  <div class="drawer-head">
+    <div class="dh-ic"><i class="ti ti-edit" id="drawer-icon"></i></div>
+    <div><h3 id="drawer-title">Edit</h3><div class="dh-s" id="drawer-sub"></div></div>
+    <div class="drawer-x" onclick="closeDrawer()"><i class="ti ti-x"></i></div>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+  <div class="drawer-foot">
+    <button class="btn btn-ghost" onclick="closeDrawer()">Cancel</button>
+    <button class="btn btn-primary" id="drawer-save"><i class="ti ti-check"></i> Save changes</button>
+  </div>
+</aside>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// BACKEND CONFIG — paste your Supabase keys to go live.
+// Leave blank to run on the built-in demo data (no backend needed).
+// ═══════════════════════════════════════════════════════════════════════
+const SUPABASE_URL = '';          // e.g. https://xxxx.supabase.co
+const SUPABASE_ANON_KEY = '';     // your anon public key
+const sb = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+const BACKEND = !!sb;             // true once configured → reads/writes Supabase
+let currentChurchId = null;       // set after data loads (needed for writes)
+
+// Browser data layer — mirrors lib/api.ts. No-ops gracefully when BACKEND is off.
+const EkklesiaAPI = {
+  async myOrg(){ if(!BACKEND) return null;
+    const {data}=await sb.from('organizations').select('*').limit(1).maybeSingle(); return data; },
+  async branches(orgId){ if(!BACKEND) return null;
+    const {data,error}=await sb.from('churches').select('*').eq('org_id',orgId)
+      .order('is_hq',{ascending:false}).order('created_at'); if(error)throw error; return data; },
+  async listing(churchId){ if(!BACKEND) return null;
+    const {data,error}=await sb.from('churches')
+      .select('*, church_services(*), leaders(*), teams(*)').eq('id',churchId).single();
+    if(error)throw error; return data; },
+  async updateChurch(id,patch){ if(!BACKEND) return; const {error}=await sb.from('churches').update(patch).eq('id',id); if(error)throw error; },
+  async replaceServices(id,services){ if(!BACKEND) return;
+    await sb.from('church_services').delete().eq('church_id',id);
+    if(services.length){ const rows=services.map((s,i)=>({church_id:id,day:s.day,name:s.name,start_time:s.from,end_time:s.to,format:s.format,display_order:i}));
+      const {error}=await sb.from('church_services').insert(rows); if(error)throw error; } },
+  async upsertLeader(id,l){ if(!BACKEND) return; const {error}=await sb.from('leaders').upsert({...l,church_id:id}); if(error)throw error; },
+  async deleteLeader(lid){ if(!BACKEND) return; await sb.from('leaders').delete().eq('id',lid); },
+  async upsertTeam(id,t){ if(!BACKEND) return; const {error}=await sb.from('teams').upsert({...t,church_id:id}); if(error)throw error; },
+  async deleteTeam(tid){ if(!BACKEND) return; await sb.from('teams').delete().eq('id',tid); },
+};
+
+// ════════ DATA (demo — used as-is when BACKEND is off; overwritten by bootData when on) ════════
+const AV_COLORS=['#7c3aed','#f43f5e','#2563eb','#0d9488','#d97706','#db2777'];
+function avColor(n){let s=0;for(const c of n)s+=c.charCodeAt(0);return AV_COLORS[s%AV_COLORS.length];}
+function initials(n){return n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();}
+
+const overviewStats=[
+  {ic:'ti-eye',val:'1,248',lbl:'Profile views',trend:'+18%',up:true},
+  {ic:'ti-user-heart',val:'86',lbl:'Followers',trend:'+12',up:true},
+  {ic:'ti-phone-call',val:'142',lbl:'Contact clicks',trend:'+9%',up:true},
+  {ic:'ti-search',val:'3,410',lbl:'Search appearances',trend:'+22%',up:true},
+];
+const engStats=[
+  {ic:'ti-eye',val:'1,248',lbl:'Profile views',trend:'+18%',up:true},
+  {ic:'ti-route',val:'58%',lbl:'From search',trend:'+6%',up:true},
+  {ic:'ti-click',val:'11.4%',lbl:'Click-through rate',trend:'+1.2%',up:true},
+  {ic:'ti-map-pin',val:'214',lbl:'Directions taps',trend:'-3%',up:false},
+];
+const todos=[
+  {t:'Church name',s:'',done:true},
+  {t:'Address & service times',s:'',done:true},
+  {t:'About description',s:'',done:true},
+  {t:'Add a cover photo',s:'Listings with photos get 3× more visits',gain:'+10%',done:false},
+  {t:'Add pastor bio & photo',s:'Helps visitors connect before they arrive',gain:'+8%',done:false},
+  {t:'Upload 3 gallery photos',s:'Show your space and community',gain:'+7%',done:false},
+];
+const recentVisitors=[
+  {n:'Daniel Okafor',d:'Today, 10:48',status:'new'},
+  {n:'Priya Sharma',d:'Today, 10:41',status:'new'},
+  {n:'Marcus Bailey',d:'Sun, 11:02',status:'ret'},
+  {n:'Grace Mensah',d:'Sun, 10:55',status:'reg'},
+  {n:'Sofia Romano',d:'Sun, 10:50',status:'new'},
+];
+const sources=[
+  {l:'Search',ic:'ti-search',v:58},{l:'Direct',ic:'ti-link',v:22},
+  {l:'Social',ic:'ti-brand-facebook',v:14},{l:'Referral',ic:'ti-arrow-forward',v:6},
+];
+const searchTerms=[
+  {l:'pentecostal church ilford',v:412},{l:'church near me',v:388},
+  {l:'sunday service ilford',v:241},{l:'spanish speaking church london',v:176},
+  {l:'grace chapel',v:120},
+];
+const followups=[
+  {ic:'ti-mail',t:'Welcome email',s:'Sent automatically after first check-in',on:true},
+  {ic:'ti-brand-whatsapp',t:'WhatsApp greeting',s:'Personal hello within 24 hours',on:true},
+  {ic:'ti-calendar-heart',t:'Invite to next service',s:'A nudge 5 days later',on:false},
+];
+const checkins=[
+  {n:'Daniel Okafor',d:'Today, 10:48',svc:'Sunday Main Service',status:'new'},
+  {n:'Priya Sharma',d:'Today, 10:41',svc:'Sunday Main Service',status:'new'},
+  {n:'Marcus Bailey',d:'Today, 10:38',svc:'Sunday Main Service',status:'ret'},
+  {n:'Grace Mensah',d:'Today, 10:33',svc:'Sunday Main Service',status:'reg'},
+  {n:'Sofia Romano',d:'Today, 10:30',svc:'Sunday Main Service',status:'new'},
+  {n:'James Adeyemi',d:'Wed, 19:12',svc:'Midweek Bible Study',status:'reg'},
+];
+const journey=[
+  {l:'First visit',v:24,c:'#2563eb'},{l:'Returning',v:15,c:'#7c3aed'},
+  {l:'Regular',v:31,c:'#16a34a'},{l:'Serving / member',v:12,c:'#f43f5e'},
+];
+const cities=[
+  {l:'Hackney',v:2},{l:'Shoreditch',v:2},{l:'Croydon',v:2},{l:'Walthamstow',v:1},{l:'Stratford',v:1},{l:'Islington',v:1},{l:'Camden',v:1},
+];
+// canonical tracked-people dataset (owner-only)
+const VISITORS=[
+  {n:'Grace Mensah',    email:'grace.m@email.com',  phone:'+44 7700 900333', city:'Shoreditch',   stage:'leader',   visits:142, last:'Yesterday', emails:2, risk:false, source:'Friend',    weeks:[1,1,1,1,1,1,1,1]},
+  {n:'Amara Okeke',     email:'amara@email.com',    phone:'+44 7700 900111', city:'Hackney',      stage:'member',   visits:64,  last:'8d ago',    emails:2, risk:false, source:'Google',    weeks:[1,1,1,1,1,1,0,1]},
+  {n:'James Adeyemi',   email:'james.a@email.com',  phone:'+44 7700 900444', city:'Croydon',      stage:'member',   visits:88,  last:'5d ago',    emails:2, risk:false, source:'Walk-in',   weeks:[1,1,1,1,1,1,1,1]},
+  {n:'Tomasz Kowalski', email:'tomasz@email.com',   phone:'+44 7700 900222', city:'Walthamstow',  stage:'engaged',  visits:21,  last:'15d ago',   emails:2, risk:false, source:'Instagram', weeks:[1,1,0,1,1,1,0,1]},
+  {n:'Priya Sharma',    email:'priya.s@email.com',  phone:'+44 7700 900555', city:'Stratford',    stage:'engaged',  visits:14,  last:'11d ago',   emails:1, risk:false, source:'Google',    weeks:[1,0,1,1,1,0,1,1]},
+  {n:'Marcus Bailey',   email:'marcus.b@email.com', phone:'+44 7700 900666', city:'Islington',    stage:'returning',visits:3,   last:'1w ago',    emails:1, risk:false, source:'Friend',    weeks:[0,0,1,0,1,0,1,1]},
+  {n:'Sofia Romano',    email:'sofia.r@email.com',  phone:'+44 7700 900777', city:'Camden',       stage:'returning',visits:4,   last:'9d ago',    emails:1, risk:false, source:'Invited',   weeks:[0,1,0,1,0,1,0,1]},
+  {n:'Aisha Bello',     email:'aisha.b@email.com',  phone:'+44 7700 900888', city:'Hackney',      stage:'returning',visits:5,   last:'4w ago',    emails:1, risk:true,  source:'Friend',    weeks:[1,0,1,0,1,0,0,0]},
+  {n:'Daniel Okafor',   email:'daniel.o@email.com', phone:'+44 7700 900999', city:'Shoreditch',   stage:'first',    visits:1,   last:'2d ago',    emails:1, risk:false, source:'Google',    weeks:[0,0,0,0,0,0,0,1]},
+  {n:'Michael Chen',    email:'michael.c@email.com',phone:'+44 7700 901000', city:'Croydon',      stage:'first',    visits:1,   last:'3w ago',    emails:0, risk:true,  source:'Walk-in',   weeks:[0,0,0,0,1,0,0,0]},
+  {n:'Elena Petrova',   email:'elena.p@email.com',  phone:'+44 7700 901111', city:'Hackney',      stage:'first',    visits:1,   last:'18d ago',   emails:1, risk:true,  source:'Event',     weeks:[0,0,0,1,0,0,0,0]},
+  {n:'Liam Walsh',      email:'liam.w@email.com',   phone:'+44 7700 901222', city:'Walthamstow',  stage:'discovery',visits:0,   last:'5d ago',    emails:0, risk:false, source:'Instagram', weeks:[0,0,0,0,0,0,0,0]},
+];
+const viewSeries=[28,31,26,35,40,38,52,47,44,58,55,49,62,68,60,57,71,66,74,80,72,69,84,88,79,92,86,95,102,98];
+
+// ════════ RENDER ════════
+const $=id=>document.getElementById(id);
+const statTile=s=>`<div class="stat"><div class="ic"><i class="ti ${s.ic}"></i></div><div class="val">${s.val}</div><div class="lbl">${s.lbl}</div><span class="trend ${s.up?'up':'down'}"><i class="ti ti-${s.up?'trending-up':'trending-down'}" style="font-size:13px"></i>${s.trend}</span></div>`;
+$('stat-tiles').innerHTML=overviewStats.map(statTile).join('');
+$('eng-tiles').innerHTML=engStats.map(statTile).join('');
+
+// completeness ring
+(function(){
+  const pct=78; // published but incomplete — matches the to-do list below
+  const circ=327, off=circ*(1-pct/100);
+  setTimeout(()=>{$('ring-fill').style.transition='stroke-dashoffset 1s cubic-bezier(.2,.7,.3,1)';$('ring-fill').setAttribute('stroke-dashoffset',off);},150);
+  let cur=0;const t=setInterval(()=>{cur+=2;if(cur>=pct){cur=pct;clearInterval(t);}$('ring-pct').textContent=cur+'%';},18);
+  $('todo-list').innerHTML=todos.map(td=>`
+    <div class="todo-item ${td.done?'done':'todo'}">
+      <div class="tick"><i class="ti ti-${td.done?'check':'plus'}"></i></div>
+      <div class="t">${td.t}${td.s?`<small>${td.s}</small>`:''}</div>
+      ${td.done?`<span class="gain"><i class="ti ti-check"></i></span>`:`<button class="add">Add ${td.gain}</button>`}
+    </div>`).join('');
+})();
+
+// line chart builder
+function lineChart(series,{w=440,h=150,fill=true,stroke='url(#lg)'}={}){
+  const max=Math.max(...series),min=Math.min(...series),pad=10;
+  const iw=w-pad*2,ih=h-pad*2-14;
+  const pts=series.map((v,i)=>[pad+iw*i/(series.length-1), pad+ih-(v-min)/(max-min)*ih]);
+  const d=pts.map((p,i)=>`${i?'L':'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+  const area=`${d} L${pad+iw} ${pad+ih} L${pad} ${pad+ih} Z`;
+  const last=pts[pts.length-1];
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" preserveAspectRatio="none" style="display:block">
+    <defs>
+      <linearGradient id="lg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f43f5e"/><stop offset="1" stop-color="#7c3aed"/></linearGradient>
+      <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(124,58,237,.18)"/><stop offset="1" stop-color="rgba(124,58,237,0)"/></linearGradient>
+    </defs>
+    ${fill?`<path d="${area}" fill="url(#ag)"/>`:''}
+    <path d="${d}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4" fill="#7c3aed" stroke="#fff" stroke-width="2"/>
+  </svg>
+  <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ek-gray-light);margin-top:4px"><span>30 days ago</span><span>Today</span></div>`;
+}
+$('views-chart').innerHTML=lineChart(viewSeries);
+$('eng-chart').innerHTML=lineChart(viewSeries);
+
+// sources bars
+function barList(arr,max){max=max||Math.max(...arr.map(a=>a.v));return arr.map(a=>`
+  <div class="bar-row"><div class="bl">${a.ic?`<i class="ti ${a.ic}" style="font-size:15px;color:var(--ek-purple)"></i>`:''}${a.l}</div>
+  <div class="bar-track"><div class="bar-fill" style="width:${a.v/max*100}%"></div></div>
+  <div class="bv">${a.suffix===false?a.v:a.v+(a.pct?'%':'')}</div></div>`).join('');}
+$('sources').innerHTML=sources.map(s=>({...s,pct:true})).map(s=>`
+  <div class="bar-row"><div class="bl"><i class="ti ${s.ic}" style="font-size:15px;color:var(--ek-purple)"></i>${s.l}</div>
+  <div class="bar-track"><div class="bar-fill" style="width:${s.v}%"></div></div><div class="bv">${s.v}%</div></div>`).join('');
+$('search-terms').innerHTML=barList(searchTerms);
+$('cities').innerHTML=barList(cities);
+
+// search terms / cities use counts not %
+function countBars(arr){const max=Math.max(...arr.map(a=>a.v));return arr.map(a=>`
+  <div class="bar-row"><div class="bl" style="width:auto;flex:1;font-weight:600">${a.l}</div>
+  <div class="bar-track" style="max-width:160px"><div class="bar-fill" style="width:${a.v/max*100}%"></div></div>
+  <div class="bv">${a.v}</div></div>`).join('');}
+$('search-terms').innerHTML=countBars(searchTerms);
+$('cities').innerHTML=countBars(cities);
+
+// visitor tables
+function vrow(v){return `<tr><td><div class="vname"><div class="vav" style="background:${avColor(v.n)}">${initials(v.n)}</div>${v.n}</div></td>
+  <td style="color:var(--ek-gray)">${v.d}</td>${v.svc?`<td style="color:var(--ek-gray)">${v.svc}</td>`:''}
+  <td><span class="pill ${v.status}">${v.status==='new'?'First visit':v.status==='ret'?'Returning':'Regular'}</span></td></tr>`;}
+$('recent-visitors').innerHTML=`<tr><th>Visitor</th><th>When</th><th>Status</th></tr>`+recentVisitors.map(vrow).join('');
+$('checkin-table').innerHTML=`<tr><th>Visitor</th><th>When</th><th>Service</th><th>Status</th></tr>`+checkins.map(vrow).join('');
+
+// follow-up toggles
+$('followup').innerHTML=followups.map(f=>`
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--ek-border);border-radius:13px">
+    <div class="mi" style="width:38px;height:38px;border-radius:10px;background:var(--ek-grad-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${f.ic}" style="font-size:18px;color:var(--ek-purple)"></i></div>
+    <div style="flex:1"><div style="font-size:13.5px;font-weight:700">${f.t}</div><div style="font-size:11.5px;color:var(--ek-gray)">${f.s}</div></div>
+    <div class="tog ${f.on?'on':''}" onclick="this.classList.toggle('on')" style="width:42px;height:24px;border-radius:20px;background:${f.on?'var(--ek-purple)':'#e5e7eb'};position:relative;cursor:pointer;transition:.2s;flex-shrink:0">
+      <div style="width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:3px;left:${f.on?'21px':'3px'};transition:.2s"></div></div>
+  </div>`).join('');
+
+// donut
+(function(){
+  const data=[{l:'New',v:62,c:'#f43f5e'},{l:'Returning',v:38,c:'#7c3aed'}];
+  const r=46,c=2*Math.PI*r;let off=0;
+  let circles='';
+  data.forEach(d=>{const len=c*d.v/100;circles+=`<circle cx="60" cy="60" r="${r}" fill="none" stroke="${d.c}" stroke-width="16" stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-off}" transform="rotate(-90 60 60)"/>`;off+=len;});
+  $('donut').innerHTML=`<svg width="120" height="120">${circles}<text x="60" y="56" text-anchor="middle" font-size="22" font-weight="800" fill="#0f0f1a">12</text><text x="60" y="72" text-anchor="middle" font-size="10" fill="#6b7280">tracked</text></svg>`;
+  $('donut-legend').innerHTML=data.map(d=>`<div class="li"><span class="dot" style="background:${d.c}"></span>${d.l}<span class="lv">${d.v}%</span></div>`).join('');
+})();
+
+// ═══ VISITOR INSIGHTS (6-stage model, owner-only) ═══
+const STAGES={
+  discovery:{label:'Discovery', c:'#0d9488'},
+  first:    {label:'First Visit',c:'#2563eb'},
+  returning:{label:'Returning', c:'#7c3aed'},
+  engaged:  {label:'Engaged',   c:'#d97706'},
+  member:   {label:'Member',    c:'#16a34a'},
+  leader:   {label:'Leader',    c:'#f43f5e'},
+};
+const STAGE_ORDER=['discovery','first','returning','engaged','member','leader'];
+const stageLabel=s=>(STAGES[s]||{label:s}).label;
+const stageColor=s=>(STAGES[s]||{c:'#6b7280'}).c;
+function stagePill(s){ const c=stageColor(s); return `<span class="pill" style="color:${c};background:${c}1a">${stageLabel(s)}</span>`; }
+
+// stat tiles
+const total=VISITORS.length, atRisk=VISITORS.filter(v=>v.risk).length;
+const returningRate=Math.round(VISITORS.filter(v=>v.visits>=2).length/total*100);
+const viTiles=[
+  {val:total,lbl:'Total visitors',sub:'across all stages',c:'#7c3aed'},
+  {val:3,lbl:'New this month',sub:'since 1 Jun',c:'#2563eb'},
+  {val:returningRate+'%',lbl:'Returning rate',sub:'came back 2+ times',c:'#16a34a'},
+  {val:atRisk,lbl:'At risk',sub:'35+ days quiet',c:'#f43f5e'},
+];
+$('vi-tiles').innerHTML=viTiles.map(t=>`
+  <div class="stat" style="border-left:3px solid ${t.c}">
+    <div class="val" style="color:${t.c}">${t.val}</div>
+    <div class="lbl" style="font-weight:700;color:var(--ek-ink)">${t.lbl}</div>
+    <div style="font-size:11.5px;color:${t.c};font-weight:600;margin-top:3px">${t.sub}</div>
+  </div>`).join('');
+$('vi-count').textContent=total;
+
+// AI insight callouts
+const aiInsights=[
+  {tone:'warn',ic:'ti-user-exclamation',tag:'Needs attention',t:`${atRisk} people have gone quiet`,s:'They were active but haven\'t been seen in 18–28 days. A warm hello often brings people back.',cta:'Message them'},
+  {tone:'good',ic:'ti-trending-up',tag:'Working well',t:`Returning rate is ${returningRate}%`,s:'Most first-timers are coming back — your welcome follow-ups are landing well.',cta:'View returning cohort'},
+  {tone:'info',ic:'ti-direction-sign',tag:'Pattern spotted',t:'Friends & Google drive most visits',s:'Word-of-mouth and search bring the most people. Encourage members to invite & share.',cta:'Get a shareable link'},
+];
+$('ai-insights').innerHTML=aiInsights.map(a=>`
+  <div class="ai-card ${a.tone}">
+    <div class="ai-top"><div class="ai-ic"><i class="ti ${a.ic}" style="font-size:16px"></i></div><span class="ai-tag">${a.tag}</span></div>
+    <div class="ai-t">${a.t}</div><div class="ai-s">${a.s}</div>
+    <span class="ai-cta">${a.cta} <i class="ti ti-arrow-right" style="font-size:14px"></i></span>
+  </div>`).join('');
+
+// journey funnel (counts per stage)
+const stageCounts={}; STAGE_ORDER.forEach(s=>stageCounts[s]=VISITORS.filter(v=>v.stage===s).length);
+const funnelMax=Math.max(...Object.values(stageCounts),1);
+$('funnel').innerHTML=STAGE_ORDER.map(s=>`
+  <div class="bar-row"><div class="bl" style="width:120px"><span class="dot" style="width:9px;height:9px;border-radius:50%;background:${stageColor(s)};display:inline-block;margin-right:2px"></span>${stageLabel(s)}</div>
+  <div class="bar-track"><div class="bar-fill" style="width:${stageCounts[s]/funnelMax*100}%;background:${stageColor(s)}"></div></div>
+  <div class="bv">${stageCounts[s]}</div></div>`).join('');
+
+// at-risk / lapsed flags
+const lcFlags=[
+  {k:'risk',ic:'ti-alert-triangle',v:atRisk,l:'At-risk',n:'Active before, quiet 18–35 days'},
+  {k:'lapsed',ic:'ti-user-off',v:0,l:'Lapsed',n:'No visit in 60+ days'},
+];
+$('lc-flags').innerHTML=lcFlags.map(f=>`
+  <div class="lc-flag ${f.k}"><div class="lf-ic"><i class="ti ${f.ic}" style="font-size:17px"></i></div>
+    <div style="flex:1"><div class="lf-l">${f.v} ${f.l}</div><div class="lf-n">${f.n}</div></div>
+    <button class="followup-btn">Follow up</button></div>`).join('');
+
+// how they found us
+const found=[
+  {l:'Friend',v:3},{l:'Google',v:3},{l:'Walk-in',v:2},{l:'Instagram',v:2},{l:'Invited',v:1},{l:'Event',v:1},
+];
+$('found').innerHTML=(function(){const max=Math.max(...found.map(a=>a.v));return found.map(a=>`
+  <div class="bar-row"><div class="bl" style="width:auto;flex:1;font-weight:600">${a.l}</div>
+  <div class="bar-track" style="max-width:200px"><div class="bar-fill" style="width:${a.v/max*100}%"></div></div>
+  <div class="bv">${a.v}</div></div>`).join('');})();
+
+// people to follow up (the at-risk ones)
+const followupPeople=VISITORS.filter(v=>v.risk);
+$('followup-table').innerHTML=`<tr><th>Person</th><th>Stage</th><th></th></tr>`+followupPeople.map(p=>`
+  <tr><td><div class="vname"><div class="vav" style="background:${avColor(p.n)}">${initials(p.n)}</div><div>${p.n}<div style="font-size:11px;color:var(--ek-gray);font-weight:500">Last seen · ${p.last}</div></div></div></td>
+  <td>${stagePill(p.stage)}</td>
+  <td style="text-align:right"><button class="followup-btn">Reach out</button></td></tr>`).join('');
+
+// 8-week attendance tracking (those with visits)
+const tracking=VISITORS.filter(v=>v.visits>0).slice(0,6);
+$('tracking-table').innerHTML=`<tr><th>Person</th><th>Stage</th><th>Visits</th><th>Last 8 weeks</th><th>Last seen</th></tr>`+
+  tracking.map(t=>`<tr>
+    <td><div class="vname"><div class="vav" style="background:${avColor(t.n)}">${initials(t.n)}</div>${t.n}</div></td>
+    <td>${stagePill(t.stage)}</td>
+    <td style="font-weight:700">${t.visits}</td>
+    <td><div class="attn">${t.weeks.map(w=>`<span class="${w?'on':''}"></span>`).join('')}</div></td>
+    <td style="color:var(--ek-gray)">${t.last}</td></tr>`).join('');
+
+// ── All visitors: full table + stage filters + CSV ──
+let vFilter='all';
+function renderAllVisitors(){
+  const rows=VISITORS.filter(v=> vFilter==='all' ? true : vFilter==='risk' ? v.risk : v.stage===vFilter);
+  $('all-visitors').innerHTML=
+    `<tr><th>Name</th><th>Contact</th><th>City</th><th>Stage</th><th>Visits</th><th>Last seen</th><th>Emails</th><th>Status</th></tr>`+
+    (rows.length?rows.map(v=>`
+      <tr>
+        <td><div class="vname"><div class="vav" style="background:${avColor(v.n)}">${initials(v.n)}</div>${v.n}</div></td>
+        <td><div style="font-size:12.5px">${v.email}</div><div style="font-size:11px;color:var(--ek-gray-light)">${v.phone}</div></td>
+        <td style="font-weight:600">${v.city}</td>
+        <td>${stagePill(v.stage)}</td>
+        <td style="font-weight:700">${v.visits}</td>
+        <td style="color:var(--ek-gray)">${v.last}</td>
+        <td><span style="display:inline-flex;gap:3px">${Array.from({length:Math.max(v.emails,1)}).map((_,i)=>`<span style="width:7px;height:7px;border-radius:50%;background:${i<v.emails?'#16a34a':'#e5e7eb'}"></span>`).join('')}</span></td>
+        <td>${v.risk?'<span class="pill risk">At risk</span>':'<span class="pill" style="color:#15803d;background:#f0fdf4">Active</span>'}</td>
+      </tr>`).join('')
+      :`<tr><td colspan="8" style="text-align:center;color:var(--ek-gray);padding:24px">No visitors in this stage yet.</td></tr>`);
+}
+function renderStageFilters(){
+  const counts={all:VISITORS.length, risk:atRisk};
+  STAGE_ORDER.forEach(s=>counts[s]=VISITORS.filter(v=>v.stage===s).length);
+  const pills=[['all','All'],...STAGE_ORDER.map(s=>[s,stageLabel(s)]),['risk','⚠ At risk']];
+  $('stage-filters').innerHTML=pills.map(([k,lbl])=>{
+    const on=vFilter===k;
+    return `<button onclick="setVFilter('${k}')" style="font-size:12px;font-weight:700;padding:7px 13px;border-radius:20px;cursor:pointer;border:1.5px solid ${on?'transparent':'var(--ek-border)'};background:${on?'var(--ek-ink)':'#fff'};color:${on?'#fff':'var(--ek-gray)'}">${lbl}${counts[k]!=null?` <span style="opacity:.6">${counts[k]}</span>`:''}</button>`;
+  }).join('');
+}
+function setVFilter(k){ vFilter=k; renderStageFilters(); renderAllVisitors(); }
+function exportVisitorsCSV(){
+  const head=['Name','Email','Phone','City','Stage','Visits','Last seen','Emails sent','Status'];
+  const rows=VISITORS.map(v=>[v.n,v.email,v.phone,v.city,stageLabel(v.stage),v.visits,v.last,v.emails,v.risk?'At risk':'Active']);
+  const csv=[head,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='ekklesia-visitors.csv'; a.click(); URL.revokeObjectURL(url);
+}
+renderStageFilters(); renderAllVisitors();
+
+// devices
+const devices=[{l:'Mobile',v:71,ic:'ti-device-mobile'},{l:'Desktop',v:23,ic:'ti-device-desktop'},{l:'Tablet',v:6,ic:'ti-device-tablet'}];
+$('devices').innerHTML=devices.map(d=>`
+  <div class="bar-row"><div class="bl"><i class="ti ${d.ic}" style="font-size:15px;color:var(--ek-purple)"></i>${d.l}</div>
+  <div class="bar-track"><div class="bar-fill" style="width:${d.v}%"></div></div><div class="bv">${d.v}%</div></div>`).join('');
+
+// peak-times heatmap (7 days x 4 buckets)
+const peakDays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const peakBuckets=['Morning','Midday','Evening','Night'];
+const peakData=[[2,2,3,1],[1,1,4,1],[2,2,5,2],[1,1,3,1],[2,3,4,2],[3,2,3,1],[10,7,4,2]]; // [day][bucket]
+(function(){
+  const max=10;
+  let html='<div class="heat"><div></div>'+peakDays.map(d=>`<div class="hd">${d}</div>`).join('');
+  peakBuckets.forEach((b,bi)=>{
+    html+=`<div class="hl">${b}</div>`;
+    peakDays.forEach((d,di)=>{
+      const v=peakData[di][bi], op=0.12+0.88*(v/max);
+      html+=`<div class="cell" style="background:rgba(124,58,237,${op.toFixed(2)})" title="${d} ${b}: ${v}"></div>`;
+    });
+  });
+  html+='</div>';
+  $('peaktimes').innerHTML=html;
+})();
+
+// ═══ ORGANISATION: BRANCHES ═══
+let BRANCHES=[
+  {name:'Ilford (HQ)', sub:'Ilford branch · United Kingdom · Pentecostal', addr:'322 High Road, Ilford, IG1 1QP', pastor:'Pastor David Mensah', members:420, visitors:12, weekly:380, status:'Published', hq:true},
+  {name:'Croydon',     sub:'Croydon branch · United Kingdom · Pentecostal', addr:'7 High Street, Croydon, CR0 1QF', pastor:'Pastor Grace Okafor', members:180, visitors:7, weekly:165, status:'Published'},
+  {name:'Stratford',   sub:'Stratford branch · United Kingdom · Pentecostal', addr:'12 The Grove, Stratford, E15 1NS', pastor:'Pastor Samuel Adeyemi', members:95, visitors:4, weekly:0, status:'Draft'},
+];
+let currentBranch=0;
+const brInit=n=>n.replace(/\(.*\)/,'').trim().split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+
+function renderBranchMenu(){
+  $('branch-options').innerHTML=BRANCHES.map((b,i)=>`
+    <div class="branch-opt ${i===currentBranch?'active':''}" onclick="switchBranch(${i})">
+      <div class="bo-mark">${brInit(b.name)}</div>
+      <div style="flex:1"><div class="bo-n">${b.name}</div><div class="bo-s">${b.addr.split(',').slice(-2).join(',').trim()} · ${b.status}</div></div>
+      ${i===currentBranch?'<i class="ti ti-check bo-tick"></i>':''}
+    </div>`).join('');
+}
+function switchBranch(i){
+  currentBranch=i; const b=BRANCHES[i];
+  $('tb-branch').textContent='Grace Chapel International';
+  $('tb-sub').textContent=b.sub;
+  document.getElementById('branch-menu').classList.remove('open');
+  renderBranchMenu();
+}
+function renderBranches(){
+  const totMembers=BRANCHES.reduce((s,b)=>s+b.members,0);
+  const totVisitors=BRANCHES.reduce((s,b)=>s+b.visitors,0);
+  const published=BRANCHES.filter(b=>b.status==='Published').length;
+  const tiles=[
+    {val:BRANCHES.length,lbl:'Branches',sub:'under one account',c:'#7c3aed'},
+    {val:totMembers,lbl:'Members',sub:'across all branches',c:'#2563eb'},
+    {val:totVisitors,lbl:'Tracked visitors',sub:'this month',c:'#16a34a'},
+    {val:published+'/'+BRANCHES.length,lbl:'Published',sub:Math.max(0,BRANCHES.length-published)+' in draft',c:'#d97706'},
+  ];
+  $('br-tiles').innerHTML=tiles.map(t=>`
+    <div class="stat" style="border-left:3px solid ${t.c}">
+      <div class="val" style="color:${t.c}">${t.val}</div>
+      <div class="lbl" style="font-weight:700;color:var(--ek-ink)">${t.lbl}</div>
+      <div style="font-size:11.5px;color:${t.c};font-weight:600;margin-top:3px">${t.sub}</div>
+    </div>`).join('');
+  $('br-count').textContent=BRANCHES.length;
+  $('branch-grid').innerHTML=BRANCHES.map((b,i)=>`
+    <div class="branch-card">
+      <div class="bc-top">
+        <div class="bc-mark">${brInit(b.name)}</div>
+        <div style="flex:1">
+          <div class="bc-n">${b.name} ${b.hq?'<span class="hq-badge">HQ</span>':''}</div>
+          <div class="bc-a"><i class="ti ti-map-pin" style="font-size:12px"></i> ${b.addr}</div>
+        </div>
+        ${b.status==='Published'?'<span class="badge-status badge-pub"><i class="ti ti-circle-filled" style="font-size:8px"></i> Published</span>':'<span class="badge-status badge-unv"><i class="ti ti-pencil"></i> Draft</span>'}
+      </div>
+      <div class="bc-stats">
+        <div class="bc-stat"><div class="v">${b.members}</div><div class="l">Members</div></div>
+        <div class="bc-stat"><div class="v">${b.visitors}</div><div class="l">Visitors</div></div>
+        <div class="bc-stat"><div class="v">${b.weekly||'—'}</div><div class="l">Weekly avg</div></div>
+      </div>
+      <div style="font-size:12.5px;color:var(--ek-gray);margin-bottom:13px"><i class="ti ti-user-star" style="font-size:13px;color:var(--ek-purple)"></i> Led by <b style="color:var(--ek-ink)">${b.pastor}</b></div>
+      <div class="bc-foot">
+        <button onclick="switchBranch(${i});go('overview')" class="btn btn-primary" style="flex:1;justify-content:center">Manage branch</button>
+        <button class="btn btn-ghost"><i class="ti ti-external-link"></i></button>
+      </div>
+    </div>`).join('')+`
+    <div class="branch-add-card" onclick="alert('Demo: this would start the Add Your Church flow for a new branch under this account.')">
+      <i class="ti ti-plus" style="font-size:28px"></i><div>Add a branch</div>
+      <div style="font-size:11.5px;color:var(--ek-gray);font-weight:500;max-width:180px;text-align:center">A new location under Grace Chapel International</div>
+    </div>`;
+}
+
+// ═══ PASTOR & TEAMS ═══
+let LEADERS=[
+  {name:'Pastor David Mensah', role:'Senior Pastor', bio:'Founded Grace Chapel in 2009 with a heart for community, discipleship and reaching the city.', photo:'', lead:true},
+  {name:'Grace Okafor', role:'Associate Pastor', bio:'Oversees pastoral care and leads the Croydon branch.', photo:''},
+  {name:'Ruth Bello', role:'Worship Pastor', bio:'Directs praise & worship across all services and branches.', photo:''},
+  {name:'Samuel Adeyemi', role:'Youth Pastor', bio:'Leads youth and young-adults ministry.', photo:''},
+];
+function avatarStyle(photo,grad){ return photo?`background-image:url(${photo});background-size:cover;background-position:center`:(grad||'background:var(--ek-grad)'); }
+function renderTeam(){
+  const li=LEADERS.findIndex(l=>l.lead); const lead=LEADERS[li>=0?li:0]; const leadIdx=li>=0?li:0;
+  $('lead-hero').innerHTML=`
+    <div class="lead-hero">
+      <div class="lh-av" style="${avatarStyle(lead.photo)}">${lead.photo?'':initials(lead.name.replace('Pastor ',''))}</div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap"><div style="font-size:18px;font-weight:800">${lead.name}</div><span style="font-size:11px;font-weight:700;color:#fff;background:var(--ek-grad);padding:3px 10px;border-radius:20px">${lead.role}</span></div>
+        <div style="font-size:13px;color:var(--ek-gray);margin-top:6px;line-height:1.6">${lead.bio}</div>
+      </div>
+      <button class="btn btn-ghost" onclick="editLeader(${leadIdx})"><i class="ti ti-pencil"></i> Edit</button>
+    </div>`;
+  $('lead-grid').innerHTML=LEADERS.map((l,i)=>({l,i})).filter(x=>!x.l.lead).map(({l,i})=>`
+    <div class="lead-card" style="cursor:pointer" onclick="editLeader(${i})">
+      <div class="lc-av" style="${avatarStyle(l.photo, 'background:'+avColor(l.name))}">${l.photo?'':initials(l.name)}</div>
+      <div style="font-size:14px;font-weight:800">${l.name}</div>
+      <div style="font-size:11.5px;font-weight:700;color:var(--ek-purple-dark);margin:3px 0 7px">${l.role}</div>
+      <div style="font-size:11.5px;color:var(--ek-gray);line-height:1.5">${l.bio}</div>
+    </div>`).join('');
+}
+let TEAMS=[
+  {name:'Praise & Worship', ic:'ti-microphone-2', lead:'Ruth Bello', members:18, open:true},
+  {name:'Media & Production', ic:'ti-video', lead:'Daniel Kim', members:9, open:true},
+  {name:'Sound & Tech', ic:'ti-device-speaker', lead:'Marcus Bailey', members:6, open:true},
+  {name:'Hospitality & Welcome', ic:'ti-coffee', lead:'Aisha Bello', members:14, open:true},
+  {name:'Kids / Sunday School', ic:'ti-mood-kid', lead:'Sofia Romano', members:12, open:true},
+  {name:'Ushering', ic:'ti-hand-stop', lead:'James Adeyemi', members:11, open:false},
+  {name:'Prayer', ic:'ti-heart', lead:'Grace Okafor', members:22, open:false},
+  {name:'Outreach & Missions', ic:'ti-heart-handshake', lead:'Tomasz Kowalski', members:8, open:true},
+];
+function renderTeams(){
+  $('team-grid').innerHTML=TEAMS.map(t=>`
+    <div class="team-card">
+      <div class="tc-ic"><i class="ti ${t.ic}"></i></div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:800">${t.name}</div>
+        <div style="font-size:11.5px;color:var(--ek-gray);margin-top:2px">Led by ${t.lead} · ${t.members} members</div>
+      </div>
+      ${t.open?'<span class="join-badge">Open to join</span>':'<span class="closed-badge">Invite only</span>'}
+    </div>`).join('');
+}
+renderBranchMenu(); renderBranches(); renderTeam(); renderTeams();
+document.addEventListener('click',()=>document.getElementById('branch-menu').classList.remove('open'));
+
+// ═══ PUBLIC LISTING (reads the same live data — reflects owner edits) ═══
+function openPublic(){ renderPublicListing(); go('public'); }
+function pubChips(arr,accent){ return `<div style="display:flex;flex-wrap:wrap;gap:7px">${arr.map(x=>`<span style="font-size:12.5px;font-weight:600;color:${accent||'var(--ek-purple-dark)'};background:#f5f3ff;border:1px solid #ede9fe;padding:6px 12px;border-radius:20px">${x}</span>`).join('')}</div>`; }
+function pubSection(icon,title,inner){ return `<div class="card card-pad" style="margin-bottom:18px"><div class="card-h"><i class="ti ${icon}"></i><div class="card-title">${title}</div></div><div style="margin-top:14px">${inner}</div></div>`; }
+function renderPublicListing(){
+  const L=LISTING, lead=LEADERS.find(l=>l.lead)||LEADERS[0];
+  const header=`
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:18px">
+      <div style="height:170px;background:var(--ek-grad);position:relative"></div>
+      <div style="padding:0 24px 22px">
+        <div style="display:flex;align-items:flex-end;gap:16px;margin-top:-36px">
+          <div style="width:84px;height:84px;border-radius:20px;background:var(--ek-grad);border:4px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px;font-weight:800;flex-shrink:0">${initials(L.name)}</div>
+          <div style="flex:1;padding-bottom:4px">
+            <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap"><div style="font-size:22px;font-weight:800;letter-spacing:-.02em">${L.name}</div><span style="font-size:11px;font-weight:700;color:var(--ek-purple-dark);background:#f5f3ff;padding:3px 10px;border-radius:20px">${L.denom}</span></div>
+            <div style="font-size:13px;color:var(--ek-gray);margin-top:5px"><i class="ti ti-map-pin" style="font-size:13px"></i> ${L.address}</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  const svc=L.services.length?L.services.map(s=>`<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--ek-border)"><b style="min-width:96px">${s.day}</b><span style="flex:1">${s.name}</span><span style="color:var(--ek-gray)">${[s.from,s.to].filter(Boolean).join(' – ')}</span><span style="font-size:10px;font-weight:700;color:var(--ek-purple-dark);background:#f5f3ff;padding:2px 8px;border-radius:20px">${s.format}</span></div>`).join(''):'<div style="color:var(--ek-gray);font-size:13px">No services listed.</div>';
+  const others=LEADERS.filter(l=>!l.lead);
+  const leadership=`
+    <div style="display:flex;gap:15px;align-items:center;margin-bottom:${others.length?'16px':'0'}">
+      <div style="width:64px;height:64px;border-radius:16px;${avatarStyle(lead.photo)};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:20px;flex-shrink:0">${lead.photo?'':initials(lead.name.replace('Pastor ',''))}</div>
+      <div><div style="font-size:15px;font-weight:800">${lead.name}</div><div style="font-size:12.5px;font-weight:700;color:var(--ek-purple-dark)">${lead.role}</div><div style="font-size:12.5px;color:var(--ek-gray);margin-top:4px;line-height:1.5">${lead.bio}</div></div>
+    </div>
+    ${others.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">${others.map(l=>`<div style="text-align:center;border:1px solid var(--ek-border);border-radius:13px;padding:13px"><div style="width:46px;height:46px;border-radius:12px;${avatarStyle(l.photo,'background:'+avColor(l.name))};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;margin:0 auto 8px">${l.photo?'':initials(l.name)}</div><div style="font-size:13px;font-weight:700">${l.name}</div><div style="font-size:11px;color:var(--ek-purple-dark);font-weight:600">${l.role}</div></div>`).join('')}</div>`:''}`;
+  const teams=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">${TEAMS.map(t=>`<div style="display:flex;align-items:center;gap:11px;border:1px solid var(--ek-border);border-radius:13px;padding:13px"><div style="width:40px;height:40px;border-radius:11px;background:var(--ek-grad-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${t.ic}" style="font-size:19px;color:var(--ek-purple)"></i></div><div style="flex:1"><div style="font-size:13px;font-weight:700">${t.name}</div>${t.open?'<div style="font-size:11px;color:#15803d;font-weight:600">Open to join</div>':'<div style="font-size:11px;color:var(--ek-gray)">Serving team</div>'}</div></div>`).join('')}</div>`;
+  const ct=[]; if(L.email)ct.push(`<i class="ti ti-mail" style="color:var(--ek-purple)"></i> ${L.email}`); if(L.phone)ct.push(`<i class="ti ti-phone" style="color:var(--ek-purple)"></i> ${L.phone}`); if(L.website)ct.push(`<i class="ti ti-world" style="color:var(--ek-purple)"></i> ${L.website}`); if(L.facebook)ct.push(`<i class="ti ti-brand-facebook" style="color:var(--ek-purple)"></i> Facebook`); if(L.instagram)ct.push(`<i class="ti ti-brand-instagram" style="color:var(--ek-purple)"></i> Instagram`); if(L.youtube)ct.push(`<i class="ti ti-brand-youtube" style="color:var(--ek-purple)"></i> YouTube`);
+  const contact=`<div style="display:flex;flex-direction:column;gap:9px;font-size:13px">${ct.map(c=>`<div style="display:flex;align-items:center;gap:9px">${c}</div>`).join('')}</div>`;
+  $('public-body').innerHTML = header
+    + pubSection('ti-info-circle','About', `<div style="font-size:13.5px;line-height:1.7;color:var(--ek-ink)">${L.about}</div>`)
+    + pubSection('ti-clock','Service times', svc)
+    + pubSection('ti-user-star','Leadership', leadership)
+    + pubSection('ti-users-group','Teams & ministries you can join', teams)
+    + pubSection('ti-heart-handshake','Ministries & outreach', pubChips(L.ministryList))
+    + pubSection('ti-accessible','Facilities', pubChips(L.facilityList,'#15803d'))
+    + pubSection('ti-language','Languages', pubChips(L.languages))
+    + pubSection('ti-address-book','Contact', contact);
+}
+
+// ═══ MY LISTING — editable via slide-over drawer ═══
+let LISTING={
+  name:'Grace Chapel International',
+  denom:'Pentecostal',
+  about:'Grace Chapel International is a warm, welcoming Pentecostal community in Ilford. Whether you\'re exploring faith for the first time or looking for a church to call home, you\'ll find genuine community and a place to belong.',
+  email:'hello@gracechapel.org', phone:'+44 20 8554 1000', website:'gracechapel.org',
+  facebook:'facebook.com/gracechapelilford', instagram:'instagram.com/gracechapel', youtube:'youtube.com/@gracechapel',
+  services:[
+    {day:'Sunday', name:'Main Service', from:'10:30 AM', to:'12:30 PM', format:'In-Person'},
+    {day:'Wednesday', name:'Midweek Bible Study', from:'7:00 PM', to:'8:30 PM', format:'Hybrid'},
+  ],
+  ministries:6, facilities:7, languages:['English','Spanish','Telugu'],
+  ministryList:['Youth Ministry','Children\'s Church','Food Bank','Women\'s Ministry','Men\'s Ministry','Prayer Ministry'],
+  facilityList:['Wheelchair access','Hearing loop','Free parking','Baby changing','Café','Kids area','Livestream'],
+  address:'322 High Road, Ilford, IG1 1QP',
+};
+function svcSummary(){ return LISTING.services.map(s=>`${s.day} ${s.from}`).join(' · ')||'No services yet'; }
+const LISTING_CARDS=[
+  {k:'profile', ic:'ti-id-badge-2',    t:'Profile & about',    s:()=>`${LISTING.name} · ${LISTING.denom}`, edit:true},
+  {k:'address', ic:'ti-map-pin',       t:'Address & map',      s:()=>LISTING.address, edit:false},
+  {k:'service', ic:'ti-clock-hour-4',  t:'Service times',      s:()=>svcSummary(), edit:true},
+  {k:'contact', ic:'ti-address-book',  t:'Contact & socials',  s:()=>`${LISTING.email} · ${LISTING.phone}`, edit:true},
+  {k:'minfac',  ic:'ti-heart-handshake',t:'Ministries & facilities', s:()=>`${LISTING.ministries} ministries · ${LISTING.facilities} facilities`, edit:false},
+  {k:'lang',    ic:'ti-language',      t:'Languages',          s:()=>LISTING.languages.join(', '), edit:false},
+];
+function renderListingCards(){
+  $('listing-cards').innerHTML=LISTING_CARDS.map(c=>`
+    <a href="#" onclick="${c.edit?`openDrawer('${c.k}')`:`alert('Demo: the ${c.t} editor opens here next.')`};return false">
+      <div class="mi"><i class="ti ${c.ic}"></i></div>
+      <div><div class="mt">${c.t}</div><div class="ms">${c.s()}</div></div>
+      <i class="ti ti-chevron-right arr"></i></a>`).join('');
+}
+renderListingCards();
+
+// ── drawer engine ──
+let drawerSave=null, draftServices=[], drawerToast='Saved';
+function openDrawerRaw(){
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-scrim').classList.add('open');
+}
+function openDrawer(section){
+  const head={profile:['ti-id-badge-2','Profile & about','Name, denomination & description'],
+              service:['ti-clock-hour-4','Service times','Add, edit or remove your services'],
+              contact:['ti-address-book','Contact & socials','How visitors reach you']}[section];
+  $('drawer-icon').className='ti '+head[0];
+  $('drawer-title').textContent=head[1];
+  $('drawer-sub').textContent=head[2];
+  drawerToast='Listing updated — changes are live';
+  if(section==='profile') buildProfileEditor();
+  if(section==='service') buildServiceEditor();
+  if(section==='contact') buildContactEditor();
+  openDrawerRaw();
+}
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-scrim').classList.remove('open');
+}
+$('drawer-save').onclick=()=>{ if(drawerSave)drawerSave(); renderListingCards(); closeDrawer(); toast(drawerToast); };
+
+function toast(msg){
+  let t=document.getElementById('toast');
+  if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ek-ink);color:#fff;font-size:13px;font-weight:600;padding:12px 20px;border-radius:12px;z-index:60;opacity:0;transition:.3s;box-shadow:var(--shadow);display:flex;align-items:center;gap:8px';document.body.appendChild(t);}
+  t.innerHTML=`<i class="ti ti-circle-check" style="font-size:16px;color:#4ade80"></i> ${msg}`;
+  requestAnimationFrame(()=>{t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';});
+  clearTimeout(t._h);t._h=setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(20px)';},2600);
+}
+
+// Profile editor
+function buildProfileEditor(){
+  const denoms=['Pentecostal','Baptist','Catholic','Anglican','Methodist','Non-Denominational','Orthodox','Other'];
+  $('drawer-body').innerHTML=`
+    <div class="df-field"><label>Church name</label><input id="ed-name" value="${LISTING.name.replace(/"/g,'&quot;')}"></div>
+    <div class="df-field"><label>Denomination</label><select id="ed-denom">${denoms.map(d=>`<option ${d===LISTING.denom?'selected':''}>${d}</option>`).join('')}</select></div>
+    <div class="df-field"><label>About your church</label><textarea id="ed-about" rows="6">${LISTING.about}</textarea><div style="font-size:11px;color:var(--ek-gray);margin-top:6px">This is the first thing visitors read. Keep it warm and welcoming.</div></div>`;
+  drawerSave=()=>{ LISTING.name=$('ed-name').value.trim()||LISTING.name; LISTING.denom=$('ed-denom').value; LISTING.about=$('ed-about').value.trim();
+    EkklesiaAPI.updateChurch(currentChurchId,{name:LISTING.name,denomination:LISTING.denom,about:LISTING.about}).catch(e=>console.warn('save failed',e)); };
+}
+
+// Contact editor
+function buildContactEditor(){
+  const f=(id,label,val,ph)=>`<div class="df-field"><label>${label}</label><input id="${id}" value="${(val||'').replace(/"/g,'&quot;')}" placeholder="${ph||''}"></div>`;
+  $('drawer-body').innerHTML=
+    f('ed-email','Email',LISTING.email,'hello@yourchurch.org')+
+    f('ed-phone','Phone / WhatsApp',LISTING.phone,'+44 …')+
+    f('ed-website','Website',LISTING.website,'yourchurch.org')+
+    `<div style="height:1px;background:var(--ek-border);margin:6px 0 18px"></div>`+
+    f('ed-fb','Facebook',LISTING.facebook,'facebook.com/yourchurch')+
+    f('ed-ig','Instagram',LISTING.instagram,'instagram.com/yourchurch')+
+    f('ed-yt','YouTube',LISTING.youtube,'youtube.com/@yourchurch');
+  drawerSave=()=>{ LISTING.email=$('ed-email').value.trim(); LISTING.phone=$('ed-phone').value.trim(); LISTING.website=$('ed-website').value.trim(); LISTING.facebook=$('ed-fb').value.trim(); LISTING.instagram=$('ed-ig').value.trim(); LISTING.youtube=$('ed-yt').value.trim();
+    EkklesiaAPI.updateChurch(currentChurchId,{email:LISTING.email,phone:LISTING.phone,website:LISTING.website,facebook:LISTING.facebook,instagram:LISTING.instagram,youtube:LISTING.youtube}).catch(e=>console.warn('save failed',e)); };
+}
+
+// ── Pastor / leader editor (with photo) ──
+let editLeaderIdx=-1, leaderPhoto='';
+function editLeader(i){
+  editLeaderIdx=i;
+  const l = i>=0 ? LEADERS[i] : {name:'',role:'',bio:'',photo:'',lead:false};
+  leaderPhoto = l.photo||'';
+  const isLead = i>=0 && l.lead;
+  $('drawer-icon').className='ti ti-user-star';
+  $('drawer-title').textContent = i>=0 ? (isLead?'Edit lead pastor':'Edit leader') : 'Add a leader';
+  $('drawer-sub').textContent='Shown on your public listing';
+  drawerToast = i>=0 ? 'Leader updated' : 'Leader added';
+  $('drawer-body').innerHTML=`
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:22px">
+      <div id="leader-avatar" style="width:96px;height:96px;border-radius:24px;${avatarStyle(leaderPhoto)};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:30px">${leaderPhoto?'':'<i class="ti ti-user"></i>'}</div>
+      <div style="display:flex;gap:8px">
+        <label for="leader-photo-input" class="btn btn-ghost" style="cursor:pointer"><i class="ti ti-camera"></i> ${leaderPhoto?'Change photo':'Upload photo'}</label>
+        ${leaderPhoto?'<button class="btn btn-ghost" onclick="leaderPhotoClear()"><i class="ti ti-trash"></i></button>':''}
+      </div>
+      <input id="leader-photo-input" type="file" accept="image/*" style="display:none" onchange="leaderPhotoPick(this)">
+    </div>
+    <div class="df-field"><label>Full name</label><input id="ld-name" value="${(l.name||'').replace(/"/g,'&quot;')}" placeholder="e.g. Pastor David Mensah" oninput="leaderAvatarText()"></div>
+    <div class="df-field"><label>Role / title</label><input id="ld-role" value="${(l.role||'').replace(/"/g,'&quot;')}" placeholder="e.g. Senior Pastor"></div>
+    <div class="df-field"><label>Short bio</label><textarea id="ld-bio" rows="5" placeholder="A sentence or two about them — visitors love a warm, personal intro.">${l.bio||''}</textarea></div>
+    ${(i>=0 && !isLead)?`<button onclick="leaderRemove(${i})" style="width:100%;font-size:13px;font-weight:700;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;padding:11px;border-radius:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px"><i class="ti ti-trash"></i> Remove this leader</button>`:''}`;
+  drawerSave=()=>{
+    const name=$('ld-name').value.trim(); if(!name){ $('ld-name').focus(); return; }
+    const obj={ name, role:$('ld-role').value.trim()||'Leader', bio:$('ld-bio').value.trim(), photo:leaderPhoto, lead: i>=0?LEADERS[i].lead:false };
+    if(i>=0) LEADERS[i]=obj; else LEADERS.push(obj);
+    EkklesiaAPI.upsertLeader(currentChurchId,{id:obj.id,name:obj.name,role:obj.role,bio:obj.bio,photo_url:obj.photo,is_lead:obj.lead}).catch(e=>console.warn('save failed',e));
+    renderTeam();
+  };
+  openDrawerRaw();
+}
+function leaderPhotoPick(input){ const f=input.files&&input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{ leaderPhoto=e.target.result; refreshLeaderAvatar(); }; r.readAsDataURL(f); }
+function leaderPhotoClear(){ leaderPhoto=''; refreshLeaderAvatar(); }
+function refreshLeaderAvatar(){ editLeaderReopenPreserve(); }
+function editLeaderReopenPreserve(){
+  // re-render just the avatar + photo buttons without losing typed fields
+  const a=document.getElementById('leader-avatar'); if(!a)return;
+  if(leaderPhoto){ a.style.backgroundImage=`url(${leaderPhoto})`; a.style.backgroundSize='cover'; a.style.backgroundPosition='center'; a.innerHTML=''; }
+  else { a.style.backgroundImage=''; leaderAvatarText(); }
+  const lbl=document.querySelector('label[for="leader-photo-input"]'); if(lbl) lbl.innerHTML=`<i class="ti ti-camera"></i> ${leaderPhoto?'Change photo':'Upload photo'}`;
+}
+function leaderAvatarText(){ const a=document.getElementById('leader-avatar'); if(a&&!leaderPhoto){ const n=($('ld-name')||{}).value||''; a.innerHTML = n.trim()?initials(n.replace('Pastor ','')):'<i class=\'ti ti-user\'></i>'; } }
+function leaderRemove(i){ const l=LEADERS[i]; if(l&&l.id)EkklesiaAPI.deleteLeader(l.id).catch(e=>console.warn(e)); LEADERS.splice(i,1); renderTeam(); closeDrawer(); toast('Leader removed'); }
+
+// Service-times editor (full add/edit/remove)
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const FORMATS=['In-Person','Online','Hybrid'];
+function buildServiceEditor(){
+  draftServices=LISTING.services.map(s=>({...s}));
+  renderSvcRows();
+  drawerSave=()=>{ LISTING.services=draftServices.filter(s=>s.name&&s.day).map(s=>({...s}));
+    EkklesiaAPI.replaceServices(currentChurchId,LISTING.services).catch(e=>console.warn('save failed',e)); };
+}
+function renderSvcRows(){
+  $('drawer-body').innerHTML=draftServices.map((s,i)=>`
+    <div class="svc-edit">
+      <div class="se-rm" onclick="svcRemove(${i})"><i class="ti ti-trash"></i></div>
+      <div class="df-field" style="margin-bottom:10px"><label>Service name</label><input value="${(s.name||'').replace(/"/g,'&quot;')}" oninput="svcSet(${i},'name',this.value)" placeholder="e.g. Main Service"></div>
+      <div class="se-grid">
+        <div class="df-field" style="margin:0"><label>Day</label><select onchange="svcSet(${i},'day',this.value)">${DAYS.map(d=>`<option ${d===s.day?'selected':''}>${d}</option>`).join('')}</select></div>
+        <div class="df-field" style="margin:0"><label>Format</label><select onchange="svcSet(${i},'format',this.value)">${FORMATS.map(f=>`<option ${f===s.format?'selected':''}>${f}</option>`).join('')}</select></div>
+        <div class="df-field" style="margin:10px 0 0"><label>From</label><input value="${s.from||''}" oninput="svcSet(${i},'from',this.value)" placeholder="10:30 AM"></div>
+        <div class="df-field" style="margin:10px 0 0"><label>To</label><input value="${s.to||''}" oninput="svcSet(${i},'to',this.value)" placeholder="12:30 PM"></div>
+      </div>
+    </div>`).join('')+
+    `<button class="add-svc" onclick="svcAdd()"><i class="ti ti-plus"></i> Add another service</button>`;
+}
+function svcSet(i,k,v){ draftServices[i][k]=v; }
+function svcRemove(i){ draftServices.splice(i,1); renderSvcRows(); }
+function svcAdd(){ draftServices.push({day:'Sunday',name:'',from:'',to:'',format:'In-Person'}); renderSvcRows(); }
+
+// nav
+function go(view){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===view));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+view));
+  document.getElementById('sidebar').classList.remove('open');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>go(n.dataset.view)));
+
+// photo slots (listing)
+$('photo-slots').innerHTML=`
+  <div style="border:1.5px dashed var(--ek-border);border-radius:14px;height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ek-gray-light);cursor:pointer"><i class="ti ti-cloud-upload" style="font-size:24px"></i><span style="font-size:12px;margin-top:5px">Add cover photo</span></div>
+  <div style="border:1.5px dashed var(--ek-border);border-radius:14px;height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ek-gray-light);cursor:pointer"><i class="ti ti-cloud-upload" style="font-size:24px"></i><span style="font-size:12px;margin-top:5px">Add logo</span></div>
+  <div style="border:1.5px dashed var(--ek-border);border-radius:14px;height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ek-gray-light);cursor:pointer"><i class="ti ti-plus" style="font-size:24px"></i><span style="font-size:12px;margin-top:5px">Add gallery photos</span></div>`;
+
+// ═══ LOAD LIVE DATA (only when Supabase is configured) ═══
+async function bootData(){
+  if(!BACKEND) return;  // demo data stays as-is
+  try{
+    const org = await EkklesiaAPI.myOrg(); if(!org) return;
+    const branches = await EkklesiaAPI.branches(org.id) || [];
+    if(branches.length){
+      BRANCHES = branches.map(b=>({
+        id:b.id, name:b.is_hq?`${b.name} (HQ)`:b.name,
+        sub:`${b.city||''} branch · ${b.country||''} · ${b.denomination||''}`,
+        addr:[b.address_line,b.city,b.postcode].filter(Boolean).join(', '),
+        pastor:'—', members:0, visitors:0, weekly:0,
+        status:b.status==='published'?'Published':'Draft', hq:b.is_hq,
+      }));
+      const hq = branches.find(b=>b.is_hq) || branches[0];
+      currentChurchId = hq.id;
+      const full = await EkklesiaAPI.listing(hq.id);
+      if(full){
+        LISTING.name=full.name; LISTING.denom=full.denomination||''; LISTING.about=full.about||'';
+        LISTING.email=full.email||''; LISTING.phone=full.phone||''; LISTING.website=full.website||'';
+        LISTING.facebook=full.facebook||''; LISTING.instagram=full.instagram||''; LISTING.youtube=full.youtube||'';
+        LISTING.address=[full.address_line,full.city,full.postcode,full.country].filter(Boolean).join(', ');
+        LISTING.ministryList=full.ministries||[]; LISTING.facilityList=full.facilities||[]; LISTING.languages=full.languages||[];
+        LISTING.ministries=(full.ministries||[]).length; LISTING.facilities=(full.facilities||[]).length;
+        LISTING.services=(full.church_services||[]).sort((a,b)=>a.display_order-b.display_order)
+          .map(s=>({day:s.day,name:s.name,from:s.start_time||'',to:s.end_time||'',format:s.format||'In-Person'}));
+        LEADERS=(full.leaders||[]).sort((a,b)=>(b.is_lead-a.is_lead)||a.display_order-b.display_order)
+          .map(l=>({id:l.id,name:l.name,role:l.role||'',bio:l.bio||'',photo:l.photo_url||'',lead:l.is_lead}));
+        TEAMS=(full.teams||[]).sort((a,b)=>a.display_order-b.display_order)
+          .map(t=>({id:t.id,name:t.name,ic:t.icon||'ti-users',lead:t.lead_name||'',members:t.member_count||0,open:t.open_to_join}));
+      }
+    }
+    // re-render everything with live data
+    renderListingCards(); renderTeam(); renderTeams(); renderBranches(); renderBranchMenu();
+    const b=BRANCHES[currentBranch]; if(b){ $('tb-branch').textContent='Grace Chapel International'; }
+    toast('Connected to your live data');
+  }catch(e){ console.warn('bootData failed — staying on demo data', e); }
+}
+bootData();
+</script>
+</body>
+</html>

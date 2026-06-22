@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grace Chapel International — Ekklesia</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.30.0/tabler-icons.min.css" rel="stylesheet">
+<style>
+:root{--grad:linear-gradient(135deg,#f43f5e,#7c3aed);--grad-soft:linear-gradient(135deg,rgba(244,63,94,.1),rgba(124,58,237,.1));--purple:#7c3aed;--purple-d:#6d28d9;--coral:#f43f5e;--ink:#0f0f1a;--gray:#6b7280;--gray-l:#9ca3af;--border:#e9e9ef;--surface:#f5f3ff;--bg:#f7f7fb}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:none;background:none}a{color:inherit;text-decoration:none}
+.wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:13.5px;font-weight:700;padding:10px 16px;border-radius:12px}
+.btn-primary{background:var(--grad);color:#fff}
+.btn-coral{background:var(--coral);color:#fff}
+.btn-dark{background:rgba(0,0,0,.45);color:#fff;backdrop-filter:blur(6px)}
+.btn-amber{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff}
+.topbar{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+.topbar .row{display:flex;align-items:center;gap:10px;height:56px}
+.topbar a.back{font-size:14px;font-weight:700;color:var(--gray);display:flex;align-items:center;gap:6px}
+.demo{margin-left:auto;font-size:12px;font-weight:700;color:var(--purple-d);background:var(--surface);padding:6px 12px;border-radius:20px}
+
+/* cover */
+.cover{position:relative;min-height:440px;overflow:hidden;background:#1e1b3a}
+.cover-track{position:absolute;inset:0;display:flex;height:100%;transition:transform .55s cubic-bezier(.4,0,.2,1)}
+.cover-slide{min-width:100%;height:100%;background-size:cover;background-position:center}
+.cover-shade{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(10,8,25,.35),rgba(10,8,25,.12) 35%,rgba(10,8,25,.82));z-index:1}
+.cover-content{position:relative;z-index:3;display:flex;flex-direction:column;min-height:440px;padding:20px 0 28px}
+.cover-top{display:flex;align-items:center;gap:10px}
+.cov-pill{background:rgba(0,0,0,.4);backdrop-filter:blur(6px);color:#fff;font-size:13px;font-weight:700;padding:7px 13px;border-radius:20px;display:inline-flex;align-items:center;gap:6px}
+.cov-pill.live .dot{width:7px;height:7px;border-radius:50%;background:#22c55e}
+.cov-count{margin-left:auto;background:rgba(0,0,0,.4);color:#fff;font-size:12px;font-weight:700;padding:6px 13px;border-radius:20px}
+.cover-bottom{margin-top:auto}
+.cover-logo{width:84px;height:84px;border-radius:22px;background:var(--grad);border:3px solid rgba(255,255,255,.85);margin-bottom:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:30px}
+.cover-name{font-size:36px;font-weight:900;letter-spacing:-.025em;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.4)}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 16px}
+.badge{background:rgba(255,255,255,.16);color:#fff;backdrop-filter:blur(6px);font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:20px;display:inline-flex;align-items:center;gap:6px}
+.cover-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.actions{display:flex;gap:9px;flex-wrap:wrap}
+.socials{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.soc{background:#fff;color:var(--ink);font-size:13px;font-weight:800;padding:5px 13px 5px 5px;border-radius:22px;display:inline-flex;align-items:center;gap:7px}
+.soc .d{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px}
+.cov-arrow{position:absolute;top:46%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;color:var(--ink);font-size:18px;z-index:4}
+.cov-arrow.prev{left:18px}.cov-arrow.next{right:18px}
+.cover-dots{position:absolute;bottom:16px;right:24px;display:flex;gap:7px;z-index:4}
+.cover-dots .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.45);cursor:pointer}
+.cover-dots .dot.on{background:#fff;width:22px;border-radius:5px}
+
+/* stats */
+.stats{display:flex;justify-content:center;gap:30px;flex-wrap:wrap;background:#fff;border-bottom:1px solid var(--border);padding:18px 0}
+.stat{text-align:center}.stat .v{font-size:22px;font-weight:800;color:var(--purple-d)}.stat .l{font-size:12px;color:var(--gray);margin-top:2px}
+
+/* body */
+.layout{display:grid;grid-template-columns:1.7fr 1fr;gap:22px;align-items:start;padding:24px 0 70px}
+.card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:18px}
+.card-h{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.card-h .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px}
+.card-h h3{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--purple-d)}
+.card p{font-size:14px;line-height:1.7;color:#23232e}
+.svc{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
+.svc:last-child{border-bottom:none}
+.svc .day{font-weight:800;font-size:14px;width:110px}
+.svc .nm{flex:1;font-size:14px}
+.svc .tm{font-size:13px;color:var(--gray)}
+.svc .fmt{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--surface);color:var(--purple-d);margin-left:10px}
+.leader-main{display:flex;gap:14px;margin-bottom:16px}
+.leader-main .av{width:64px;height:64px;border-radius:16px;background:var(--grad);flex-shrink:0}
+.leader-main .nm{font-weight:800;font-size:16px}.leader-main .rl{color:var(--purple-d);font-weight:700;font-size:12.5px}
+.leader-main .bio{font-size:13px;color:var(--gray);margin-top:5px;line-height:1.5}
+.team{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.team .t{border:1px solid var(--border);border-radius:13px;padding:14px;text-align:center}
+.team .av{width:54px;height:54px;border-radius:14px;background:var(--grad);margin:0 auto 9px}
+.team .nm{font-weight:700;font-size:13px}.team .rl{font-size:11.5px;color:var(--purple-d);font-weight:600}
+.kv{display:flex;align-items:center;gap:11px;font-size:13.5px;padding:9px 0}
+.kv i{width:20px;color:var(--purple-d)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px;background:var(--surface);color:var(--purple-d)}
+.chip.green{background:#f0fdf4;color:#15803d}
+.qr-mini{width:46px;height:46px;border-radius:12px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.map{height:150px;border-radius:13px;background:linear-gradient(135deg,#ede9fe,#fce7f3);display:flex;align-items:center;justify-content:center;color:var(--gray-l);margin-top:4px}
+@media(max-width:880px){.layout{grid-template-columns:1fr}.cover-name{font-size:27px}.socials{margin-left:0;width:100%}.team{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="wrap row">
+  <a class="back" href="#"><i class="ti ti-arrow-left"></i> All churches</a>
+  <span class="demo"><i class="ti ti-sparkles"></i> Rich design — same data as your live page</span>
+</div></div>
+
+<!-- COVER -->
+<div class="cover" id="cover">
+  <div class="cover-track" id="cover-track"></div>
+  <div class="cover-shade"></div>
+  <button class="cov-arrow prev" onclick="coverGo(-1)"><i class="ti ti-chevron-left"></i></button>
+  <button class="cov-arrow next" onclick="coverGo(1)"><i class="ti ti-chevron-right"></i></button>
+  <div class="wrap cover-content">
+    <div class="cover-top">
+      <span class="cov-pill"><i class="ti ti-eye"></i> 4,820 views</span>
+      <span class="cov-pill live"><span class="dot"></span> 40 viewing now</span>
+      <span class="cov-count" id="cov-count">1 / 3</span>
+    </div>
+    <div class="cover-bottom">
+      <div class="cover-logo">GC</div>
+      <h1 class="cover-name">Grace Chapel International</h1>
+      <div class="badges">
+        <span class="badge"><i class="ti ti-flame"></i> Pentecostal</span>
+        <span class="badge"><i class="ti ti-map-pin"></i> Ilford, London</span>
+        <span class="badge"><i class="ti ti-star-filled" style="color:#fbbf24"></i> 4.9 · 312 reviews</span>
+        <span class="badge"><i class="ti ti-rosette-discount-check-filled" style="color:#34d399"></i> Verified</span>
+        <span class="badge">Est. 2009</span>
+      </div>
+      <div class="cover-row">
+        <div class="actions">
+          <button class="btn btn-primary"><i class="ti ti-map-pin"></i> Get directions</button>
+          <button class="btn btn-coral"><i class="ti ti-player-play"></i> Watch live</button>
+          <button class="btn btn-dark"><i class="ti ti-share"></i> Share</button>
+          <button class="btn btn-amber"><i class="ti ti-pencil"></i> Edit cover</button>
+        </div>
+        <div class="socials">
+          <span class="soc"><span class="d" style="background:#1877f2"><i class="ti ti-brand-facebook"></i></span> 31.5K</span>
+          <span class="soc"><span class="d" style="background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)"><i class="ti ti-brand-instagram"></i></span> 48.2K</span>
+          <span class="soc"><span class="d" style="background:#ff0000"><i class="ti ti-brand-youtube"></i></span> 22.7K</span>
+        </div>
+      </div>
+    </div>
+    <div class="cover-dots" id="cover-dots"></div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat"><div class="v">15+</div><div class="l">Years serving</div></div>
+  <div class="stat"><div class="v">1,200</div><div class="l">Congregation</div></div>
+  <div class="stat"><div class="v">2</div><div class="l">Weekly services</div></div>
+  <div class="stat"><div class="v">3</div><div class="l">Languages</div></div>
+  <div class="stat"><div class="v">8</div><div class="l">Ministries</div></div>
+</div>
+
+<div class="wrap layout">
+  <!-- MAIN -->
+  <div>
+    <div class="card">
+      <div class="card-h"><div class="ic" style="background:linear-gradient(135deg,#a855f7,#7c3aed)"><i class="ti ti-info-circle"></i></div><h3>About</h3></div>
+      <p>Grace Chapel International is a warm, welcoming Pentecostal community in Ilford. Whether you're exploring faith for the first time or looking for a church to call home, you'll find genuine community and a place to belong.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><div class="ic" style="background:linear-gradient(135deg,#2dd4bf,#0891b2)"><i class="ti ti-clock"></i></div><h3>Service Times</h3></div>
+      <div class="svc"><div class="day">Sunday</div><div class="nm">Main Service</div><div class="tm">10:30 AM – 12:30 PM</div><span class="fmt">In-Person</span></div>
+      <div class="svc"><div class="day">Wednesday</div><div class="nm">Midweek Bible Study</div><div class="tm">7:00 PM – 8:30 PM</div><span class="fmt">Hybrid</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><div class="ic" style="background:linear-gradient(135deg,#f43f5e,#db2777)"><i class="ti ti-users-group"></i></div><h3>Leadership</h3></div>
+      <div class="leader-main">
+        <div class="av"></div>
+        <div><div class="nm">Pastor David Mensah</div><div class="rl">Senior Pastor</div><div class="bio">Founded Grace Chapel in 2009 with a heart for community, discipleship and reaching the city.</div></div>
+      </div>
+      <div class="team">
+        <div class="t"><div class="av"></div><div class="nm">Grace Okafor</div><div class="rl">Associate Pastor</div></div>
+        <div class="t"><div class="av"></div><div class="nm">Ruth Bello</div><div class="rl">Worship Pastor</div></div>
+        <div class="t"><div class="av"></div><div class="nm">Samuel Adeyemi</div><div class="rl">Youth Pastor</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><div class="ic" style="background:linear-gradient(135deg,#fbbf24,#d97706)"><i class="ti ti-photo"></i></div><h3>Gallery</h3></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        <div style="aspect-ratio:4/3;border-radius:11px;background:linear-gradient(135deg,#7c3aed,#f43f5e)"></div>
+        <div style="aspect-ratio:4/3;border-radius:11px;background:linear-gradient(135deg,#0891b2,#7c3aed)"></div>
+        <div style="aspect-ratio:4/3;border-radius:11px;background:linear-gradient(135deg,#16a34a,#0891b2)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div>
+    <div class="card">
+      <div class="card-h"><div class="ic" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)"><i class="ti ti-mail"></i></div><h3>Contact</h3></div>
+      <div class="kv"><i class="ti ti-mail"></i> hello@gracechapel.org</div>
+      <div class="kv"><i class="ti ti-phone"></i> +44 20 8554 1000</div>
+      <div class="kv"><i class="ti ti-world"></i> gracechapel.org</div>
+      <div class="kv"><i class="ti ti-map-pin"></i> 322 High Road, Ilford, IG1 1QP</div>
+      <div class="map"><i class="ti ti-map-2" style="font-size:28px"></i></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><div class="ic" style="background:linear-gradient(135deg,#2dd4bf,#0d9488)"><i class="ti ti-language"></i></div><h3>Languages</h3></div>
+      <div class="chips"><span class="chip">English</span><span class="chip">Spanish</span><span class="chip">Telugu</span></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><div class="ic" style="background:linear-gradient(135deg,#16a34a,#15803d)"><i class="ti ti-accessible"></i></div><h3>Facilities</h3></div>
+      <div class="chips">
+        <span class="chip green">Wheelchair access</span><span class="chip green">Hearing loop</span><span class="chip green">Free parking</span>
+        <span class="chip green">Baby changing</span><span class="chip green">Café</span><span class="chip green">Kids area</span><span class="chip green">Livestream</span>
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:13px">
+        <div class="qr-mini"><i class="ti ti-qrcode"></i></div>
+        <div style="flex:1"><div style="font-weight:800;font-size:14px">QR scan &amp; share</div><div style="font-size:12px;color:var(--gray)">Open this church on any phone</div></div>
+        <button class="btn btn-primary">Get QR</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const COV=['linear-gradient(135deg,#7c3aed,#f43f5e)','linear-gradient(135deg,#0f172a,#7c3aed)','linear-gradient(135deg,#0891b2,#7c3aed)'];
+let ci=0;
+function renderCover(){
+  $('cover-track').innerHTML=COV.map(c=>`<div class="cover-slide" style="background:${c}"></div>`).join('');
+  $('cover-dots').innerHTML=COV.map((_,i)=>`<span class="dot ${i===0?'on':''}" onclick="coverTo(${i})"></span>`).join('');
+  upd();
+}
+function upd(){$('cover-track').style.transform=`translateX(-${ci*100}%)`;$('cov-count').textContent=`${ci+1} / ${COV.length}`;document.querySelectorAll('#cover-dots .dot').forEach((d,i)=>d.classList.toggle('on',i===ci));}
+function coverGo(d){ci=(ci+d+COV.length)%COV.length;upd();}
+function coverTo(i){ci=i;upd();}
+renderCover();
+</script>
+</body>
+</html>

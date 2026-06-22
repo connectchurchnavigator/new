@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --purple: #7c3aed;
+  --purple-light: #f5f3ff;
+  --purple-dark: #5b21b6;
+  --coral: #f43f5e;
+  --ink: #111827;
+  --gray: #6b7280;
+  --gray-light: #9ca3af;
+  --border: #e5e7eb;
+  --surface: #f9fafb;
+}
+
+html,
+body {
+  background: #f3f4f6;
+  color: var(--ink);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes livePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: livePulse 1.5s ease-in-out infinite;
+  display: inline-block;
+}
+
+.avail-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: pulse 2s infinite;
+  display: inline-block;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 15px;
+  border-radius: 20px;
+  margin: 4px;
+}
+.chip-blue { background: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe; }
+.chip-amber { background: #fffbeb; color: #92400e; border: 1.5px solid #fde68a; }
+.chip-green { background: #f0fdf4; color: #065f46; border: 1.5px solid #a7f3d0; }
+.chip-purple { background: #f5f3ff; color: #5b21b6; border: 1.5px solid #ddd6fe; }
+.chip-pink { background: #fdf2f8; color: #9d174d; border: 1.5px solid #fbcfe8; }
+.chip-red { background: #fef2f2; color: #991b1b; border: 1.5px solid #fecaca; }
