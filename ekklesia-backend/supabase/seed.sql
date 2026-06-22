@@ -18,9 +18,6 @@ begin
     raise exception 'No users found. Sign up a user first, then re-run seed.sql';
   end if;
 
-  -- Clean up any existing seeded data to avoid duplicate key errors
-  delete from organizations where slug = 'grace-chapel-international';
-
   -- organization
   insert into organizations (name, slug, owner_id)
   values ('Grace Chapel International', 'grace-chapel-international', v_owner)
