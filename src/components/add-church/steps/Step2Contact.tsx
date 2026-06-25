@@ -6,6 +6,85 @@ interface Step2ContactProps {
   onBack: () => void;
 }
 
+const validateSocialUrl = (field: string, value: string): string => {
+  if (!value.trim()) return "";
+
+  // Default prefixes that are populated on focus
+  const prefixes: { [key: string]: string } = {
+    facebook: "https://facebook.com/",
+    instagram: "https://instagram.com/",
+    youtube: "https://youtube.com/",
+    twitter: "https://twitter.com/",
+    tiktok: "https://tiktok.com/@"
+  };
+
+  const prefix = prefixes[field];
+  
+  // If the user hasn't typed anything beyond the prefix, or has cleared it, don't show error yet
+  if (value === prefix || value === "https://" || value === "http://") {
+    return "";
+  }
+
+  // Basic URL structure check
+  let isValidUrl = false;
+  try {
+    const url = new URL(value);
+    isValidUrl = url.protocol === "http:" || url.protocol === "https:";
+  } catch (_) {
+    isValidUrl = false;
+  }
+
+  const platformName = {
+    facebook: "Facebook",
+    instagram: "Instagram",
+    youtube: "YouTube",
+    twitter: "X / Twitter",
+    tiktok: "TikTok"
+  }[field] || field;
+
+  const example = {
+    facebook: "facebook.com/yourchurch",
+    instagram: "instagram.com/yourchurch",
+    youtube: "youtube.com/c/yourchurch",
+    twitter: "twitter.com/yourchurch",
+    tiktok: "tiktok.com/@yourchurch"
+  }[field] || "";
+
+  if (!isValidUrl) {
+    return `Enter a valid ${platformName} link (e.g. ${example}).`;
+  }
+
+  const lowerVal = value.toLowerCase();
+  if (field === "facebook" && !lowerVal.includes("facebook.com")) {
+    return `Enter a valid Facebook link (e.g. facebook.com/yourchurch).`;
+  }
+  if (field === "instagram" && !lowerVal.includes("instagram.com")) {
+    return `Enter a valid Instagram link (e.g. instagram.com/yourchurch).`;
+  }
+  if (field === "youtube" && !lowerVal.includes("youtube.com") && !lowerVal.includes("youtu.be")) {
+    return `Enter a valid YouTube link (e.g. youtube.com/c/yourchurch).`;
+  }
+  if (field === "twitter" && !lowerVal.includes("twitter.com") && !lowerVal.includes("x.com")) {
+    return `Enter a valid X / Twitter link (e.g. twitter.com/yourchurch).`;
+  }
+  if (field === "tiktok" && !lowerVal.includes("tiktok.com")) {
+    return `Enter a valid TikTok link (e.g. tiktok.com/@yourchurch).`;
+  }
+
+  // Enforce that there is something after the domain/prefix
+  try {
+    const url = new URL(value);
+    const path = url.pathname.replace(/^\/|\/$/g, '');
+    if (!path || path === '@') {
+      return `Enter a valid ${platformName} link (e.g. ${example}).`;
+    }
+  } catch (_) {
+    return `Enter a valid ${platformName} link (e.g. ${example}).`;
+  }
+
+  return "";
+};
+
 export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
   const { formData, updateFormData } = useFormContext();
   const [selectedCountry, setSelectedCountry] = useState("GB");
@@ -19,6 +98,32 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
     { code: "ZA", label: "South Africa", emoji: "🇿🇦" },
     { code: "CA", label: "Canada", emoji: "🇨🇦" },
   ];
+
+  const validateField = (field: string, value: string) => {
+    let errorMsg = "";
+    
+    if (field === "email") {
+      if (!value.trim()) {
+        errorMsg = "Email is required";
+      } else {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) {
+          errorMsg = "Please enter a valid email address";
+        }
+      }
+    } else if (field === "phone") {
+      if (value && value.replace(/[^0-9]/g, '').length < 9) {
+        errorMsg = "Phone number must be at least 9 digits";
+      }
+    } else if (["facebook", "instagram", "youtube", "twitter", "tiktok"].includes(field)) {
+      errorMsg = validateSocialUrl(field, value);
+    }
+
+    setErrors(prev => ({
+      ...prev,
+      [field]: errorMsg
+    }));
+  };
 
   const handleNext = () => {
     const newErrors: { [key: string]: string } = {};
@@ -36,12 +141,24 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
       newErrors.phone = "Phone number must be at least 9 digits";
     }
 
+    // Validate social fields on submit
+    const socialFields = ["facebook", "instagram", "youtube", "twitter", "tiktok"];
+    socialFields.forEach(field => {
+      const val = formData[field] || "";
+      const err = validateSocialUrl(field, val);
+      if (err) {
+        newErrors[field] = err;
+      }
+    });
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       const firstErrorId = Object.keys(newErrors)[0];
       setTimeout(() => {
         const el = document.getElementById(`f-${firstErrorId}`);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
       }, 0);
       return;
     }
@@ -69,12 +186,20 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
             value={formData.email || ""}
             onChange={(e) => {
               updateFormData({ email: e.target.value });
-              if (errors.email) setErrors({ ...errors, email: "" });
+              validateField("email", e.target.value);
             }}
-            style={{ border: errors.email ? "1.5px solid red" : "" }}
+            style={{ 
+              border: errors.email ? "1.5px solid red" : "",
+              backgroundColor: errors.email ? "#fef2f2" : "" 
+            }}
             autoComplete="email" 
           />
-          {errors.email && <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{errors.email}</div>}
+          {errors.email && (
+            <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+              <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
+              <span>{errors.email}</span>
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: "18px" }}>
@@ -87,11 +212,19 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
             onChange={(e) => {
               const val = e.target.value.replace(/[^\d\s\+\-\(\)]/g, '');
               updateFormData({ phone: val });
-              if (errors.phone) setErrors({ ...errors, phone: "" });
+              validateField("phone", val);
             }}
-            style={{ border: errors.phone ? "1.5px solid red" : "" }}
+            style={{ 
+              border: errors.phone ? "1.5px solid red" : "",
+              backgroundColor: errors.phone ? "#fef2f2" : "" 
+            }}
           />
-          {errors.phone && <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{errors.phone}</div>}
+          {errors.phone && (
+            <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+              <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
+              <span>{errors.phone}</span>
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: "14px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
@@ -115,11 +248,26 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
               </span> Facebook
             </label>
             <input 
+              id="f-facebook"
               placeholder="facebook.com/yourchurch" 
               value={formData.facebook || ""}
               onFocus={() => { if (!formData.facebook) updateFormData({ facebook: "https://facebook.com/" }); }}
-              onChange={(e) => updateFormData({ facebook: e.target.value })}
+              onChange={(e) => {
+                const val = e.target.value;
+                updateFormData({ facebook: val });
+                validateField("facebook", val);
+              }}
+              style={{ 
+                border: errors.facebook ? "1.5px solid red" : "",
+                backgroundColor: errors.facebook ? "#fef2f2" : "" 
+              }}
             />
+            {errors.facebook && (
+              <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
+                <span>{errors.facebook}</span>
+              </div>
+            )}
           </div>
           <div>
             <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
@@ -128,11 +276,26 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
               </span> Instagram
             </label>
             <input 
+              id="f-instagram"
               placeholder="instagram.com/yourchurch or @handle" 
               value={formData.instagram || ""}
               onFocus={() => { if (!formData.instagram) updateFormData({ instagram: "https://instagram.com/" }); }}
-              onChange={(e) => updateFormData({ instagram: e.target.value })}
+              onChange={(e) => {
+                const val = e.target.value;
+                updateFormData({ instagram: val });
+                validateField("instagram", val);
+              }}
+              style={{ 
+                border: errors.instagram ? "1.5px solid red" : "",
+                backgroundColor: errors.instagram ? "#fef2f2" : "" 
+              }}
             />
+            {errors.instagram && (
+              <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
+                <span>{errors.instagram}</span>
+              </div>
+            )}
           </div>
           <div>
             <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
@@ -141,11 +304,26 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
               </span> YouTube
             </label>
             <input 
+              id="f-youtube"
               placeholder="youtube.com/c/yourchurch" 
               value={formData.youtube || ""}
               onFocus={() => { if (!formData.youtube) updateFormData({ youtube: "https://youtube.com/" }); }}
-              onChange={(e) => updateFormData({ youtube: e.target.value })}
+              onChange={(e) => {
+                const val = e.target.value;
+                updateFormData({ youtube: val });
+                validateField("youtube", val);
+              }}
+              style={{ 
+                border: errors.youtube ? "1.5px solid red" : "",
+                backgroundColor: errors.youtube ? "#fef2f2" : "" 
+              }}
             />
+            {errors.youtube && (
+              <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
+                <span>{errors.youtube}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -160,11 +338,26 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
               </span> X / Twitter
             </label>
             <input 
+              id="f-twitter"
               placeholder="@yourchurch" 
               value={formData.twitter || ""}
               onFocus={() => { if (!formData.twitter) updateFormData({ twitter: "https://twitter.com/" }); }}
-              onChange={(e) => updateFormData({ twitter: e.target.value })}
+              onChange={(e) => {
+                const val = e.target.value;
+                updateFormData({ twitter: val });
+                validateField("twitter", val);
+              }}
+              style={{ 
+                border: errors.twitter ? "1.5px solid red" : "",
+                backgroundColor: errors.twitter ? "#fef2f2" : "" 
+              }}
             />
+            {errors.twitter && (
+              <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
+                <span>{errors.twitter}</span>
+              </div>
+            )}
           </div>
           <div>
             <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
@@ -173,11 +366,26 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
               </span> TikTok
             </label>
             <input 
+              id="f-tiktok"
               placeholder="@yourchurch" 
               value={formData.tiktok || ""}
               onFocus={() => { if (!formData.tiktok) updateFormData({ tiktok: "https://tiktok.com/@" }); }}
-              onChange={(e) => updateFormData({ tiktok: e.target.value })}
+              onChange={(e) => {
+                const val = e.target.value;
+                updateFormData({ tiktok: val });
+                validateField("tiktok", val);
+              }}
+              style={{ 
+                border: errors.tiktok ? "1.5px solid red" : "",
+                backgroundColor: errors.tiktok ? "#fef2f2" : "" 
+              }}
             />
+            {errors.tiktok && (
+              <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
+                <span>{errors.tiktok}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

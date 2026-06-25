@@ -13,10 +13,10 @@ export default function WizardLayout({ children }: { children: React.ReactNode }
   const totalSteps = 6;
 
   return (
-    <div style={{ background: "#fff", minHeight: "100vh", position: "relative", overflow: "hidden" }}>
+    <div style={{ background: "#fff", minHeight: "100vh", position: "relative", overflowX: "hidden" }}>
       <div style={{ position: "absolute", width: "500px", height: "500px", borderRadius: "50%", background: "radial-gradient(circle, rgba(244,63,94,0.05), transparent 70%)", top: "-150px", right: "-100px", pointerEvents: "none" }}></div>
 
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "32px 24px 60px", position: "relative", zIndex: 1 }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "32px 24px 180px", position: "relative", zIndex: 1 }}>
         {/* Form Wizard Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

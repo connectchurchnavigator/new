@@ -2,6 +2,45 @@ import React, { useRef, useState } from "react";
 import { useFormContext } from "@/context/FormContext";
 import { useRouter } from "next/navigation";
 
+const SOCIAL_RULES = {
+  youtube: {
+    rx: /^(https?:\/\/)?(www\.)?(youtube\.com\/[A-Za-z0-9@._\-\/?=&%]+|youtu\.be\/[A-Za-z0-9\-]+)$/i,
+    others: /(facebook\.com|fb\.com|fb\.me|instagram\.com|linkedin\.com|twitter\.com|x\.com|tiktok\.com|t\.me)/i,
+    name: 'YouTube',
+    ex: 'youtube.com/@yourchurch'
+  }
+};
+
+const prettyPlatform = (url: string) => {
+  if (/facebook\.com|fb\.com|fb\.me/i.test(url)) return "Facebook";
+  if (/instagram\.com/i.test(url)) return "Instagram";
+  if (/linkedin\.com/i.test(url)) return "LinkedIn";
+  if (/twitter\.com|x\.com/i.test(url)) return "Twitter / X";
+  if (/tiktok\.com/i.test(url)) return "TikTok";
+  if (/t\.me/i.test(url)) return "Telegram";
+  return "another platform";
+};
+
+const validateYouTubeUrl = (url: string): string | null => {
+  const v = url.trim();
+  if (!v) return null;
+  
+  // bare prefilled domain
+  if (/^https?:\/\/(www\.)?youtube\.com\/?$/i.test(v)) return null;
+  
+  const wrong = SOCIAL_RULES.youtube.others.exec(v);
+  if (wrong) {
+    return `That looks like a ${prettyPlatform(wrong[0])} link — please put your YouTube link here.`;
+  }
+  
+  const ok = SOCIAL_RULES.youtube.rx.test(v);
+  if (!ok) {
+    return `Enter a valid YouTube link (e.g. youtube.com/@yourchurch).`;
+  }
+  
+  return null;
+};
+
 interface Step6MediaProps {
   onBack: () => void;
 }
@@ -12,7 +51,7 @@ export default function Step6Media({ onBack }: Step6MediaProps) {
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(formData.logo || null);
   const [coverPreview, setCoverPreview] = useState<string | null>(formData.cover || null);
-  const [error, setError] = useState<string | null>(null);
+  const [youtubeError, setYoutubeError] = useState<string | null>(validateYouTubeUrl(formData.youtube || ""));
   const router = useRouter();
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setPreview: React.Dispatch<React.SetStateAction<string | null>>) => {
@@ -34,16 +73,30 @@ export default function Step6Media({ onBack }: Step6MediaProps) {
 
   const [description, setDescription] = useState(formData.description || "");
 
+  const handleYoutubeChange = (val: string) => {
+    updateFormData({ youtube: val });
+    const err = validateYouTubeUrl(val);
+    setYoutubeError(err);
+  };
+
+  const handleWriteWithAI = () => {
+    const name = formData.churchName || "our church";
+    const denom = formData.denomination || "";
+    const aiText = `${name} is a warm and welcoming ${denom ? denom + " " : ""}community dedicated to faith, fellowship and service. Whether you're visiting for the first time or looking for a church home, you'll find a place to belong, grow and connect with God and others.`;
+    setDescription(aiText);
+  };
+
   const handleNext = () => {
-    if (formData.youtube && !formData.youtube.includes("youtube.com")) {
-      setError("Please enter a valid YouTube channel URL");
+    const err = validateYouTubeUrl(formData.youtube || "");
+    if (err) {
+      setYoutubeError(err);
       setTimeout(() => {
         const el = document.getElementById("f-youtube");
         if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 0);
       return;
     }
-    setError(null);
+    setYoutubeError(null);
     updateFormData({
       logo: logoPreview,
       cover: coverPreview,
@@ -135,13 +188,10 @@ export default function Step6Media({ onBack }: Step6MediaProps) {
           id="f-youtube"
           placeholder="https://youtube.com/@yourchurch" 
           value={formData.youtube || ""}
-          onChange={(e) => {
-            updateFormData({ youtube: e.target.value });
-            if (error) setError(null);
-          }}
-          style={{ marginBottom: error ? "4px" : "24px", border: error ? "1.5px solid red" : "" }}
+          onChange={(e) => handleYoutubeChange(e.target.value)}
+          className={youtubeError ? "error" : (formData.youtube && formData.youtube.trim() ? "verified" : "")}
+          style={{ marginBottom: "24px" }}
         />
-        {error && <div style={{ color: "red", fontSize: "12px", marginBottom: "20px" }}>{error}</div>}
 
         <label>About your church</label>
         <textarea 
@@ -151,9 +201,18 @@ export default function Step6Media({ onBack }: Step6MediaProps) {
           placeholder="Tell people about your church — vision, community, what to expect when they visit..."
         ></textarea>
         
-        <button style={{ background: "#f5f3ff", border: "1.5px solid #ede9fe", color: "var(--cn-purple-dark)", borderRadius: "10px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+        <button 
+          onClick={handleWriteWithAI} 
+          style={{ background: "#f5f3ff", border: "1.5px solid #ede9fe", color: "var(--cn-purple-dark)", borderRadius: "10px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
+        >
           <i className="ti ti-sparkles" style={{ fontSize: "14px" }}></i> Write with AI
         </button>
+
+        {youtubeError && (
+          <div style={{ color: "#ef4444", fontSize: "12.5px", marginTop: "16px", display: "flex", alignItems: "center", gap: "6px", fontWeight: 500 }}>
+            <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i> {youtubeError}
+          </div>
+        )}
       </div>
 
       <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>

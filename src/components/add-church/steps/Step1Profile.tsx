@@ -38,6 +38,8 @@ export default function Step1Profile({ onNext }: Step1ProfileProps) {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   
   const [showDropdown, setShowDropdown] = useState(false);
+  const [hasNoPredictions, setHasNoPredictions] = useState(false);
+  
   const countryRef = useRef<HTMLDivElement>(null);
   const addressRef = useRef<HTMLDivElement>(null);
 
@@ -48,6 +50,7 @@ export default function Step1Profile({ onNext }: Step1ProfileProps) {
       }
       if (addressRef.current && !addressRef.current.contains(event.target as Node)) {
         (window as any).addressPredictions = [];
+        setHasNoPredictions(false);
         setErrors(prev => ({ ...prev, _trigger: Math.random().toString() }));
       }
     }
@@ -73,6 +76,16 @@ export default function Step1Profile({ onNext }: Step1ProfileProps) {
     
     setErrors({});
     onNext();
+  };
+
+  const handleUseTypedAddress = () => {
+    updateFormData({
+      latitude: 0.0001,
+      longitude: 0.0001
+    });
+    (window as any).addressPredictions = [];
+    setHasNoPredictions(false);
+    setErrors(prev => ({ ...prev, _trigger: Math.random().toString() }));
   };
 
   const filteredCountries = COUNTRIES.filter(c => c[1].toLowerCase().includes((formData.country || '').toLowerCase())).slice(0, 50);
@@ -195,17 +208,21 @@ export default function Step1Profile({ onNext }: Step1ProfileProps) {
                       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(e.target.value)}&countrycodes=${cc}&limit=5`);
                       const data = await res.json();
                       (window as any).addressPredictions = data;
+                      setHasNoPredictions(data.length === 0);
                       setErrors(prev => ({ ...prev, _trigger: Math.random().toString() }));
-                    } catch (err) {}
+                    } catch (err) {
+                      setHasNoPredictions(true);
+                    }
                   }, 500);
                 } else {
                   (window as any).addressPredictions = [];
+                  setHasNoPredictions(false);
                   setErrors(prev => ({ ...prev, _trigger: Math.random().toString() }));
                 }
               }}
             />
             
-            {(window as any).addressPredictions && (window as any).addressPredictions.length > 0 && formData.address && (
+            {((window as any).addressPredictions && (window as any).addressPredictions.length > 0 && formData.address) ? (
               <div className="autocomplete-dropdown" style={{ display: "block", position: "absolute", width: "100%", top: "100%", zIndex: 10, background: "#fff", border: "1.5px solid var(--cn-border)", borderRadius: "12px", marginTop: "4px", boxShadow: "0 10px 25px rgba(15,15,26,0.08)", maxHeight: "200px", overflowY: "auto" }}>
                 {(window as any).addressPredictions.map((p: any, i: number) => (
                   <div 
@@ -218,6 +235,7 @@ export default function Step1Profile({ onNext }: Step1ProfileProps) {
                         longitude: parseFloat(p.lon)
                       });
                       (window as any).addressPredictions = [];
+                      setHasNoPredictions(false);
                       setErrors(prev => ({ ...prev, _trigger: Math.random().toString() }));
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.background = "var(--cn-surface)"}
@@ -238,36 +256,67 @@ export default function Step1Profile({ onNext }: Step1ProfileProps) {
                   </div>
                 ))}
               </div>
-            )}
+            ) : hasNoPredictions && formData.address ? (
+              <div className="autocomplete-dropdown" style={{ display: "block", position: "absolute", width: "100%", top: "100%", zIndex: 10, background: "#fff", border: "1.5px solid var(--cn-border)", borderRadius: "12px", marginTop: "4px", boxShadow: "0 10px 25px rgba(15,15,26,0.08)", padding: "14px 16px" }}>
+                <div style={{ fontSize: "12.5px", color: "var(--cn-gray)", display: "flex", alignItems: "flex-start", gap: "8px", marginBottom: "12px" }}>
+                  <i className="ti ti-map-pin" style={{ fontSize: "16px", color: "var(--cn-gray-light)", marginTop: "1px" }}></i>
+                  <span>We couldn't verify this exact address. You can continue with the address you typed — we'll save it as entered.</span>
+                </div>
+                <button 
+                  onClick={handleUseTypedAddress}
+                  style={{ fontSize: "12.5px", fontWeight: 700, color: "#fff", background: "var(--cn-purple)", border: "none", padding: "9px 16px", borderRadius: "9px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <i className="ti ti-check" style={{ fontSize: "14px" }}></i> Use the address I typed
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : (
           <div style={{ marginBottom: "18px" }}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: "12px", padding: "12px 14px", marginBottom: "18px", position: "relative" }}>
-              <i className="ti ti-circle-check-filled" style={{ fontSize: "15px", color: "#16a34a", flexShrink: 0, marginTop: "1px" }}></i>
-              <div style={{ fontSize: "12.5px", color: "#15803d", fontWeight: 600 }}>{formData.address}</div>
-              <button 
-                onClick={() => updateFormData({ latitude: undefined, longitude: undefined, address: "" })}
-                style={{ position: "absolute", top: "10px", right: "10px", background: "none", border: "none", cursor: "pointer", color: "#16a34a" }}
-                title="Change address"
-              >
-                <i className="ti ti-pencil" style={{ fontSize: "14px" }}></i>
-              </button>
-            </div>
-            
-            <div>
-              <label style={{ marginBottom: "9px", display: "block", fontSize: "12px", fontWeight: 700, color: "var(--cn-ink)" }}>Confirm the pin is on your building</label>
-              <div style={{ width: "100%", height: "200px", borderRadius: "12px", overflow: "hidden", border: "1.5px solid var(--cn-border)" }}>
-                <iframe 
-                  width="100%" 
-                  height="100%" 
-                  frameBorder="0" 
-                  scrolling="no" 
-                  marginHeight={0} 
-                  marginWidth={0} 
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${formData.longitude! - 0.005},${formData.latitude! - 0.005},${formData.longitude! + 0.005},${formData.latitude! + 0.005}&layer=mapnik&marker=${formData.latitude},${formData.longitude}`}
-                ></iframe>
+            {formData.latitude === 0.0001 ? (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", background: "#fffbeb", border: "1.5px solid #fde68a", borderRadius: "12px", padding: "12px 14px", marginBottom: "18px", position: "relative" }}>
+                <i className="ti ti-alert-triangle" style={{ fontSize: "15px", color: "#d97706", flexShrink: 0, marginTop: "1px" }}></i>
+                <div style={{ fontSize: "12.5px", color: "#92400e", fontWeight: 600 }}>
+                  <strong>Saved as you entered it</strong> (not auto-verified): {formData.address}
+                </div>
+                <button 
+                  onClick={() => updateFormData({ latitude: undefined, longitude: undefined, address: "" })}
+                  style={{ position: "absolute", top: "10px", right: "10px", background: "none", border: "none", cursor: "pointer", color: "#d97706" }}
+                  title="Change address"
+                >
+                  <i className="ti ti-pencil" style={{ fontSize: "14px" }}></i>
+                </button>
               </div>
-            </div>
+            ) : (
+              <>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: "12px", padding: "12px 14px", marginBottom: "18px", position: "relative" }}>
+                  <i className="ti ti-circle-check-filled" style={{ fontSize: "15px", color: "#16a34a", flexShrink: 0, marginTop: "1px" }}></i>
+                  <div style={{ fontSize: "12.5px", color: "#15803d", fontWeight: 600 }}>{formData.address}</div>
+                  <button 
+                    onClick={() => updateFormData({ latitude: undefined, longitude: undefined, address: "" })}
+                    style={{ position: "absolute", top: "10px", right: "10px", background: "none", border: "none", cursor: "pointer", color: "#16a34a" }}
+                    title="Change address"
+                  >
+                    <i className="ti ti-pencil" style={{ fontSize: "14px" }}></i>
+                  </button>
+                </div>
+                
+                <div>
+                  <label style={{ marginBottom: "9px", display: "block", fontSize: "12px", fontWeight: 700, color: "var(--cn-ink)" }}>Confirm the pin is on your building</label>
+                  <div style={{ width: "100%", height: "200px", borderRadius: "12px", overflow: "hidden", border: "1.5px solid var(--cn-border)" }}>
+                    <iframe 
+                      width="100%" 
+                      height="100%" 
+                      frameBorder="0" 
+                      scrolling="no" 
+                      marginHeight={0} 
+                      marginWidth={0} 
+                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${formData.longitude! - 0.005},${formData.latitude! - 0.005},${formData.longitude! + 0.005},${formData.latitude! + 0.005}&layer=mapnik&marker=${formData.latitude},${formData.longitude}`}
+                    ></iframe>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
         
