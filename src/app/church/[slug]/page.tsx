@@ -8,6 +8,8 @@ import ShareButton from '@/components/church-profile/ShareButton';
 import HeroCarousel from '@/components/church-profile/HeroCarousel';
 import ChurchProfileClient from '@/components/church-profile/ChurchProfileClient';
 import VisitorBanner from '@/components/church-profile/VisitorBanner';
+import ContactSection from '@/components/church-profile/ContactSection';
+import NearbySection from '@/components/church-profile/NearbySection';
 import './church.css';
 
 export default async function ChurchProfilePage({ params, searchParams }: { params: Promise<{ slug: string }> | { slug: string }, searchParams?: Promise<{ [key: string]: string | string[] | undefined }> | { [key: string]: string | string[] | undefined } }) {
@@ -238,6 +240,25 @@ export default async function ChurchProfilePage({ params, searchParams }: { para
         telegramUrl={telegramUrl}
         initialBranchesCount={branchesCount}
       />
+
+      <div className="wrap">
+        <ContactSection 
+          churchName={church.name}
+          email={church.email}
+          phone={church.phone}
+          address={church.address_line}
+          socials={{
+            facebook: church.social_facebook || church.facebook,
+            instagram: church.social_instagram || church.instagram,
+            youtube: church.social_youtube || church.youtube,
+            twitter: church.social_twitter || church.twitter,
+            tiktok: church.social_tiktok || church.tiktok,
+            telegram: church.social_telegram || church.telegram
+          }}
+        />
+      </div>
+
+      <NearbySection />
 
     </main>
     </>
