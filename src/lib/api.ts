@@ -1,5 +1,5 @@
 // ───────────────────────────────────────────────────────────────────────
-// Ekklesia — data-access layer
+// Church Navigator — data-access layer
 // All reads/writes the dashboard, onboarding, search and home page need.
 // Every call goes through Supabase, so Row-Level Security is enforced:
 // the public only sees published listings; owners only touch their own org.
@@ -15,7 +15,7 @@ import type {
 } from './types';
 
 const FULL_SELECT =
-  '*, church_services(*), leaders(*), teams(*)';
+  '*, church_services(*), leaders(*), church_teams(*, church_team_members(*)), branches(*)';
 
 // ═══ PUBLIC: search + home + listing pages ═══════════════════════════════
 

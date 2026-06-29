@@ -120,10 +120,11 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
       <input
         type="text"
         placeholder={placeholder}
-        className={error ? "error" : inputValue && !error ? "verified" : ""}
         style={{
           fontSize: "13px",
-          padding: "10px 12px"
+          padding: "10px 12px",
+          border: error ? "1.5px solid red" : inputValue && !error ? "1.5px solid #16a34a" : "1.5px solid var(--cn-border)",
+          backgroundColor: error ? "#fef2f2" : inputValue && !error ? "#f0fdf4" : ""
         }}
         value={inputValue}
         onChange={(e) => handleInputChange(e.target.value)}
@@ -237,6 +238,7 @@ export default function Step3Ministry({ onNext, onBack }: Step3MinistryProps) {
     }
 
     setCustomMinistriesList(prev => [...prev, val]);
+    setActiveChips(prev => [...prev, val]);
     setCustomMinMsg({ text: `Added “${val}” to your ministries.`, type: "success" });
     setCustomMinistry("");
     if (error) setError("");
@@ -246,8 +248,10 @@ export default function Step3Ministry({ onNext, onBack }: Step3MinistryProps) {
     }, 2500);
   };
 
-  const removeCustomMinistry = (min: string) => {
-    setCustomMinistriesList(prev => prev.filter(m => m !== min));
+  const toggleCustomMinistry = (min: string) => {
+    setActiveChips(prev => 
+      prev.includes(min) ? prev.filter(c => c !== min) : [...prev, min]
+    );
   };
 
   const updateServiceField = (id: number, field: string, value: string) => {
@@ -255,8 +259,17 @@ export default function Step3Ministry({ onNext, onBack }: Step3MinistryProps) {
   };
 
   const handleNext = () => {
-    // Validate service times: if either from or to is entered, they must be parseable
-    const invalidService = services.find(s => {
+    // Filter out completely empty services
+    const filledServices = services.filter(s => s.name?.trim() || s.from?.trim() || s.to?.trim());
+
+    if (filledServices.length === 0) {
+      setError("Please add at least one service time.");
+      return;
+    }
+
+    const invalidService = filledServices.find(s => {
+      if (!s.name?.trim() || !s.from?.trim()) return true;
+      
       const fromVal = s.from?.trim();
       const toVal = s.to?.trim();
       if (fromVal && !parseTimeString(fromVal)) return true;
@@ -265,7 +278,7 @@ export default function Step3Ministry({ onNext, onBack }: Step3MinistryProps) {
     });
 
     if (invalidService) {
-      setError("Please enter valid service times (e.g. 10am or 10:30am)");
+      setError("Please complete all service fields (Name and From time are required, e.g. 10am)");
       return;
     }
 
@@ -279,7 +292,7 @@ export default function Step3Ministry({ onNext, onBack }: Step3MinistryProps) {
     }
     setError("");
     updateFormData({
-      services: services,
+      services: filledServices,
       ministries: [...activeChips, ...customMinistriesList]
     });
     onNext();
@@ -325,9 +338,18 @@ export default function Step3Ministry({ onNext, onBack }: Step3MinistryProps) {
                   <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", marginBottom: "5px" }}>SERVICE NAME</div>
                   <input 
                     placeholder="e.g. Main Service" 
-                    style={{ fontSize: "13px", padding: "10px 12px" }} 
+                    style={{ 
+                      fontSize: "13px", 
+                      padding: "10px 12px",
+                      border: (!svc.name && svc.from && !error) ? "1.5px solid red" : svc.name ? "1.5px solid #16a34a" : "1.5px solid var(--cn-border)",
+                      backgroundColor: (!svc.name && svc.from && !error) ? "#fef2f2" : svc.name ? "#f0fdf4" : ""
+                    }} 
                     value={svc.name || ""} 
                     onChange={(e) => updateServiceField(svc.id, "name", e.target.value)}
+                    onBlur={(e) => {
+                      const val = e.target.value.replace(/\s+/g, ' ').trim().replace(/(^|\s)(\w)/g, (m: string, p: string, c: string) => p + c.toUpperCase());
+                      updateServiceField(svc.id, "name", val);
+                    }}
                   />
                 </div>
                 <div>
@@ -431,11 +453,19 @@ export default function Step3Ministry({ onNext, onBack }: Step3MinistryProps) {
               </div>
             );
           })}
-          {customMinistriesList.map(min => (
-            <div key={min} className="chip on" style={{ cursor: "pointer" }} onClick={() => removeCustomMinistry(min)}>
-              <i className="ti ti-plus" style={{ fontSize: "12px" }}></i> {min}
-            </div>
-          ))}
+          {customMinistriesList.map(min => {
+            const isActive = activeChips.includes(min);
+            return (
+              <div 
+                key={min} 
+                className={`chip ${isActive ? "on" : ""}`} 
+                style={{ cursor: "pointer" }} 
+                onClick={() => toggleCustomMinistry(min)}
+              >
+                <i className="ti ti-plus" style={{ fontSize: "12px" }}></i> {min}
+              </div>
+            );
+          })}
         </div>
 
         <button 

@@ -48,9 +48,7 @@ interface Step6MediaProps {
 export default function Step6Media({ onBack }: Step6MediaProps) {
   const { formData, updateFormData } = useFormContext();
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const coverInputRef = useRef<HTMLInputElement>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(formData.logo || null);
-  const [coverPreview, setCoverPreview] = useState<string | null>(formData.cover || null);
   const [youtubeError, setYoutubeError] = useState<string | null>(validateYouTubeUrl(formData.youtube || ""));
   const router = useRouter();
 
@@ -63,6 +61,23 @@ export default function Step6Media({ onBack }: Step6MediaProps) {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCoverPhotosUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updateFormData({ coverBanners: [...(formData.coverBanners || []), reader.result as string] });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeCoverPhoto = (index: number) => {
+    const newBanners = [...(formData.coverBanners || [])];
+    newBanners.splice(index, 1);
+    updateFormData({ coverBanners: newBanners });
   };
 
   const removeImage = (e: React.MouseEvent, setPreview: React.Dispatch<React.SetStateAction<string | null>>, inputRef: React.RefObject<HTMLInputElement | null>) => {
@@ -99,7 +114,6 @@ export default function Step6Media({ onBack }: Step6MediaProps) {
     setYoutubeError(null);
     updateFormData({
       logo: logoPreview,
-      cover: coverPreview,
       description: description
     });
     router.push('/add-church/7');
@@ -149,36 +163,25 @@ export default function Step6Media({ onBack }: Step6MediaProps) {
             </div>
           </div>
 
-          {/* Cover Upload */}
-          <div>
-            <label><i className="ti ti-photo" style={{ fontSize: "12px", color: "var(--cn-purple)" }}></i> Cover photo</label>
-            <input 
-              type="file" 
-              accept="image/*" 
-              style={{ display: "none" }} 
-              ref={coverInputRef}
-              onChange={(e) => handleImageUpload(e, setCoverPreview)}
-            />
-            <div 
-              onClick={() => coverInputRef.current?.click()} 
-              style={{ position: "relative", border: "1.5px dashed var(--cn-border)", borderRadius: "14px", height: "130px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: "var(--cn-surface)", overflow: "hidden" }}
-            >
-              {!coverPreview ? (
-                <div style={{ textAlign: "center", color: "var(--cn-gray-light)" }}>
-                  <i className="ti ti-cloud-upload" style={{ fontSize: "26px", display: "block", margin: "0 auto 6px" }}></i>
-                  <div style={{ fontSize: "12px" }}>Click to upload cover</div>
-                </div>
-              ) : (
-                <>
-                  <img src={coverPreview} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="Cover Preview" />
-                  <button 
-                    onClick={(e) => removeImage(e, setCoverPreview, coverInputRef)} 
-                    style={{ position: "absolute", top: "6px", right: "6px", background: "rgba(0,0,0,0.5)", border: "none", borderRadius: "50%", width: "22px", height: "22px", cursor: "pointer", color: "#fff", fontSize: "13px", display: "flex", alignItems: "center", justifyContent: "center" }}
-                  >
-                    ×
-                  </button>
-                </>
-              )}
+          {/* Cover Upload (Multiple) */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <label><i className="ti ti-photo" style={{ fontSize: "12px", color: "var(--cn-purple)" }}></i> Cover photos</label>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                {(formData.coverBanners || []).map((img: string, i: number) => (
+                  <div key={i} style={{ width: "90px", height: "60px", borderRadius: "8px", background: `url(${img}) center/cover`, position: "relative", flexShrink: 0 }}>
+                    <button onClick={(e) => { e.stopPropagation(); removeCoverPhoto(i); }} style={{ position: "absolute", top: "4px", right: "4px", background: "rgba(0,0,0,0.5)", color: "#fff", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <i className="ti ti-x" style={{ fontSize: "12px" }}></i>
+                    </button>
+                  </div>
+                ))}
+                
+                <label style={{ width: "90px", height: "60px", borderRadius: "8px", border: "2px dashed var(--cn-border)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--cn-gray)", background: "var(--cn-surface)", flexShrink: 0 }}>
+                  <i className="ti ti-plus" style={{ fontSize: "16px", marginBottom: "2px" }}></i>
+                  <span style={{ fontSize: "11px", fontWeight: 600 }}>Add photo</span>
+                  <input type="file" accept="image/*" onChange={handleCoverPhotosUpload} style={{ display: "none" }} />
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -189,8 +192,11 @@ export default function Step6Media({ onBack }: Step6MediaProps) {
           placeholder="https://youtube.com/@yourchurch" 
           value={formData.youtube || ""}
           onChange={(e) => handleYoutubeChange(e.target.value)}
-          className={youtubeError ? "error" : (formData.youtube && formData.youtube.trim() ? "verified" : "")}
-          style={{ marginBottom: "24px" }}
+          style={{ 
+            marginBottom: "24px",
+            border: youtubeError ? "1.5px solid red" : (formData.youtube && formData.youtube.trim() ? "1.5px solid #16a34a" : "1.5px solid var(--cn-border)"),
+            backgroundColor: youtubeError ? "#fef2f2" : (formData.youtube && formData.youtube.trim() ? "#f0fdf4" : "")
+          }}
         />
 
         <label>About your church</label>

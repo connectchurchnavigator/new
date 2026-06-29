@@ -1,5 +1,5 @@
 // ───────────────────────────────────────────────────────────────────────
-// Ekklesia — Supabase clients
+// Church Navigator — Supabase clients
 //   npm i @supabase/supabase-js @supabase/ssr
 // Env (.env.local):
 //   NEXT_PUBLIC_SUPABASE_URL=...

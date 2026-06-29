@@ -8,8 +8,8 @@ import Step3Ministry from "@/components/add-church/steps/Step3Ministry";
 import Step4Languages from "@/components/add-church/steps/Step4Languages";
 import Step5Facilities from "@/components/add-church/steps/Step5Facilities";
 import Step6Media from "@/components/add-church/steps/Step6Media";
-import Step7Review from "@/components/add-church/steps/Step7Review";
-
+import Step7Extras from "@/components/add-church/steps/Step7Extras";
+import Step9Review from "@/components/add-church/steps/Step9Review";
 export default function StepPage() {
   const params = useParams();
   const router = useRouter();
@@ -19,7 +19,7 @@ export default function StepPage() {
     router.push(`/add-church/${nextStep}`);
   };
 
-  const isReviewStep = step === "7";
+  const isReviewStep = step === "8";
 
   return (
     <>
@@ -32,19 +32,7 @@ export default function StepPage() {
         </div>
       )}
 
-      {!isReviewStep && (
-        <div className="ai-bubble">
-          <div className="ai-icon"><i className="ti ti-sparkles" style={{ fontSize: "17px", color: "#fff" }}></i></div>
-          <div style={{ fontSize: "13px", color: "var(--cn-ink)", lineHeight: 1.6, paddingTop: "3px" }}>
-            {step === "1" && "I'll guide you through this! Let's start with your profile and location."}
-            {step === "2" && "Great job! Let's add your contact information so people can reach you."}
-            {step === "3" && "Now let's add your service times and ministries. This helps visitors know when to join you."}
-            {step === "4" && "What languages do you offer? This is incredibly helpful for non-native speakers."}
-            {step === "5" && "Let's highlight your facilities to help visitors plan their trip."}
-            {step === "6" && "Almost done! Let's make your church stand out with some great photos and a warm description."}
-          </div>
-        </div>
-      )}
+
 
       {step === "1" && <Step1Profile onNext={() => handleNext(2)} />}
       {step === "2" && <Step2Contact onBack={() => router.push(`/add-church/1`)} onNext={() => handleNext(3)} />}
@@ -52,8 +40,9 @@ export default function StepPage() {
       {step === "4" && <Step4Languages onBack={() => router.push(`/add-church/3`)} onNext={() => handleNext(5)} />}
       {step === "5" && <Step5Facilities onBack={() => router.push(`/add-church/4`)} onNext={() => handleNext(6)} />}
       {step === "6" && <Step6Media onBack={() => router.push(`/add-church/5`)} />}
-      {step === "7" && <Step7Review />}
-      {parseInt(step) > 7 && (
+      {step === "7" && <Step7Extras onBack={() => router.push(`/add-church/6`)} onNext={() => handleNext(8)} />}
+      {step === "8" && <Step9Review />}
+      {parseInt(step) > 8 && (
         <div style={{ textAlign: "center", padding: "40px" }}>
           <h2>Step {step} Content Coming Soon...</h2>
           <div style={{ marginTop: "20px", display: "flex", gap: "10px", justifyContent: "center" }}>

@@ -1,5 +1,5 @@
 // ───────────────────────────────────────────────────────────────────────
-// Ekklesia — shared types (match the SQL schema)
+// Church Navigator — shared types (match the SQL schema)
 // ───────────────────────────────────────────────────────────────────────
 
 export type ChurchStatus = 'draft' | 'published';

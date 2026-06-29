@@ -4,19 +4,35 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import logoImg from "@/Assets/logo (1).png";
 
-export default function Step7Review() {
+export default function Step9Review() {
   const { formData } = useFormContext();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    // Simulate API call to Supabase
-    setTimeout(() => {
-      setIsSubmitting(false);
+    setError(null);
+    try {
+      const res = await fetch('/api/churches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to submit listing');
+      }
+
       localStorage.removeItem('churchFormData');
-      router.push("/add-church/success");
-    }, 1500);
+      router.push(`/add-church/success?slug=${data.church.slug}`);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const pvEsc = (s: string) => (s || '');
@@ -62,7 +78,7 @@ export default function Step7Review() {
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <Image src={logoImg} alt="ChurchNavigator Logo" width={160} height={42} style={{ objectFit: "contain" }} />
         </div>
-        <button onClick={() => router.push("/add-church/1")} className="btn-secondary">
+        <button onClick={() => router.push("/add-church/8")} className="btn-secondary">
           <i className="ti ti-arrow-left" style={{ fontSize: "14px" }}></i> Back to edit
         </button>
       </div>
@@ -75,8 +91,23 @@ export default function Step7Review() {
       <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "24px" }}>
         {/* Live preview card (full public-style listing) */}
         <div className="scard" style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ height: "150px", background: formData.cover ? `url(${formData.cover}) center/cover no-repeat` : "var(--cn-grad)", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {!formData.cover && <i className="ti ti-photo" style={{ fontSize: "30px", color: "rgba(255,255,255,0.6)" }}></i>}
+          <div style={{ height: "150px", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "var(--cn-grad)" }}>
+            {formData.coverBanners && formData.coverBanners.length > 0 ? (
+              <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", overflowX: "auto", snapType: "x mandatory" }}>
+                {formData.coverBanners.map((img: string, i: number) => (
+                  <div key={i} style={{ minWidth: "100%", height: "100%", background: `url(${img}) center/cover no-repeat`, scrollSnapAlign: "start" }} />
+                ))}
+                {formData.coverBanners.length > 1 && (
+                  <div style={{ position: "absolute", bottom: "8px", right: "8px", background: "rgba(0,0,0,0.6)", color: "#fff", padding: "2px 8px", borderRadius: "10px", fontSize: "10px", fontWeight: 700 }}>
+                    {formData.coverBanners.length} photos
+                  </div>
+                )}
+              </div>
+            ) : formData.cover ? (
+              <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: `url(${formData.cover}) center/cover no-repeat` }} />
+            ) : (
+              <i className="ti ti-photo" style={{ fontSize: "30px", color: "rgba(255,255,255,0.6)", zIndex: 1 }}></i>
+            )}
           </div>
           <div style={{ padding: "22px" }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: "14px", marginBottom: "16px" }}>
@@ -115,8 +146,8 @@ export default function Step7Review() {
               {formData.services && formData.services.length > 0 && formData.services[0].name && (
                 <SectionWrap>
                   <SectionHeader icon="ti-clock" title="Service times" />
-                  {formData.services.map((svc: any) => svc.name && (
-                    <div key={svc.id} style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "13px", color: "var(--cn-ink)", padding: "6px 0" }}>
+                  {formData.services.map((svc: any, i: number) => svc.name && (
+                    <div key={svc.id || i} style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "13px", color: "var(--cn-ink)", padding: "6px 0" }}>
                       <b style={{ minWidth: "78px" }}>{svc.day}</b>
                       <span>{svc.name}</span>
                       <span style={{ color: "var(--cn-gray)" }}>{svc.from} - {svc.to}</span>
@@ -135,7 +166,7 @@ export default function Step7Review() {
                 <SectionWrap>
                   <SectionHeader icon="ti-heart-handshake" title="Ministries & outreach" />
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                    {formData.ministries.map((min: string) => <Chip key={min} text={min} />)}
+                    {formData.ministries.map((min: string, i: number) => <Chip key={`${min}-${i}`} text={min} />)}
                   </div>
                 </SectionWrap>
               )}
@@ -145,7 +176,7 @@ export default function Step7Review() {
                 <SectionWrap>
                   <SectionHeader icon="ti-language" title="Languages" />
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                    {formData.languages.map((lang: string) => <Chip key={lang} text={lang} />)}
+                    {formData.languages.map((lang: string, i: number) => <Chip key={`${lang}-${i}`} text={lang} />)}
                   </div>
                 </SectionWrap>
               )}
@@ -155,7 +186,7 @@ export default function Step7Review() {
                 <SectionWrap>
                   <SectionHeader icon="ti-accessible" title="Facilities" />
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                    {formData.facilities.map((fac: string) => <Chip key={fac} text={fac} />)}
+                    {formData.facilities.map((fac: string, i: number) => <Chip key={`${fac}-${i}`} text={fac} />)}
                   </div>
                 </SectionWrap>
               )}
@@ -165,6 +196,22 @@ export default function Step7Review() {
                 <SectionWrap>
                   <SectionHeader icon="ti-info-circle" title="About" />
                   <div style={{ fontSize: "13px", color: "var(--cn-ink)", lineHeight: 1.65 }}>{formData.description}</div>
+                </SectionWrap>
+              )}
+
+              {/* EXTRAS */}
+              {(formData.establishedYear || formData.liveStreamUrl || formData.socialInstagram || formData.socialFacebook || formData.socialX) && (
+                <SectionWrap>
+                  <SectionHeader icon="ti-plug-connected" title="Socials & Extras" />
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px", color: "var(--cn-ink)" }}>
+                    {formData.establishedYear && <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><i className="ti ti-calendar" style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i> Established: {formData.establishedYear}</div>}
+                    {formData.liveStreamUrl && <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><i className="ti ti-video" style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i> Live Stream Available</div>}
+                    <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                      {formData.socialInstagram && <i className="ti ti-brand-instagram" style={{ fontSize: "16px", color: "#e1306c" }}></i>}
+                      {formData.socialFacebook && <i className="ti ti-brand-facebook" style={{ fontSize: "16px", color: "#1877f2" }}></i>}
+                      {formData.socialX && <i className="ti ti-brand-x" style={{ fontSize: "16px", color: "#000" }}></i>}
+                    </div>
+                  </div>
                 </SectionWrap>
               )}
             </div>
@@ -198,8 +245,14 @@ export default function Step7Review() {
         </div>
       </div>
 
+      {error && (
+        <div style={{ padding: "12px", background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: "8px", fontSize: "14px", marginTop: "24px", textAlign: "center" }}>
+          {error}
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "28px" }}>
-        <button onClick={() => router.push("/add-church/1")} className="btn-secondary">
+        <button onClick={() => router.push("/add-church/8")} className="btn-secondary">
           <i className="ti ti-pencil" style={{ fontSize: "14px" }}></i> Keep editing
         </button>
         <button onClick={handleSubmit} className="btn-primary" disabled={isSubmitting} style={{ opacity: isSubmitting ? 0.7 : 1 }}>

@@ -1,20 +1,29 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { useFormContext } from "@/context/FormContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function SuccessPage() {
+function SuccessContent() {
   const { formData } = useFormContext();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [copied, setCopied] = useState(false);
 
+  const apiSlug = searchParams.get('slug');
   const name = formData.name || "Your Church";
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  const url = `ekklesia.app/church/${slug || 'your-church'}`;
+  const slug = apiSlug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  
+  const [domain, setDomain] = useState("");
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setDomain(window.location.host);
+    }
+  }, []);
+  const url = domain ? `${domain.includes('localhost') ? 'http' : 'https'}://${domain}/church/${slug || 'your-church'}` : `https://churchnavigator.com/church/${slug || 'your-church'}`;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(`https://${url}`);
+    navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -22,8 +31,8 @@ export default function SuccessPage() {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: `${name} on Ekklesia`,
-        url: `https://${url}`,
+        title: `${name} on ChurchNavigator`,
+        url: url,
       }).catch(console.error);
     } else {
       handleCopy();
@@ -46,7 +55,7 @@ export default function SuccessPage() {
         </div>
 
         <div style={{ fontSize: "32px", fontWeight: 800, color: "var(--cn-ink)", marginBottom: "10px" }}>You're live!</div>
-        <div style={{ fontSize: "15px", color: "var(--cn-gray)", marginBottom: "28px" }}>{name} is now on Ekklesia</div>
+        <div style={{ fontSize: "15px", color: "var(--cn-gray)", marginBottom: "28px" }}>{name} is now on ChurchNavigator</div>
 
         {/* URL Box */}
         <div style={{ background: "#f5f3ff", border: "1.5px solid #ede9fe", borderRadius: "14px", padding: "13px 18px", marginBottom: "28px", display: "flex", alignItems: "center", gap: "10px" }}>
@@ -69,7 +78,7 @@ export default function SuccessPage() {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)" }}>Listing created</div>
-              <div style={{ fontSize: "11px", color: "var(--cn-gray)" }}>You're live on Ekklesia!</div>
+              <div style={{ fontSize: "11px", color: "var(--cn-gray)" }}>You're live on ChurchNavigator!</div>
             </div>
           </div>
 
@@ -121,5 +130,13 @@ export default function SuccessPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SuccessContent />
+    </Suspense>
   );
 }

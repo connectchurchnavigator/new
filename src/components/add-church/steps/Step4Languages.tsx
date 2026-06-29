@@ -85,7 +85,7 @@ export default function Step4Languages({ onNext, onBack }: Step4LanguagesProps) 
               setIsOpen(true);
             }}
             onFocus={() => setIsOpen(true)}
-            style={{ paddingLeft: "42px" }} 
+            style={{ paddingLeft: "42px", border: error && selectedLangs.length === 0 ? "1.5px solid red" : "" }} 
             autoComplete="off"
           />
           {isOpen && (

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ekklesia — Launch Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.30.0/tabler-icons.min.css" rel="stylesheet">
+<style>
+:root{
+  --grad:linear-gradient(135deg,#f43f5e 0%,#7c3aed 100%);
+  --purple:#7c3aed;--purple-d:#6d28d9;--coral:#f43f5e;
+  --ink:#0f0f1a;--gray:#6b7280;--gray-l:#9ca3af;--border:#e9e9ef;--surface:#f5f3ff;--bg:#f7f7fb;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;padding-bottom:60px}
+.top{background:var(--grad);color:#fff;padding:30px 20px 70px}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px}
+.brand{display:inline-flex;align-items:center;gap:9px;font-weight:800;font-size:18px}
+.brand .mark{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center}
+h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:18px 0 6px}
+.sub{opacity:.9;font-size:14px}
+.overall{margin-top:20px;background:rgba(255,255,255,.16);border-radius:16px;padding:16px 18px;backdrop-filter:blur(4px)}
+.overall .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+.overall .pct{font-size:30px;font-weight:800}
+.overall .meta{font-size:12.5px;opacity:.9}
+.track{height:9px;background:rgba(255,255,255,.25);border-radius:20px;overflow:hidden}
+.track .fill{height:100%;background:#fff;border-radius:20px;transition:width .4s}
+.phases{margin-top:-46px}
+.phase{background:#fff;border:1px solid var(--border);border-radius:18px;padding:18px 18px 8px;margin-bottom:16px;box-shadow:0 10px 30px -22px rgba(15,15,26,.4)}
+.ph-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:6px;cursor:pointer}
+.ph-num{width:34px;height:34px;border-radius:10px;background:var(--surface);color:var(--purple-d);font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ph-t{font-size:15.5px;font-weight:800}
+.ph-s{font-size:12px;color:var(--gray);margin-top:1px}
+.ph-pct{margin-left:auto;font-size:12px;font-weight:700;color:var(--purple-d);background:var(--surface);padding:4px 10px;border-radius:20px;white-space:nowrap}
+.ph-mini{height:5px;background:#f1f0f7;border-radius:20px;overflow:hidden;margin:10px 0 4px}
+.ph-mini .fill{height:100%;background:var(--grad);border-radius:20px;transition:width .4s}
+.tasks{margin-top:6px}
+.task{display:flex;gap:11px;align-items:flex-start;padding:10px 4px;border-bottom:1px solid #f3f2f8}
+.task:last-child{border-bottom:none}
+.cb{width:21px;height:21px;border-radius:7px;border:2px solid var(--border);flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;background:#fff}
+.cb.on{background:var(--grad);border-color:transparent;color:#fff}
+.cb i{font-size:13px;opacity:0;transition:.15s}
+.cb.on i{opacity:1}
+.task .txt{font-size:13.5px;line-height:1.5;flex:1}
+.task.done .txt{color:var(--gray-l);text-decoration:line-through}
+.task .tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:6px;vertical-align:middle}
+.tag-you{background:#fffbeb;color:#b45309}
+.tag-key{background:#fef2f2;color:#b91c1c}
+.tag-dec{background:#eff6ff;color:#1d4ed8}
+.rm{opacity:0;background:none;border:none;color:var(--gray-l);cursor:pointer;font-size:14px;padding:2px}
+.task:hover .rm{opacity:1}
+.add{display:flex;gap:8px;padding:10px 4px 6px}
+.add input{flex:1;font-family:inherit;font-size:13px;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;outline:none}
+.add input:focus{border-color:var(--purple)}
+.add button{background:var(--surface);color:var(--purple-d);font-weight:700;font-size:13px;border:none;border-radius:10px;padding:0 14px;cursor:pointer}
+.collapsed .tasks,.collapsed .add,.collapsed .ph-mini{display:none}
+.foot{max-width:760px;margin:20px auto 0;padding:0 18px;display:flex;justify-content:space-between;align-items:center;color:var(--gray);font-size:12px}
+.foot button{background:none;border:1px solid var(--border);border-radius:9px;padding:8px 13px;color:var(--gray);font-weight:600;cursor:pointer}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--gray)}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.dot{width:8px;height:8px;border-radius:3px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="wrap">
+    <div class="brand"><span class="mark"><i class="ti ti-cross"></i></span> Ekklesia</div>
+    <h1>Launch Tracker</h1>
+    <div class="sub">Every task from foundation to launch. Tap to check off — your progress saves automatically in this browser.</div>
+    <div class="overall">
+      <div class="row"><div class="pct" id="overall-pct">0%</div><div class="meta" id="overall-meta">0 of 0 done</div></div>
+      <div class="track"><div class="fill" id="overall-fill" style="width:0%"></div></div>
+      <div class="legend">
+        <span><span class="dot" style="background:#fde68a"></span> You only</span>
+        <span><span class="dot" style="background:#fecaca"></span> Critical</span>
+        <span><span class="dot" style="background:#bfdbfe"></span> Decision</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="phases" id="phases"></div>
+  <div class="foot">
+    <span id="saved-note">Saved locally on this device</span>
+    <button onclick="resetAll()">Reset tracker</button>
+  </div>
+</div>
+
+<script>
+const KEY='ekklesia-tracker-v1';
+// d=default done. tag: you|key|dec
+const PHASES=[
+ {n:'0',t:'Verify the foundation',s:'Do this first — nothing is proven until it runs',tasks:[
+   {id:'p0-1',x:'Create a Supabase project (region near users, save DB password)',tag:'you'},
+   {id:'p0-2',x:'Run 0001_init.sql in the SQL editor',tag:'you'},
+   {id:'p0-3',x:'Run 0002_visitors.sql',tag:'you'},
+   {id:'p0-4',x:'Create Storage bucket church-media (Public) + policies',tag:'you'},
+   {id:'p0-5',x:'Auth → Email → turn OFF "Confirm email" for local testing',tag:'you'},
+   {id:'p0-6',x:'Copy URL + anon key + service_role key',tag:'you'},
+   {id:'p0-7',x:'cp .env.example .env.local and paste keys',tag:'you'},
+   {id:'p0-8',x:'npm install then npm run dev',tag:'you'},
+   {id:'p0-9',x:'Walk the path: sign up → create church → edit → publish → view → search',tag:'you'},
+   {id:'p0-10',x:'Fix any first-run errors (paste them to Claude)',tag:'you'},
+ ]},
+ {n:'1',t:'Owner dashboard',s:'Bring the live app up to the prototype',tasks:[
+   {id:'p1-1',x:'Profile & about editor (live, saves to DB)',d:1},
+   {id:'p1-2',x:'Service times editor (add/edit/remove)',d:1},
+   {id:'p1-3',x:'Pastor & leaders editor (+ photo upload)',d:1},
+   {id:'p1-4',x:'Ministry teams editor (Media, Audio, etc.)',d:1},
+   {id:'p1-5',x:'Publish / unpublish listing',d:1},
+   {id:'p1-6',x:'Address capture — wire Google Places into onboarding',tag:'you'},
+   {id:'p1-7',x:'Photo upload UI — cover + logo + gallery'},
+   {id:'p1-8',x:'Ministries & facilities editor (chips)'},
+   {id:'p1-9',x:'Languages editor (search + multi-select)'},
+   {id:'p1-10',x:'Profile-strength / completeness meter'},
+   {id:'p1-11',x:'Bible College — decide: a team, or its own program page?',tag:'dec'},
+ ]},
+ {n:'2',t:'Public site',s:'Home, search, listing — polish',tasks:[
+   {id:'p2-1',x:'Home page with search (SSR)',d:1},
+   {id:'p2-2',x:'Public listing page (SSR + SEO) — pastor & teams',d:1},
+   {id:'p2-3',x:'Search filters UI (denomination, city, ministry, language)'},
+   {id:'p2-4',x:'Map view / "near me" (lat-lng stored)'},
+   {id:'p2-5',x:'Directions / add-to-calendar / share buttons'},
+   {id:'p2-6',x:'Empty / loading / error states'},
+   {id:'p2-7',x:'Mobile responsiveness pass (real phone)'},
+   {id:'p2-8',x:'404 / not-found pages'},
+ ]},
+ {n:'3',t:'Visitor features',s:'Schema done; UI to build',tasks:[
+   {id:'p3-1',x:'Visitor tracking schema + funnel/stats + owner-only RLS',d:1},
+   {id:'p3-2',x:'Visitor-insights UI ported into React dashboard'},
+   {id:'p3-3',x:'QR check-in screen + recording'},
+   {id:'p3-4',x:'People to follow up + send-message action'},
+   {id:'p3-5',x:'CSV export'},
+   {id:'p3-6',x:'Anonymous view tracking on public pages'},
+   {id:'p3-7',x:'Nightly job to recompute at-risk'},
+ ]},
+ {n:'4',t:'AI features',s:'Designed, not built',tasks:[
+   {id:'p4-1',x:'AI "write my description" (Anthropic, server-side)'},
+   {id:'p4-2',x:'AI "people to follow up" suggestions'},
+   {id:'p4-3',x:'AI / natural-language church search'},
+   {id:'p4-4',x:'Smart-import from existing website / Facebook'},
+ ]},
+ {n:'5',t:'Multi-branch',s:'Model done; UI to build',tasks:[
+   {id:'p5-1',x:'Data model: one org → many branches',d:1},
+   {id:'p5-2',x:'Branch switcher + per-branch dashboards'},
+   {id:'p5-3',x:'"Add a branch" flow'},
+   {id:'p5-4',x:'Org roles (owner/admin/editor) + invite teammates'},
+ ]},
+ {n:'6',t:'Production hardening',s:'Before any public launch',tasks:[
+   {id:'p6-1',x:'Email confirmation ON + password reset + magic link',tag:'key'},
+   {id:'p6-2',x:'Transactional email (Resend/Postmark)',tag:'key'},
+   {id:'p6-3',x:'Error handling + monitoring (Sentry)',tag:'key'},
+   {id:'p6-4',x:'Rate limiting (public endpoints + address proxy)'},
+   {id:'p6-5',x:'Image optimisation + upload size limits'},
+   {id:'p6-6',x:'Server-side input validation on every form'},
+   {id:'p6-7',x:'Security review: RLS on every table; service_role server-only',tag:'key'},
+   {id:'p6-8',x:'Accessibility pass (keyboard, contrast, labels)'},
+   {id:'p6-9',x:'Performance: indexes under load + page-speed'},
+   {id:'p6-10',x:'GDPR: privacy policy + lawful basis for member data',tag:'key'},
+   {id:'p6-11',x:'Consent for personal data (visitor tracking)',tag:'key'},
+   {id:'p6-12',x:'Cookie notice + Terms of service'},
+   {id:'p6-13',x:'Data deletion / export (data-subject rights)',tag:'key'},
+   {id:'p6-14',x:'Data residency: EU/UK Supabase region'},
+ ]},
+ {n:'7',t:'Deploy & launch',s:'Go live on a real URL',tasks:[
+   {id:'p7-1',x:'Deploy to Vercel (repo + env vars)',tag:'you'},
+   {id:'p7-2',x:'Buy domain + connect',tag:'you'},
+   {id:'p7-3',x:'Separate prod vs dev Supabase project',tag:'you'},
+   {id:'p7-4',x:'Restrict Google key to production domain',tag:'you'},
+   {id:'p7-5',x:'Run migrations on production DB'},
+   {id:'p7-6',x:'Smoke-test full flow on production'},
+   {id:'p7-7',x:'Confirm backups'},
+   {id:'p7-8',x:'Analytics (Plausible/GA)'},
+ ]},
+ {n:'8',t:'Go-to-market',s:'Parallel, non-technical',tasks:[
+   {id:'p8-1',x:'Onboard 3–5 pilot churches (your network)',tag:'you'},
+   {id:'p8-2',x:'Seed directory so it isn\'t empty at launch'},
+   {id:'p8-3',x:'Landing page for church owners'},
+   {id:'p8-4',x:'Pricing decision (free / freemium / verified tier)',tag:'dec'},
+   {id:'p8-5',x:'Feedback loop with pilots',tag:'you'},
+   {id:'p8-6',x:'SEO: sitemap + Church structured data'},
+ ]},
+];
+
+let state=load();
+function load(){ try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return {}} }
+function save(){ try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){} }
+
+// seed defaults once
+PHASES.forEach(p=>p.tasks.forEach(t=>{ if(state[t.id]===undefined && t.d) state[t.id]=true; }));
+
+function isDone(t){ return !!state[t.id]; }
+const tagClass={you:'tag-you',key:'tag-key',dec:'tag-dec'};
+const tagText={you:'you',key:'critical',dec:'decide'};
+
+function render(){
+  const host=document.getElementById('phases'); host.innerHTML='';
+  let total=0,done=0;
+  PHASES.forEach((p,pi)=>{
+    const custom=(state['custom-'+p.n]||[]);
+    const all=[...p.tasks,...custom];
+    const pdone=all.filter(isDone).length; total+=all.length; done+=pdone;
+    const pct=all.length?Math.round(pdone/all.length*100):0;
+    const collapsed=state['collapsed-'+p.n];
+    const div=document.createElement('div');
+    div.className='phase'+(collapsed?' collapsed':'');
+    div.innerHTML=`
+      <div class="ph-head" onclick="toggle('${p.n}')">
+        <div class="ph-num">${p.n}</div>
+        <div><div class="ph-t">${p.t}</div><div class="ph-s">${p.s}</div></div>
+        <div class="ph-pct">${pdone}/${all.length} · ${pct}%</div>
+      </div>
+      <div class="ph-mini"><div class="fill" style="width:${pct}%"></div></div>
+      <div class="tasks">${all.map(t=>taskRow(t,p.n)).join('')}</div>
+      <div class="add">
+        <input placeholder="Add a task to this phase…" id="add-${p.n}" onkeydown="if(event.key==='Enter')addTask('${p.n}')">
+        <button onclick="addTask('${p.n}')">Add</button>
+      </div>`;
+    host.appendChild(div);
+  });
+  const opct=total?Math.round(done/total*100):0;
+  document.getElementById('overall-pct').textContent=opct+'%';
+  document.getElementById('overall-meta').textContent=done+' of '+total+' done';
+  document.getElementById('overall-fill').style.width=opct+'%';
+}
+function taskRow(t,pn){
+  const on=isDone(t);
+  const tag=t.tag?`<span class="tag ${tagClass[t.tag]}">${tagText[t.tag]}</span>`:'';
+  const rm=t.custom?`<button class="rm" onclick="delTask(event,'${pn}','${t.id}')"><i class="ti ti-trash"></i></button>`:'';
+  return `<div class="task ${on?'done':''}">
+    <div class="cb ${on?'on':''}" onclick="check('${t.id}')"><i class="ti ti-check"></i></div>
+    <div class="txt">${t.x}${tag}</div>${rm}</div>`;
+}
+function check(id){ state[id]=!state[id]; save(); render(); }
+function toggle(n){ state['collapsed-'+n]=!state['collapsed-'+n]; save(); render(); }
+function addTask(n){
+  const inp=document.getElementById('add-'+n); const v=(inp.value||'').trim(); if(!v)return;
+  const key='custom-'+n; const arr=state[key]||[];
+  arr.push({id:'c-'+n+'-'+Date.now(),x:v,custom:true}); state[key]=arr; save(); render();
+}
+function delTask(e,n,id){
+  e.stopPropagation();
+  const key='custom-'+n; state[key]=(state[key]||[]).filter(t=>t.id!==id); delete state[id]; save(); render();
+}
+function resetAll(){
+  if(!confirm('Reset all progress and custom tasks on this device?'))return;
+  state={}; PHASES.forEach(p=>p.tasks.forEach(t=>{ if(t.d) state[t.id]=true; })); save(); render();
+}
+render();
+</script>
+</body>
+</html>

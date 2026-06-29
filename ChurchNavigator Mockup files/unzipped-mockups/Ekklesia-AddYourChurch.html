@@ -1,0 +1,2278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Ekklesia — Add Your Church</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{
+  --ek-purple:#7c3aed;
+  --ek-purple-dark:#5b21b6;
+  --ek-coral:#f43f5e;
+  --ek-grad:linear-gradient(135deg,#f43f5e,#7c3aed);
+  --ek-ink:#0f0f1a;
+  --ek-gray:#6b7280;
+  --ek-gray-light:#9ca3af;
+  --ek-border:#e8e8ed;
+  --ek-surface:#f8f8fb;
+  --ek-glow:rgba(124,58,237,0.18);
+  --ek-glow2:rgba(124,58,237,0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter','Segoe UI',Arial,sans-serif}
+body{background:#fff;min-height:100vh;color:var(--ek-ink)}
+.screen{display:none}
+.screen.on{display:block}
+
+/* Inputs */
+input,textarea,select{
+  width:100%;padding:13px 16px;font-size:14px;
+  border:1.5px solid var(--ek-border);border-radius:12px;
+  background:#fff;font-family:inherit;outline:none;
+  transition:all 0.2s;color:var(--ek-ink)
+}
+input::placeholder,textarea::placeholder{color:#aeb0bd}
+input:focus,textarea:focus,select:focus{
+  border-color:var(--ek-purple);
+  box-shadow:0 0 0 4px var(--ek-glow2)
+}
+input.verified{border-color:#16a34a;background:#f0fdf4}
+input.error{border-color:#ef4444;background:#fff1f2}
+label{font-size:13px;font-weight:700;color:var(--ek-ink);display:block;margin-bottom:7px}
+.req-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;color:#be123c;background:#fee2e6;padding:2px 8px;border-radius:20px;margin-left:8px;letter-spacing:0.03em;vertical-align:middle}
+.opt-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;color:#6b7280;background:#f3f4f6;padding:2px 8px;border-radius:20px;margin-left:8px;letter-spacing:0.03em;vertical-align:middle}
+#f-country-box:focus-within{border-color:var(--ek-purple)!important;box-shadow:0 0 0 3px rgba(124,58,237,0.12)}
+
+/* Buttons */
+.btn-primary{
+  background:var(--ek-purple);
+  color:#fff;border:none;border-radius:12px;
+  padding:13px 24px;font-size:14px;font-weight:600;
+  cursor:pointer;font-family:inherit;
+  display:inline-flex;align-items:center;gap:7px;justify-content:center;
+  transition:all 0.2s
+}
+.btn-primary:hover{background:var(--ek-purple-dark)}
+.btn-secondary{
+  background:#fff;color:var(--ek-ink);
+  border:1.5px solid var(--ek-border);border-radius:12px;
+  padding:12px 20px;font-size:14px;cursor:pointer;
+  font-family:inherit;display:inline-flex;align-items:center;gap:6px;
+  transition:all 0.2s;font-weight:600
+}
+.btn-secondary:hover{background:var(--ek-surface);border-color:#d4d4dc}
+
+/* Cards */
+.scard{
+  background:#fff;border:1.5px solid var(--ek-border);
+  border-radius:20px;overflow:hidden;margin-bottom:20px;
+  padding:32px;box-shadow:0 1px 3px rgba(15,15,26,0.04)
+}
+
+/* Top progress bar segments */
+.prog-track{display:flex;gap:8px}
+.prog-seg{height:6px;border-radius:4px;flex:1;background:var(--ek-border);transition:background 0.4s}
+.prog-seg.done{background:var(--ek-purple)}
+.prog-seg.active{background:linear-gradient(90deg,var(--ek-purple),var(--ek-coral))}
+
+/* Icon-tile step bar */
+.step-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
+.step-icon-outer{
+  width:46px;height:46px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all 0.2s
+}
+.step-icon-outer.pending{background:var(--ek-surface)}
+.step-icon-outer.active{background:var(--ek-grad);box-shadow:0 4px 14px var(--ek-glow)}
+.step-icon-outer.done{background:#16a34a}
+.step-connector{height:2px;flex:1;border-radius:2px;background:var(--ek-border);transition:background 0.4s;margin-bottom:24px}
+.step-connector.done{background:#16a34a}
+
+/* Chips */
+.chip{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:13px;padding:8px 14px;border-radius:20px;
+  margin:3px;cursor:pointer;
+  border:1.5px solid var(--ek-border);background:#fff;
+  color:var(--ek-gray);transition:all 0.15s;user-select:none
+}
+.chip:hover{border-color:var(--ek-purple);color:var(--ek-purple)}
+.chip.on{background:var(--ek-purple);color:#fff;border-color:var(--ek-purple)}
+
+/* Autocomplete */
+.autocomplete-dropdown{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;
+  background:#fff;border:1.5px solid var(--ek-border);
+  border-radius:16px;box-shadow:0 16px 40px rgba(15,15,26,0.12);
+  z-index:1000;max-height:320px;overflow-y:auto;
+}
+.autocomplete-item{
+  padding:13px 16px;cursor:pointer;
+  display:flex;align-items:flex-start;gap:10px;
+  border-bottom:1px solid #f3f3f6;transition:background 0.15s
+}
+.autocomplete-item:hover{background:var(--ek-surface)}
+.autocomplete-item:last-child{border-bottom:none}
+
+/* AI bubble */
+.ai-bubble{
+  background:linear-gradient(135deg,#fdf2f8,#f5f3ff);
+  border-radius:16px;padding:16px;margin-bottom:24px;
+  display:flex;gap:12px;align-items:flex-start;
+  border:1.5px solid #ede9fe;
+}
+.ai-icon{
+  width:36px;height:36px;border-radius:10px;
+  background:var(--ek-grad);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;box-shadow:0 4px 14px var(--ek-glow)
+}
+
+/* Country buttons */
+.country-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 15px;border-radius:10px;
+  border:1.5px solid var(--ek-border);background:#fff;
+  color:var(--ek-gray);cursor:pointer;font-family:inherit;
+  font-size:13px;font-weight:600;transition:all 0.15s
+}
+.country-btn:hover{border-color:var(--ek-purple)}
+.country-btn.on{border-color:var(--ek-purple);background:#f5f3ff;color:var(--ek-purple-dark)}
+
+/* Facility chips */
+.fac-chip{
+  display:flex;align-items:center;gap:9px;
+  padding:11px 14px;border-radius:12px;
+  border:1.5px solid var(--ek-border);background:#fff;
+  color:var(--ek-gray);cursor:pointer;font-size:13px;font-weight:500;
+  transition:all 0.15s;margin-bottom:8px;width:100%;
+  font-family:inherit
+}
+.fac-chip:hover{border-color:var(--ek-purple)}
+.fac-chip.on{background:#f5f3ff;border-color:var(--ek-purple);color:var(--ek-purple-dark)}
+.fac-chip .fac-icon{
+  width:30px;height:30px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all 0.15s;background:var(--ek-surface)
+}
+.fac-chip.on .fac-icon{background:var(--ek-grad)}
+.fac-chip.on .fac-icon i{color:#fff !important}
+
+/* Type cards */
+.type-card{
+  background:#fff;border:1.5px solid var(--ek-border);
+  border-radius:16px;padding:20px 12px;text-align:center;
+  cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden
+}
+.type-card:hover{border-color:var(--ek-purple);background:var(--ek-surface)}
+.type-card.on{border-color:var(--ek-purple);background:#f5f3ff;box-shadow:0 4px 16px var(--ek-glow)}
+.type-card .t-icon{
+  width:44px;height:44px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 10px;transition:all 0.2s;
+  background:var(--ek-surface)
+}
+.type-card.on .t-icon,.type-card:hover .t-icon{background:var(--ek-grad)}
+.type-card.on .t-icon i,.type-card:hover .t-icon i{color:#fff !important}
+
+/* Leaflet */
+#leaflet-map{height:220px;border-radius:14px;z-index:1;border:1.5px solid var(--ek-border)}
+
+/* Animations */
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes pulseScale{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes popIn{0%{transform:scale(0.9);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes slideUp{0%{transform:translateY(10px);opacity:0}100%{transform:translateY(0);opacity:1}}
+@keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+
+.slide-up{animation:slideUp 0.3s ease forwards}
+.pop{animation:popIn 0.3s ease forwards}
+
+/* Top nav (matches Ekklesia reference) */
+.topnav{display:flex;align-items:center;gap:20px;padding:16px 32px;border-bottom:1px solid var(--ek-border);background:#fff}
+.brand-mark{width:38px;height:38px;border-radius:11px;background:var(--ek-grad);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.nav-search{flex:1;max-width:380px;display:flex;align-items:center;gap:8px;background:var(--ek-surface);border-radius:20px;padding:9px 16px;color:var(--ek-gray-light);font-size:13px}
+.ai-pill{display:inline-flex;align-items:center;gap:6px;background:#f5f3ff;color:var(--ek-purple-dark);font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:#22c55e}
+.nav-link{font-size:13px;font-weight:600;color:var(--ek-ink);cursor:pointer;white-space:nowrap}
+.nav-cta{background:var(--ek-purple);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ TOP NAV (persistent) ═══════════ -->
+<div class="topnav">
+  <div style="display:flex;align-items:center;gap:11px;flex-shrink:0">
+    <div class="brand-mark"><i class="ti ti-building-church" style="font-size:18px;color:#fff"></i></div>
+    <div>
+      <div style="font-size:16px;font-weight:800;color:var(--ek-ink);line-height:1.1">Ekklesia</div>
+      <div style="font-size:9px;font-weight:700;color:var(--ek-gray-light);letter-spacing:0.06em">CHURCH DIRECTORY</div>
+    </div>
+  </div>
+  <div class="nav-search"><i class="ti ti-search" style="font-size:15px"></i> Search churches, cities, ministries...</div>
+  <div style="flex:1"></div>
+  <div class="ai-pill"><span class="ai-dot"></span> AI Directory</div>
+  <div class="nav-link">Explore</div>
+  <div class="nav-link">For churches</div>
+  <button class="nav-cta">List your church</button>
+</div>
+
+<!-- ═══════════ SCREEN 1: WELCOME ═══════════ -->
+<div class="screen on" id="s-welcome">
+<div style="background:#fff;min-height:100vh;position:relative;overflow:hidden">
+
+  <div style="position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(244,63,94,0.06),transparent 70%);top:-200px;right:-150px;pointer-events:none"></div>
+  <div style="position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,0.06),transparent 70%);bottom:-100px;left:-100px;pointer-events:none"></div>
+
+  <div style="max-width:760px;margin:0 auto;padding:48px 24px 60px;position:relative;z-index:1">
+
+    <div style="text-align:center;margin-bottom:40px">
+      <div style="font-size:36px;font-weight:800;color:var(--ek-ink);line-height:1.15;margin-bottom:10px">Add your church</div>
+      <div style="font-size:15px;color:var(--ek-gray)">Join thousands of churches already on Ekklesia — it only takes a couple of minutes</div>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--ek-gray);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:12px">Select listing type</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:32px">
+
+      <div class="type-card on" onclick="selectListingType('church',this)" id="lt-church">
+        <div class="t-icon"><i class="ti ti-building-church" style="font-size:24px;color:var(--ek-purple)"></i></div>
+        <div style="font-size:13px;font-weight:700;color:var(--ek-ink)">Church</div>
+        <div style="font-size:10px;color:var(--ek-gray-light);margin-top:3px">Place of worship</div>
+      </div>
+
+      <div class="type-card" onclick="selectListingType('pastor',this)" id="lt-pastor">
+        <div class="t-icon"><i class="ti ti-user" style="font-size:24px;color:var(--ek-gray-light)"></i></div>
+        <div style="font-size:13px;font-weight:700;color:var(--ek-ink)">Pastor</div>
+        <div style="font-size:10px;color:var(--ek-gray-light);margin-top:3px">Clergy & leaders</div>
+      </div>
+
+      <div class="type-card" onclick="selectListingType('worship',this)" id="lt-worship">
+        <div class="t-icon"><i class="ti ti-music" style="font-size:24px;color:var(--ek-gray-light)"></i></div>
+        <div style="font-size:13px;font-weight:700;color:var(--ek-ink)">Worship</div>
+        <div style="font-size:10px;color:var(--ek-gray-light);margin-top:3px">Teams & leaders</div>
+      </div>
+
+      <div class="type-card" onclick="selectListingType('media',this)" id="lt-media">
+        <div class="t-icon"><i class="ti ti-video" style="font-size:24px;color:var(--ek-gray-light)"></i></div>
+        <div style="font-size:13px;font-weight:700;color:var(--ek-ink)">Media</div>
+        <div style="font-size:10px;color:var(--ek-gray-light);margin-top:3px">Production teams</div>
+      </div>
+
+      <div class="type-card" onclick="selectListingType('college',this)" id="lt-college">
+        <div class="t-icon"><i class="ti ti-school" style="font-size:24px;color:var(--ek-gray-light)"></i></div>
+        <div style="font-size:13px;font-weight:700;color:var(--ek-ink)">College</div>
+        <div style="font-size:10px;color:var(--ek-gray-light);margin-top:3px">Bible & ministry</div>
+      </div>
+
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--ek-gray);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:12px">How would you like to create it?</div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:8px">
+
+      <div onclick="goScreen('s-form')" style="background:var(--ek-grad);border:1.5px solid transparent;border-radius:16px;padding:18px 14px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;box-shadow:0 8px 24px var(--ek-glow)"
+        onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 14px 32px var(--ek-glow)'"
+        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 8px 24px var(--ek-glow)'">
+        <div style="position:absolute;top:0;right:0;background:rgba(255,255,255,0.92);font-size:9px;font-weight:800;color:#b45309;padding:3px 9px;border-radius:0 16px 0 8px;letter-spacing:0.04em">FASTEST</div>
+        <div style="width:46px;height:46px;border-radius:13px;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
+          <i class="ti ti-forms" style="font-size:22px;color:#fff"></i>
+        </div>
+        <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:4px">Smart form</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.9);line-height:1.5">Step-by-step guided form</div>
+      </div>
+
+      <div onclick="goScreen('s-form')" style="background:linear-gradient(135deg,#fdf2f8,#f5f3ff);border:1.5px solid #ede9fe;border-radius:16px;padding:18px 14px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden"
+        onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 24px var(--ek-glow)'"
+        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="position:absolute;top:0;right:0;background:var(--ek-grad);font-size:9px;font-weight:700;color:#fff;padding:3px 9px;border-radius:0 16px 0 8px;letter-spacing:0.04em">WOW</div>
+        <div style="width:46px;height:46px;border-radius:13px;background:var(--ek-grad);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;box-shadow:0 4px 16px var(--ek-glow)">
+          <i class="ti ti-photo-scan" style="font-size:22px;color:#fff"></i>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--ek-ink);margin-bottom:4px">Upload flyer</div>
+        <div style="font-size:11px;color:var(--ek-gray);line-height:1.5">AI reads your flyer</div>
+      </div>
+
+      <div onclick="goScreen('s-form')" style="background:linear-gradient(135deg,#ecfdf5,#f0fdfa);border:1.5px solid #d1fae5;border-radius:16px;padding:18px 14px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden"
+        onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 24px rgba(22,163,74,0.18)'"
+        onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
+        <div style="position:absolute;top:0;right:0;background:#16a34a;font-size:9px;font-weight:700;color:#fff;padding:3px 9px;border-radius:0 16px 0 8px;letter-spacing:0.04em">MOBILE</div>
+        <div style="width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,#34d399,#16a34a);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;box-shadow:0 4px 16px rgba(22,163,74,0.3)">
+          <i class="ti ti-microphone" style="font-size:22px;color:#fff"></i>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--ek-ink);margin-bottom:4px">Voice input</div>
+        <div style="font-size:11px;color:var(--ek-gray);line-height:1.5">Speak about your listing</div>
+      </div>
+
+      <div onclick="goScreen('s-import')" style="background:#fff;border:1.5px solid var(--ek-border);border-radius:16px;padding:18px 14px;text-align:center;cursor:pointer;transition:all 0.2s"
+        onmouseover="this.style.borderColor='var(--ek-purple)';this.style.transform='translateY(-3px)'"
+        onmouseout="this.style.borderColor='var(--ek-border)';this.style.transform='translateY(0)'">
+        <div style="width:46px;height:46px;border-radius:13px;background:var(--ek-surface);display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
+          <i class="ti ti-link" style="font-size:22px;color:var(--ek-purple)"></i>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--ek-ink);margin-bottom:4px">Import from website</div>
+        <div style="font-size:11px;color:var(--ek-gray);line-height:1.5">Paste your URL — AI fills in the rest</div>
+      </div>
+
+    </div>
+
+    <div class="ai-bubble" style="margin-top:20px">
+      <div class="ai-icon"><i class="ti ti-sparkles" style="font-size:17px;color:#fff"></i></div>
+      <div style="font-size:13px;color:var(--ek-ink);line-height:1.6;padding-top:3px">
+        <span style="font-size:10px;font-weight:700;color:var(--ek-purple-dark);letter-spacing:0.06em;display:block;margin-bottom:3px">AI ASSISTANT</span>
+        Hello! I'll guide you through adding your listing. I'll suggest the right fields for your listing type, auto-fill where possible, and help you get live in minutes.
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════ SCREEN: IMPORT FROM WEBSITE ═══════════ -->
+<div class="screen" id="s-import">
+<div style="background:#fff;min-height:100vh;position:relative;overflow:hidden">
+
+  <div style="position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,0.06),transparent 70%);top:-150px;right:-100px;pointer-events:none"></div>
+
+  <div style="max-width:620px;margin:0 auto;padding:48px 24px 60px;position:relative;z-index:1">
+
+    <button onclick="resetImportScreen();goScreen('s-welcome')" class="btn-secondary" style="margin-bottom:32px">
+      <i class="ti ti-arrow-left" style="font-size:14px"></i> Choose another way
+    </button>
+
+    <!-- STATE 1: URL entry -->
+    <div id="import-state-entry">
+      <div style="text-align:center;margin-bottom:32px">
+        <div style="width:64px;height:64px;border-radius:18px;background:var(--ek-grad);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;box-shadow:0 8px 24px var(--ek-glow)">
+          <i class="ti ti-link" style="font-size:28px;color:#fff"></i>
+        </div>
+        <div style="font-size:26px;font-weight:800;color:var(--ek-ink);margin-bottom:8px">Import from your website</div>
+        <div style="font-size:14px;color:var(--ek-gray)">Paste your church's website and we'll pull in what we can find — you can review and edit everything before publishing.</div>
+      </div>
+
+      <div class="scard">
+        <label>Church website <span class="req-badge">REQUIRED</span></label>
+        <div style="position:relative;margin-bottom:6px">
+          <i class="ti ti-world" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--ek-gray-light);z-index:2"></i>
+          <input id="import-url" placeholder="www.yourchurch.org" autocomplete="off" style="padding-left:42px" onkeydown="if(event.key==='Enter')startImport()"/>
+        </div>
+        <div id="import-url-error" style="display:none;font-size:12px;color:#ef4444;margin-bottom:8px">Please enter a valid website address</div>
+        <div style="font-size:11px;color:var(--ek-gray-light);margin-bottom:18px">e.g. yourchurch.org, www.yourchurch.com, or a Facebook/Linktree page</div>
+        <button onclick="startImport()" class="btn-primary" style="width:100%;justify-content:center">
+          <i class="ti ti-sparkles" style="font-size:15px"></i> Scan website
+        </button>
+      </div>
+    </div>
+
+    <!-- STATE 2: scanning animation -->
+    <div id="import-state-scanning" style="display:none;text-align:center;padding:40px 0">
+      <div style="width:84px;height:84px;border-radius:24px;background:var(--ek-grad);display:flex;align-items:center;justify-content:center;margin:0 auto 26px;box-shadow:0 10px 30px var(--ek-glow);animation:pulseScale 1.6s ease-in-out infinite">
+        <i class="ti ti-world-search" style="font-size:34px;color:#fff"></i>
+      </div>
+      <div style="font-size:20px;font-weight:800;color:var(--ek-ink);margin-bottom:8px" id="import-scan-title">Reading your website...</div>
+      <div style="font-size:13px;color:var(--ek-gray);margin-bottom:28px" id="import-scan-url"></div>
+
+      <div style="max-width:340px;margin:0 auto;text-align:left" id="import-scan-steps">
+        <div class="import-scan-step" data-step="0" style="display:flex;align-items:center;gap:10px;padding:9px 0;color:var(--ek-gray-light);font-size:13px">
+          <i class="ti ti-circle-dashed" style="font-size:16px"></i> Fetching page content
+        </div>
+        <div class="import-scan-step" data-step="1" style="display:flex;align-items:center;gap:10px;padding:9px 0;color:var(--ek-gray-light);font-size:13px">
+          <i class="ti ti-circle-dashed" style="font-size:16px"></i> Looking for church name & address
+        </div>
+        <div class="import-scan-step" data-step="2" style="display:flex;align-items:center;gap:10px;padding:9px 0;color:var(--ek-gray-light);font-size:13px">
+          <i class="ti ti-circle-dashed" style="font-size:16px"></i> Finding service times & contact info
+        </div>
+        <div class="import-scan-step" data-step="3" style="display:flex;align-items:center;gap:10px;padding:9px 0;color:var(--ek-gray-light);font-size:13px">
+          <i class="ti ti-circle-dashed" style="font-size:16px"></i> Checking social links
+        </div>
+      </div>
+    </div>
+
+    <!-- STATE 3: results found -->
+    <div id="import-state-results" style="display:none">
+      <div style="text-align:center;margin-bottom:28px">
+        <div style="width:64px;height:64px;border-radius:18px;background:#16a34a;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;box-shadow:0 8px 24px rgba(22,163,74,0.3)">
+          <i class="ti ti-check" style="font-size:28px;color:#fff"></i>
+        </div>
+        <div style="font-size:24px;font-weight:800;color:var(--ek-ink);margin-bottom:8px">We found some details!</div>
+        <div style="font-size:13px;color:var(--ek-gray)">Here's what we pulled from your website — you'll be able to review and edit every field next.</div>
+      </div>
+
+      <div class="scard" id="import-results-list" style="padding:8px"></div>
+
+      <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:14px;padding:13px 16px;margin-bottom:20px;display:flex;gap:9px;align-items:flex-start">
+        <i class="ti ti-info-circle" style="font-size:15px;color:#d97706;flex-shrink:0;margin-top:1px"></i>
+        <div style="font-size:12px;color:#78350f;line-height:1.6">Websites aren't always structured the same way, so some fields may need a closer look. Nothing is published until you review and confirm.</div>
+      </div>
+
+      <button onclick="applyImportAndContinue()" class="btn-primary" style="width:100%;justify-content:center">
+        Review & complete listing <i class="ti ti-arrow-right" style="font-size:16px"></i>
+      </button>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- ═══════════ SCREEN 2: FORM WIZARD ═══════════ -->
+<div class="screen" id="s-form">
+<div style="background:#fff;min-height:100vh;position:relative;overflow:hidden">
+
+  <div style="position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(244,63,94,0.05),transparent 70%);top:-150px;right:-100px;pointer-events:none"></div>
+
+  <div style="max-width:900px;margin:0 auto;padding:32px 24px 60px;position:relative;z-index:1">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="brand-mark"><i class="ti ti-building-church" style="font-size:18px;color:#fff"></i></div>
+        <div style="font-size:20px;font-weight:800;color:var(--ek-ink)">Ekklesia</div>
+      </div>
+      <button class="btn-secondary"><i class="ti ti-device-floppy" style="font-size:14px"></i> Save & exit</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px">
+      <div id="step-bar" style="flex:1;display:flex;align-items:flex-start;justify-content:center;gap:0"></div>
+      <div style="font-size:13px;color:var(--ek-gray);font-weight:600;flex-shrink:0" id="step-counter">Step 1 of 6</div>
+    </div>
+
+    <button onclick="goScreen('s-welcome')" class="btn-secondary" style="margin-bottom:28px">
+      <i class="ti ti-arrow-left" style="font-size:14px"></i> Choose another way
+    </button>
+
+    <div style="text-align:center;margin-bottom:36px">
+      <div id="step-title" style="font-size:30px;font-weight:800;color:var(--ek-ink);margin-bottom:8px">Add your church</div>
+      <div id="step-subtitle" style="font-size:14px;color:var(--ek-gray)">Fill in your details below — it only takes a couple of minutes.<br/>Required fields are marked.</div>
+    </div>
+
+    <div class="ai-bubble">
+      <div class="ai-icon"><i class="ti ti-sparkles" style="font-size:17px;color:#fff"></i></div>
+      <div style="font-size:13px;color:var(--ek-ink);line-height:1.6;padding-top:3px" id="ai-hint-text"></div>
+    </div>
+
+    <div id="step-1" class="step-content slide-up">
+
+      <div class="scard">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">
+          <div style="width:38px;height:38px;border-radius:11px;background:var(--ek-grad);display:flex;align-items:center;justify-content:center"><i class="ti ti-user" style="font-size:18px;color:#fff"></i></div>
+          <div style="font-size:18px;font-weight:800;color:var(--ek-ink)">Profile</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+          <div>
+            <label>Church name <span class="req-badge">REQUIRED</span></label>
+            <input id="f-church-name" placeholder="e.g. Liberty Connections" oninput="checkDuplicate()" onblur="trimName(this)"/>
+          </div>
+          <div>
+            <label>Denomination</label>
+            <select id="f-denom" onchange="buildStepBar()">
+              <option value="">Select denomination</option>
+              <option value="Pentecostal" selected>Pentecostal</option>
+              <option value="Baptist">Baptist</option>
+              <option value="Catholic">Catholic</option>
+              <option value="Anglican">Anglican</option>
+              <option value="Methodist">Methodist</option>
+              <option value="Non-Denominational">Non-Denominational</option>
+              <option value="Orthodox">Orthodox</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div id="dup-msg" style="display:none;margin-top:16px"></div>
+      </div>
+
+      <div class="scard">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">
+          <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#fb7185,#f43f5e);display:flex;align-items:center;justify-content:center"><i class="ti ti-map-pin" style="font-size:18px;color:#fff"></i></div>
+          <div style="font-size:18px;font-weight:800;color:var(--ek-ink)">Address</div>
+        </div>
+
+        <label>Country <span class="req-badge">REQUIRED</span></label>
+        <div style="position:relative;margin-bottom:18px">
+          <span id="cp-flag" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:20px;z-index:2">🌍</span>
+          <input id="cp-search" placeholder="Select your country" oninput="filterCountries(this.value)" onfocus="filterCountries(this.value)" autocomplete="off" style="padding-left:44px"/>
+          <i id="cp-tick" class="ti ti-circle-check-filled" style="visibility:hidden;position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#16a34a"></i>
+          <div id="cp-dropdown" class="autocomplete-dropdown" style="display:none;max-height:260px;overflow:auto"></div>
+        </div>
+
+        <label>Find your address <span class="req-badge">REQUIRED</span></label>
+        <div style="position:relative;margin-bottom:6px">
+          <i class="ti ti-search" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--ek-gray-light);z-index:2"></i>
+          <input id="addr-input" placeholder="Select your country first…" oninput="addressInput(this.value)" onblur="captureTypedAddressSoon()" autocomplete="off" disabled style="padding-left:42px;padding-right:42px;opacity:0.55"/>
+          <div id="addr-spinner" style="display:none;position:absolute;right:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;border:2px solid var(--ek-border);border-top-color:var(--ek-purple);border-radius:50%;animation:spin 0.7s linear infinite"></div>
+          <i id="addr-tick" class="ti ti-circle-check-filled" style="visibility:hidden;position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#16a34a"></i>
+          <div id="addr-dropdown" class="autocomplete-dropdown" style="display:none"></div>
+        </div>
+        <div style="font-size:11.5px;color:var(--ek-gray-light);margin-bottom:14px;display:flex;align-items:center;gap:5px">
+          <i class="ti ti-info-circle" style="font-size:12px"></i>
+          Just type your street and number — we validate it and store the rest (city, postcode, region) for you.
+        </div>
+
+        <div id="addr-verified-msg" style="display:none;align-items:flex-start;gap:8px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:12px 14px;margin-bottom:18px">
+          <i class="ti ti-circle-check-filled" style="font-size:15px;color:#16a34a;flex-shrink:0;margin-top:1px"></i>
+          <div style="font-size:12.5px;color:#15803d;font-weight:600" id="addr-verified-text"></div>
+        </div>
+
+        <div id="map-section" style="display:none">
+          <label style="margin-bottom:9px">Confirm the pin is on your building</label>
+          <div id="leaflet-map"></div>
+        </div>
+
+        <!-- hidden — parsed components stored for backend analytics/reporting -->
+        <input type="hidden" id="f-addr-line"/>
+        <input type="hidden" id="f-city"/>
+        <input type="hidden" id="f-area"/>
+        <input type="hidden" id="f-state"/>
+        <input type="hidden" id="f-postcode"/>
+        <input type="hidden" id="f-country"/>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="nextStep(2)" class="btn-primary">Next — Contact <i class="ti ti-arrow-right" style="font-size:16px"></i></button>
+      </div>
+    </div>
+
+    <!-- ── STEP 2: CONTACT ── -->
+    <div id="step-2" class="step-content" style="display:none">
+      <div class="scard">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">
+          <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#60a5fa,#2563eb);display:flex;align-items:center;justify-content:center"><i class="ti ti-phone" style="font-size:18px;color:#fff"></i></div>
+          <div style="font-size:18px;font-weight:800;color:var(--ek-ink)">Contact</div>
+        </div>
+
+        <div style="margin-bottom:18px">
+          <label>Email <span class="req-badge">REQUIRED</span></label>
+          <input type="email" id="f-email" placeholder="info@church.co.uk" oninput="validateEmail(this)" autocomplete="email"/>
+        </div>
+
+        <div style="margin-bottom:18px">
+          <label>WhatsApp / phone</label>
+          <input id="s-whatsapp" placeholder="07700 900123 or +44..." oninput="validatePhone(this)"/>
+        </div>
+
+        <div style="margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div style="font-size:12px;color:var(--ek-gray);font-weight:600">Tailor social fields to:</div>
+          <button class="country-btn on" onclick="selectCountry('GB','United Kingdom',this)">🇬🇧 UK</button>
+          <button class="country-btn" onclick="selectCountry('US','United States',this)">🇺🇸 US</button>
+          <button class="country-btn" onclick="selectCountry('NG','Nigeria',this)">🇳🇬 Nigeria</button>
+          <button class="country-btn" onclick="selectCountry('GH','Ghana',this)">🇬🇭 Ghana</button>
+          <button class="country-btn" onclick="selectCountry('ZA','South Africa',this)">🇿🇦 South Africa</button>
+          <button class="country-btn" onclick="selectCountry('CA','Canada',this)">🇨🇦 Canada</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+          <div>
+            <label style="display:flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:5px;background:#1877f2;display:inline-flex;align-items:center;justify-content:center"><i class="ti ti-brand-facebook" style="font-size:11px;color:#fff"></i></span> Facebook</label>
+            <input id="s-facebook" placeholder="facebook.com/yourchurch" oninput="validateSocial(this,'facebook.com','Facebook page must start with facebook.com/...')" onfocus="prefillSocial(this,'https://facebook.com/')"/>
+          </div>
+          <div>
+            <label style="display:flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:5px;background:#e1306c;display:inline-flex;align-items:center;justify-content:center"><i class="ti ti-brand-instagram" style="font-size:11px;color:#fff"></i></span> Instagram</label>
+            <input id="s-instagram" placeholder="instagram.com/yourchurch or @handle" oninput="validateSocial(this,'instagram','Instagram must start with instagram.com/ or @')" onfocus="prefillSocial(this,'https://instagram.com/')"/>
+          </div>
+          <div>
+            <label style="display:flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:5px;background:#ff0000;display:inline-flex;align-items:center;justify-content:center"><i class="ti ti-brand-youtube" style="font-size:11px;color:#fff"></i></span> YouTube</label>
+            <input id="s-youtube" placeholder="youtube.com/c/yourchurch" oninput="validateSocial(this,'youtube.com','YouTube must start with youtube.com/...')" onfocus="prefillSocial(this,'https://youtube.com/')"/>
+          </div>
+          <div id="country-extra-1"></div>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;color:var(--ek-gray);letter-spacing:0.05em;margin-bottom:10px" id="social-country-label-wrap">More for <span id="social-country-label">United Kingdom</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" id="country-social-fields"></div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="nextStep(1)" class="btn-secondary"><i class="ti ti-arrow-left" style="font-size:14px"></i></button>
+        <button onclick="nextStep(3)" class="btn-primary">Next — Ministry <i class="ti ti-arrow-right" style="font-size:16px"></i></button>
+      </div>
+    </div>
+
+    <!-- ── STEP 3: SERVICES & MINISTRIES ── -->
+    <div id="step-3" class="step-content" style="display:none">
+      <div class="scard">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">
+          <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#34d399,#059669);display:flex;align-items:center;justify-content:center"><i class="ti ti-clock" style="font-size:18px;color:#fff"></i></div>
+          <div style="font-size:18px;font-weight:800;color:var(--ek-ink)">Service times</div>
+        </div>
+
+        <div id="svc-list">
+          <div class="svc-row" style="border:1.5px solid var(--ek-border);border-radius:14px;padding:14px;margin-bottom:12px">
+            <div style="display:grid;grid-template-columns:0.85fr 1.1fr 1fr 1fr 40px;gap:10px;align-items:start">
+              <div>
+                <div style="font-size:11px;font-weight:700;color:var(--ek-gray);margin-bottom:5px">DAY</div>
+                <select class="svc-day"><option>Sunday</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option></select>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:700;color:var(--ek-gray);margin-bottom:5px">SERVICE NAME</div>
+                <input class="svc-name" placeholder="e.g. Main Service" style="font-size:13px;padding:10px 12px" onblur="titleCaseService(this)"/>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:700;color:var(--ek-gray);margin-bottom:5px">FROM</div>
+                <div style="position:relative">
+                  <input class="time-input" placeholder="e.g. 10am, 11:30" style="font-size:13px;padding:10px 12px" oninput="parseTimeInput(this)" onblur="finaliseTime(this)"/>
+                  <div class="time-parsed" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--ek-border);border-radius:10px;z-index:100;box-shadow:0 6px 18px rgba(15,15,26,0.1)"></div>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:700;color:var(--ek-gray);margin-bottom:5px">TO</div>
+                <div style="position:relative">
+                  <input class="time-input" placeholder="e.g. 1pm, 13:00" style="font-size:13px;padding:10px 12px" oninput="parseTimeInput(this)" onblur="finaliseTime(this)"/>
+                  <div class="time-parsed" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--ek-border);border-radius:10px;z-index:100;box-shadow:0 6px 18px rgba(15,15,26,0.1)"></div>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:transparent;margin-bottom:5px">.</div>
+                <button onclick="this.closest('.svc-row').remove();buildStepBar()" style="width:38px;height:38px;background:#fff;border:1.5px solid var(--ek-border);color:#be123c;border-radius:10px;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='#fff1f2'" onmouseout="this.style.background='#fff'">
+                  <i class="ti ti-trash" style="font-size:14px"></i>
+                </button>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--ek-border)">
+              <div style="font-size:12px;color:var(--ek-gray);font-weight:600">Format:</div>
+              <button onclick="toggleFormat(this,'inperson')" class="format-btn on" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:9px;background:#f5f3ff;border:1.5px solid var(--ek-purple);color:var(--ek-purple-dark);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s">
+                <i class="ti ti-building-church" style="font-size:13px"></i> In-Person
+              </button>
+              <button onclick="toggleFormat(this,'online')" class="format-btn" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:9px;background:#fff;border:1.5px solid var(--ek-border);color:var(--ek-gray);font-size:12px;cursor:pointer;font-family:inherit;transition:all 0.15s">
+                <i class="ti ti-wifi" style="font-size:13px"></i> Online
+              </button>
+              <button onclick="toggleFormat(this,'hybrid')" class="format-btn" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:9px;background:#fff;border:1.5px solid var(--ek-border);color:var(--ek-gray);font-size:12px;cursor:pointer;font-family:inherit;transition:all 0.15s">
+                <i class="ti ti-building-community" style="font-size:13px"></i> Hybrid
+              </button>
+            </div>
+          </div>
+        </div>
+        <button onclick="addService()" style="width:100%;background:#f5f3ff;border:1.5px dashed #c4b5fd;border-radius:12px;padding:11px;font-size:13px;color:var(--ek-purple-dark);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600" onmouseover="this.style.borderColor='var(--ek-purple)'" onmouseout="this.style.borderColor='#c4b5fd'">
+          <i class="ti ti-plus" style="font-size:14px"></i> Add another service time
+        </button>
+      </div>
+
+      <div class="scard">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+          <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#fb7185,#be123c);display:flex;align-items:center;justify-content:center"><i class="ti ti-heart-handshake" style="font-size:18px;color:#fff"></i></div>
+          <div style="font-size:18px;font-weight:800;color:var(--ek-ink)">Ministries & outreach</div>
+        </div>
+
+        <div class="ai-bubble" style="margin-bottom:16px">
+          <div class="ai-icon"><i class="ti ti-sparkles" style="font-size:15px;color:#fff"></i></div>
+          <div style="font-size:13px;color:var(--ek-ink);padding-top:3px">Based on <strong>Pentecostal</strong> denomination — we've pre-selected the most common ministries for you</div>
+        </div>
+
+        <div id="ministry-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px">
+          <div class="chip on" onclick="toggleChip(this)"><i class="ti ti-users" style="font-size:12px"></i> Youth Ministry</div>
+          <div class="chip on" onclick="toggleChip(this)"><i class="ti ti-baby-carriage" style="font-size:12px"></i> Children's Church</div>
+          <div class="chip" onclick="toggleChip(this)"><i class="ti ti-bread" style="font-size:12px"></i> Food Bank</div>
+          <div class="chip" onclick="toggleChip(this)"><i class="ti ti-book" style="font-size:12px"></i> Bible Study</div>
+          <div class="chip" onclick="toggleChip(this)"><i class="ti ti-heart-handshake" style="font-size:12px"></i> Outreach</div>
+          <div class="chip" onclick="toggleChip(this)"><i class="ti ti-woman" style="font-size:12px"></i> Women's Ministry</div>
+          <div class="chip" onclick="toggleChip(this)"><i class="ti ti-man" style="font-size:12px"></i> Men's Ministry</div>
+          <div class="chip" onclick="toggleChip(this)"><i class="ti ti-pray" style="font-size:12px"></i> Prayer Group</div>
+        </div>
+
+        <button onclick="toggleCats()" style="background:none;border:none;color:var(--ek-purple);font-size:13px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;padding:0;margin-bottom:14px;font-weight:600">
+          <i class="ti ti-grid-3x3" style="font-size:14px"></i> Browse all categories to discover more
+        </button>
+        <div id="cat-browser" style="display:none;animation:slideUp 0.3s ease">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div style="background:var(--ek-surface);border:1.5px solid var(--ek-border);border-radius:14px;padding:14px">
+              <div style="font-size:11px;font-weight:700;color:var(--ek-purple-dark);margin-bottom:9px;display:flex;align-items:center;gap:5px"><i class="ti ti-users" style="font-size:13px"></i> FAMILY</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Crèche / Nursery</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Junior Church</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Teen Ministry</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Parent & Toddler</div>
+            </div>
+            <div style="background:var(--ek-surface);border:1.5px solid var(--ek-border);border-radius:14px;padding:14px">
+              <div style="font-size:11px;font-weight:700;color:var(--ek-purple-dark);margin-bottom:9px;display:flex;align-items:center;gap:5px"><i class="ti ti-heart-handshake" style="font-size:13px"></i> COMMUNITY</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Food Bank</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Community Café</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Prison Ministry</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Street Ministry</div>
+            </div>
+            <div style="background:var(--ek-surface);border:1.5px solid var(--ek-border);border-radius:14px;padding:14px">
+              <div style="font-size:11px;font-weight:700;color:var(--ek-purple-dark);margin-bottom:9px;display:flex;align-items:center;gap:5px"><i class="ti ti-music" style="font-size:13px"></i> WORSHIP & ARTS</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Praise & Worship</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Dance Ministry</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Drama & Theatre</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Choir</div>
+            </div>
+            <div style="background:var(--ek-surface);border:1.5px solid var(--ek-border);border-radius:14px;padding:14px">
+              <div style="font-size:11px;font-weight:700;color:var(--ek-purple-dark);margin-bottom:9px;display:flex;align-items:center;gap:5px"><i class="ti ti-world" style="font-size:13px"></i> MISSIONS</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Global Missions</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Church Planting</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Evangelism Team</div>
+              <div class="chip" onclick="toggleChip(this)" style="display:flex;margin:3px 0;width:100%">Local Outreach</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:9px;margin-bottom:16px">
+          <input id="custom-ministry" placeholder="Don't see yours? Type a custom ministry — e.g. Prison Ministry" style="font-size:13px;flex:1" onkeypress="if(event.key==='Enter'){event.preventDefault();addCustomMinistry();}"/>
+          <button onclick="addCustomMinistry()" style="flex-shrink:0;font-size:13px;font-weight:700;color:#fff;background:var(--ek-purple);border:none;padding:0 18px;border-radius:11px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px"><i class="ti ti-plus" style="font-size:15px"></i> Add</button>
+        </div>
+        <div id="custom-min-msg" style="display:none;font-size:12px;margin-bottom:16px"></div>
+
+        <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:14px;padding:14px 16px;display:flex;gap:9px;align-items:flex-start">
+          <i class="ti ti-eye" style="font-size:16px;color:#d97706;flex-shrink:0;margin-top:1px"></i>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:3px">More details = more visibility</div>
+            <div style="font-size:12px;color:#78350f;line-height:1.6">Listings with service times, ministries and languages get <strong>4× more profile visits</strong> than incomplete listings.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="nextStep(2)" class="btn-secondary"><i class="ti ti-arrow-left" style="font-size:14px"></i></button>
+        <button onclick="nextStep(4)" class="btn-primary">Next — Languages <i class="ti ti-arrow-right" style="font-size:16px"></i></button>
+      </div>
+    </div>
+
+    <!-- ── STEP 4: LANGUAGES ── -->
+    <div id="step-4" class="step-content" style="display:none">
+      <div class="scard">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">
+          <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center"><i class="ti ti-language" style="font-size:18px;color:#fff"></i></div>
+          <div style="font-size:18px;font-weight:800;color:var(--ek-ink)">Languages</div>
+        </div>
+        <div style="font-size:13px;color:var(--ek-gray);margin-bottom:18px">Which languages are services held in, or interpreted into?</div>
+
+        <div style="position:relative;margin-bottom:14px">
+          <i class="ti ti-search" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--ek-gray-light);z-index:2"></i>
+          <input id="lang-search" placeholder="Search languages..." oninput="langSearch(this.value)" onfocus="langFocus()" autocomplete="off" style="padding-left:42px"/>
+          <div id="lang-dropdown" class="autocomplete-dropdown" style="display:none"></div>
+        </div>
+
+        <div id="lang-selected-label" style="display:none;font-size:11px;font-weight:700;color:var(--ek-gray);letter-spacing:0.05em;margin-bottom:8px">SELECTED</div>
+        <div id="lang-chips" style="margin-bottom:18px"></div>
+
+        <div style="font-size:11px;font-weight:700;color:var(--ek-gray);letter-spacing:0.05em;margin-bottom:9px">QUICK PICKS</div>
+        <div id="lang-quick" style="display:flex;flex-wrap:wrap;gap:4px">
+          <div class="chip" onclick="addLang('English')">English</div>
+          <div class="chip" onclick="addLang('Spanish')">Spanish</div>
+          <div class="chip" onclick="addLang('French')">French</div>
+          <div class="chip" onclick="addLang('Portuguese')">Portuguese</div>
+          <div class="chip" onclick="addLang('Yoruba')">Yoruba</div>
+          <div class="chip" onclick="addLang('Twi')">Twi</div>
+          <div class="chip" onclick="addLang('Mandarin')">Mandarin</div>
+          <div class="chip" onclick="addLang('Polish')">Polish</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="nextStep(3)" class="btn-secondary"><i class="ti ti-arrow-left" style="font-size:14px"></i></button>
+        <button onclick="nextStep(5)" class="btn-primary">Next — Facilities <i class="ti ti-arrow-right" style="font-size:16px"></i></button>
+      </div>
+    </div>
+
+    <!-- ── STEP 5: FACILITIES ── -->
+    <div id="step-5" class="step-content" style="display:none">
+      <div class="scard">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">
+          <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#22d3ee,#0891b2);display:flex;align-items:center;justify-content:center"><i class="ti ti-accessible" style="font-size:18px;color:#fff"></i></div>
+          <div style="font-size:18px;font-weight:800;color:var(--ek-ink)">Facilities</div>
+        </div>
+        <div style="font-size:13px;color:var(--ek-gray);margin-bottom:22px">Help visitors plan their visit — especially families & those with accessibility needs</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--ek-purple-dark);letter-spacing:0.05em;margin-bottom:10px;display:flex;align-items:center;gap:6px"><i class="ti ti-accessible" style="font-size:14px"></i> ACCESSIBILITY</div>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-wheelchair" style="font-size:14px;color:var(--ek-purple)"></i></div>Wheelchair Access</button>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-ear" style="font-size:14px;color:var(--ek-purple)"></i></div>Hearing Loop</button>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-hand-stop" style="font-size:14px;color:var(--ek-purple)"></i></div>BSL Interpreter</button>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-accessible" style="font-size:14px;color:var(--ek-purple)"></i></div>Accessible Toilets</button>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--ek-purple-dark);letter-spacing:0.05em;margin-bottom:10px;display:flex;align-items:center;gap:6px"><i class="ti ti-car" style="font-size:14px"></i> PARKING</div>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-car" style="font-size:14px;color:var(--ek-purple)"></i></div>Free Parking</button>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-building-bank" style="font-size:14px;color:var(--ek-purple)"></i></div>On-site Car Park</button>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-bus" style="font-size:14px;color:var(--ek-purple)"></i></div>Good Transport Links</button>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-bike" style="font-size:14px;color:var(--ek-purple)"></i></div>Cycle Storage</button>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--ek-purple-dark);letter-spacing:0.05em;margin-bottom:10px;display:flex;align-items:center;gap:6px"><i class="ti ti-building" style="font-size:14px"></i> FACILITIES</div>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-wifi" style="font-size:14px;color:var(--ek-purple)"></i></div>Free WiFi</button>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-coffee" style="font-size:14px;color:var(--ek-purple)"></i></div>Café / Refreshments</button>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-baby-carriage" style="font-size:14px;color:var(--ek-purple)"></i></div>Baby Changing</button>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-pray" style="font-size:14px;color:var(--ek-purple)"></i></div>Prayer Room</button>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--ek-purple-dark);letter-spacing:0.05em;margin-bottom:10px;display:flex;align-items:center;gap:6px"><i class="ti ti-users" style="font-size:14px"></i> SPACES</div>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-building-community" style="font-size:14px;color:var(--ek-purple)"></i></div>Hall Available</button>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-door" style="font-size:14px;color:var(--ek-purple)"></i></div>Meeting Rooms</button>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-trees" style="font-size:14px;color:var(--ek-purple)"></i></div>Outdoor Space</button>
+            <button class="fac-chip" onclick="this.classList.toggle('on');buildStepBar()"><div class="fac-icon"><i class="ti ti-broadcast" style="font-size:14px;color:var(--ek-purple)"></i></div>Streaming Setup</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="nextStep(4)" class="btn-secondary"><i class="ti ti-arrow-left" style="font-size:14px"></i></button>
+        <button onclick="nextStep(6)" class="btn-primary">Next — Media <i class="ti ti-arrow-right" style="font-size:16px"></i></button>
+      </div>
+    </div>
+
+    <!-- ── STEP 6: MEDIA ── -->
+    <div id="step-6" class="step-content" style="display:none">
+      <div class="scard">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">
+          <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#fbbf24,#d97706);display:flex;align-items:center;justify-content:center"><i class="ti ti-photo" style="font-size:18px;color:#fff"></i></div>
+          <div style="font-size:18px;font-weight:800;color:var(--ek-ink)">Media & description</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+          <div>
+            <label><i class="ti ti-user-circle" style="font-size:12px;color:var(--ek-purple)"></i> Church logo</label>
+            <input type="file" id="logo-file" accept="image/*" style="display:none" onchange="previewImage(this,'logo-preview','logo-placeholder')"/>
+            <div onclick="document.getElementById('logo-file').click()" id="logo-drop" style="position:relative;border:1.5px dashed var(--ek-border);border-radius:14px;height:130px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--ek-surface);overflow:hidden">
+              <div id="logo-placeholder" style="text-align:center;color:var(--ek-gray-light)">
+                <i class="ti ti-cloud-upload" style="font-size:26px;display:block;margin:0 auto 6px"></i>
+                <div style="font-size:12px">Click to upload logo</div>
+              </div>
+              <img id="logo-preview" style="display:none;width:100%;height:100%;object-fit:cover"/>
+              <button id="logo-remove" onclick="removeImage(event,'logo-file','logo-preview','logo-placeholder','logo-drop')" style="display:none;position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.5);border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center">×</button>
+            </div>
+          </div>
+          <div>
+            <label><i class="ti ti-photo" style="font-size:12px;color:var(--ek-purple)"></i> Cover photo</label>
+            <input type="file" id="cover-file" accept="image/*" style="display:none" onchange="previewImage(this,'cover-preview','cover-placeholder')"/>
+            <div onclick="document.getElementById('cover-file').click()" id="cover-drop" style="position:relative;border:1.5px dashed var(--ek-border);border-radius:14px;height:130px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--ek-surface);overflow:hidden">
+              <div id="cover-placeholder" style="text-align:center;color:var(--ek-gray-light)">
+                <i class="ti ti-cloud-upload" style="font-size:26px;display:block;margin:0 auto 6px"></i>
+                <div style="font-size:12px">Click to upload cover</div>
+              </div>
+              <img id="cover-preview" style="display:none;width:100%;height:100%;object-fit:cover"/>
+              <button id="cover-remove" onclick="removeImage(event,'cover-file','cover-preview','cover-placeholder','cover-drop')" style="display:none;position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.5);border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center">×</button>
+            </div>
+          </div>
+        </div>
+
+        <label>YouTube channel</label>
+        <input placeholder="https://youtube.com/@yourchurch" id="f-youtube" style="margin-bottom:6px" oninput="validateSocial(this,'youtube.com')" onfocus="prefillSocial(this,'https://youtube.com/')"/>
+        <div id="f-youtube-spacer" style="margin-bottom:18px"></div>
+
+        <label>About your church</label>
+        <textarea id="f-about" style="height:130px;resize:none;margin-bottom:12px" oninput="buildStepBar()" placeholder="Tell people about your church — vision, community, what to expect when they visit..."></textarea>
+        <button style="background:#f5f3ff;border:1.5px solid #ede9fe;color:var(--ek-purple-dark);border-radius:10px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px" onclick="writeWithAI()">
+          <i class="ti ti-sparkles" style="font-size:14px"></i> Write with AI
+        </button>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="nextStep(5)" class="btn-secondary"><i class="ti ti-arrow-left" style="font-size:14px"></i></button>
+        <button onclick="goScreen('s-review')" class="btn-primary">Review listing <i class="ti ti-arrow-right" style="font-size:16px"></i></button>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- ═══════════ SCREEN 3: REVIEW ═══════════ -->
+<div class="screen" id="s-review">
+<div style="background:#fff;min-height:100vh;padding:32px 24px 60px">
+  <div style="max-width:900px;margin:0 auto">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="brand-mark"><i class="ti ti-building-church" style="font-size:18px;color:#fff"></i></div>
+        <div style="font-size:20px;font-weight:800;color:var(--ek-ink)">Ekklesia</div>
+      </div>
+      <button onclick="nextStep(6);goScreen('s-form')" class="btn-secondary"><i class="ti ti-arrow-left" style="font-size:14px"></i> Back to edit</button>
+    </div>
+
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:30px;font-weight:800;color:var(--ek-ink);margin-bottom:8px">Review your listing</div>
+      <div style="font-size:14px;color:var(--ek-gray)">Here's how your church will look — make sure everything's right before you publish</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:24px">
+
+      <!-- Live preview card (full public-style listing) -->
+      <div class="scard" style="padding:0;overflow:hidden">
+        <div style="height:150px;background:var(--ek-grad);position:relative;display:flex;align-items:center;justify-content:center" id="preview-cover-glow">
+          <img id="preview-cover-src" style="display:none;width:100%;height:150px;object-fit:cover;position:absolute;inset:0"/>
+          <img id="preview-cover-img" style="display:none;width:100%;height:150px;object-fit:cover;position:absolute;inset:0"/>
+          <i class="ti ti-photo" id="preview-cover-icon" style="font-size:30px;color:rgba(255,255,255,0.6)"></i>
+        </div>
+        <div style="padding:22px">
+          <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:16px">
+            <div style="width:58px;height:58px;border-radius:15px;background:var(--ek-grad);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;margin-top:-44px;border:3px solid #fff;box-shadow:0 4px 14px rgba(15,15,26,0.12)">
+              <i class="ti ti-building-church" id="preview-logo-icon" style="font-size:26px;color:#fff"></i>
+              <img id="preview-logo-src" style="display:none;width:100%;height:100%;object-fit:cover"/>
+            </div>
+            <div style="flex:1;padding-top:2px">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <div id="preview-church-name" style="font-size:20px;font-weight:800;color:var(--ek-ink)">Your Church Name</div>
+                <span id="preview-denom-badge" style="font-size:10px;font-weight:700;color:var(--ek-purple-dark);background:#f5f3ff;padding:3px 9px;border-radius:20px;display:none"></span>
+              </div>
+              <div id="preview-address-line" style="font-size:12.5px;color:var(--ek-gray);margin-top:5px;display:flex;align-items:center;gap:5px"></div>
+            </div>
+          </div>
+          <div id="preview-sections"></div>
+        </div>
+      </div>
+
+      <!-- Completion score panel (light Ekklesia theme) -->
+      <div class="scard" style="padding:22px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div style="font-size:12px;font-weight:800;color:var(--ek-gray);letter-spacing:0.05em">PROFILE STRENGTH</div>
+          <div id="review-score" style="font-size:24px;font-weight:800;background:var(--ek-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">0%</div>
+        </div>
+        <div style="height:9px;background:#f1f0f5;border-radius:6px;overflow:hidden;margin-bottom:14px">
+          <div id="review-bar" style="height:100%;width:0%;background:var(--ek-grad);transition:width 0.5s cubic-bezier(.2,.7,.3,1)"></div>
+        </div>
+        <div id="review-tip" style="font-size:12px;color:var(--ek-gray);margin-bottom:16px"></div>
+        <div id="review-fields" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:28px">
+      <button onclick="nextStep(6);goScreen('s-form')" class="btn-secondary"><i class="ti ti-pencil" style="font-size:14px"></i> Keep editing</button>
+      <button onclick="goScreen('s-success')" class="btn-primary"><i class="ti ti-check" style="font-size:15px"></i> Publish listing</button>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- ═══════════ SCREEN 4: SUCCESS ═══════════ -->
+<div class="screen" id="s-success">
+<div style="min-height:100vh;background:#fff;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden">
+
+  <div style="position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(244,63,94,0.06),transparent 70%);top:-150px;right:-100px;pointer-events:none"></div>
+  <div style="position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,0.06),transparent 70%);bottom:-80px;left:-60px;pointer-events:none"></div>
+
+  <div style="width:100%;max-width:540px;text-align:center;position:relative;z-index:1">
+
+    <div style="position:relative;display:inline-block;margin-bottom:28px">
+      <div style="width:100px;height:100px;border-radius:28px;background:var(--ek-grad);display:flex;align-items:center;justify-content:center;margin:0 auto;animation:float 4s ease-in-out infinite">
+        <i class="ti ti-confetti" style="font-size:46px;color:#fff"></i>
+      </div>
+    </div>
+
+    <div style="font-size:32px;font-weight:800;color:var(--ek-ink);margin-bottom:10px">You're live!</div>
+    <div style="font-size:15px;color:var(--ek-gray);margin-bottom:28px" id="success-subtitle">Your church is now on Ekklesia</div>
+
+    <div style="background:#f5f3ff;border:1.5px solid #ede9fe;border-radius:14px;padding:13px 18px;margin-bottom:28px;display:flex;align-items:center;gap:10px">
+      <i class="ti ti-link" style="font-size:16px;color:var(--ek-purple);flex-shrink:0"></i>
+      <div style="flex:1;font-size:13px;color:var(--ek-purple-dark);text-align:left;font-weight:600" id="success-url">ekklesia.app/church/your-church</div>
+      <button style="background:var(--ek-purple);border:none;border-radius:9px;padding:7px 14px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;display:flex;align-items:center;gap:4px"><i class="ti ti-copy" style="font-size:12px"></i> Copy</button>
+    </div>
+
+    <div class="scard" style="text-align:left">
+      <div style="font-size:14px;font-weight:800;color:var(--ek-ink);margin-bottom:16px;display:flex;align-items:center;gap:7px"><i class="ti ti-flag" style="font-size:16px;color:var(--ek-purple)"></i> Your journey starts here</div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div style="width:30px;height:30px;border-radius:9px;background:#16a34a;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-check" style="font-size:15px;color:#fff"></i></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--ek-ink)">Listing created</div><div style="font-size:11px;color:var(--ek-gray)">You're live on Ekklesia!</div></div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div style="width:30px;height:30px;border-radius:9px;background:#f5f3ff;border:1.5px solid #ede9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;font-weight:800;color:var(--ek-purple-dark)">2</div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--ek-ink)">Add cover photo</div><div style="font-size:11px;color:var(--ek-gray)">+20% to your profile score</div></div>
+        <button style="background:var(--ek-purple);border:none;border-radius:8px;padding:6px 12px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Add now</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div style="width:30px;height:30px;border-radius:9px;background:#f5f3ff;border:1.5px solid #ede9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;font-weight:800;color:var(--ek-purple-dark)">3</div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--ek-ink)">Set up QR visitor check-in</div><div style="font-size:11px;color:var(--ek-gray)">Start tracking your visitors</div></div>
+        <button style="background:var(--ek-purple);border:none;border-radius:8px;padding:6px 12px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Set up</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:30px;height:30px;border-radius:9px;background:#f5f3ff;border:1.5px solid #ede9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-robot" style="font-size:14px;color:var(--ek-purple-dark)"></i></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--ek-ink)">Unlock AI Visitor Intelligence</div><div style="font-size:11px;color:var(--ek-gray)">After 5 check-ins — AI insights activate</div></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:24px">
+      <button onclick="goScreen('s-welcome')" class="btn-secondary" style="flex:1;justify-content:center">
+        <i class="ti ti-eye" style="font-size:15px"></i> View listing
+      </button>
+      <button class="btn-primary" style="flex:1;justify-content:center">
+        <i class="ti ti-share" style="font-size:15px"></i> Share it
+      </button>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+// ═══ CONFIG ═══
+const STEPS = [
+  {id:1,icon:'ti-building-church',label:'Basics',title:'Add your church',subtitle:"Fill in your details below — it only takes a couple of minutes.<br/>Required fields are marked."},
+  {id:2,icon:'ti-phone',label:'Contact',title:'Contact details',subtitle:'How should visitors and members reach you?'},
+  {id:3,icon:'ti-heart-handshake',label:'Ministry',title:'Services & ministries',subtitle:'When do you meet, and what do you offer?'},
+  {id:4,icon:'ti-language',label:'Languages',title:'Languages',subtitle:'Help people find a church that speaks their language'},
+  {id:5,icon:'ti-accessible',label:'Facilities',title:'Facilities',subtitle:'What should visitors know before they arrive?'},
+  {id:6,icon:'ti-photo',label:'Media',title:'Media & description',subtitle:'Make your listing stand out visually'},
+];
+const AI_HINTS = {
+  1:"Pick your country first, then just type your street and number — I'll validate the address and quietly store the city, postcode and region behind the scenes. No need to fill those in yourself.",
+  2:"I'll show social networks popular in your country automatically — core networks always, country-specific ones below. Only fill in what you actually use. Quality over quantity!",
+  3:"Based on your denomination I've pre-selected the most likely ministries. Browse categories to discover ones you might have missed — small church ministries often go unnoticed and we want to showcase them!",
+  4:"Add every language your services are held in or interpreted into — this is one of the most-used filters on Ekklesia.",
+  5:"These details directly affect whether families and people with accessibility needs visit. Takes 30 seconds and makes a huge difference — especially wheelchair access, parking and children's facilities.",
+  6:"A great cover photo increases profile visits by 60%. Click 'Write with AI' and I'll craft a warm, professional description from everything you've entered — one click!"
+};
+let curStep=1,leafMap=null,leafMarker=null,selCountry='GB';
+
+// ═══ ADDRESS PROVIDER ═══
+// Paste your Google Maps API key below to get real, building-accurate validation
+// (enable: Maps JavaScript API, Places API, Geocoding API in Google Cloud Console).
+// Leave blank to use free OpenStreetMap (best-effort, no key required).
+const GOOGLE_API_KEY = "";            // ← paste your Google key here to test real validation
+let USE_GOOGLE=false, gAuto=null, gPlaces=null, gToken=null, gPreds=[];
+let addrCountry="", addrCountryName="";   // chosen country for the address lookup (separate from the contact-step social country)
+
+function loadGooglePlaces(){
+  if(!GOOGLE_API_KEY) return;
+  const s=document.createElement('script');
+  s.src=`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_API_KEY}&libraries=places&loading=async&callback=onGoogleReady`;
+  s.async=true; s.onerror=()=>{USE_GOOGLE=false;}; document.head.appendChild(s);
+}
+window.onGoogleReady=function(){
+  try{ gAuto=new google.maps.places.AutocompleteService(); gPlaces=new google.maps.places.PlacesService(document.createElement('div')); USE_GOOGLE=true; }
+  catch(e){ USE_GOOGLE=false; }
+};
+
+// ═══ COUNTRY PICKER ═══
+const COUNTRIES=[["GB","United Kingdom"],["US","United States"],["NG","Nigeria"],["GH","Ghana"],["KE","Kenya"],["ZA","South Africa"],["CA","Canada"],["AU","Australia"],["IE","Ireland"],["IN","India"],["PK","Pakistan"],["BD","Bangladesh"],["LK","Sri Lanka"],["PH","Philippines"],["JM","Jamaica"],["TT","Trinidad & Tobago"],["BB","Barbados"],["NZ","New Zealand"],["FR","France"],["DE","Germany"],["NL","Netherlands"],["ES","Spain"],["PT","Portugal"],["IT","Italy"],["BE","Belgium"],["CH","Switzerland"],["AT","Austria"],["SE","Sweden"],["NO","Norway"],["DK","Denmark"],["FI","Finland"],["PL","Poland"],["RO","Romania"],["UA","Ukraine"],["GR","Greece"],["HU","Hungary"],["CZ","Czechia"],["LT","Lithuania"],["LV","Latvia"],["BG","Bulgaria"],["HR","Croatia"],["RS","Serbia"],["AL","Albania"],["BR","Brazil"],["MX","Mexico"],["AR","Argentina"],["CO","Colombia"],["CL","Chile"],["PE","Peru"],["EC","Ecuador"],["VE","Venezuela"],["GT","Guatemala"],["CN","China"],["HK","Hong Kong"],["TW","Taiwan"],["KR","South Korea"],["JP","Japan"],["VN","Vietnam"],["TH","Thailand"],["MY","Malaysia"],["SG","Singapore"],["ID","Indonesia"],["NP","Nepal"],["AE","United Arab Emirates"],["SA","Saudi Arabia"],["QA","Qatar"],["KW","Kuwait"],["IL","Israel"],["TR","Turkey"],["EG","Egypt"],["MA","Morocco"],["DZ","Algeria"],["ET","Ethiopia"],["UG","Uganda"],["TZ","Tanzania"],["RW","Rwanda"],["ZW","Zimbabwe"],["ZM","Zambia"],["CM","Cameroon"],["CI","Côte d'Ivoire"],["SN","Senegal"],["AO","Angola"],["MZ","Mozambique"],["BW","Botswana"],["MW","Malawi"],["NA","Namibia"],["SL","Sierra Leone"],["LR","Liberia"],["GM","Gambia"],["CD","DR Congo"],["RU","Russia"],["BY","Belarus"],["MD","Moldova"],["GE","Georgia"],["AM","Armenia"],["MT","Malta"],["CY","Cyprus"],["LU","Luxembourg"],["IS","Iceland"],["EE","Estonia"],["SK","Slovakia"],["SI","Slovenia"]];
+
+function filterCountries(q){
+  const dd=document.getElementById('cp-dropdown');
+  q=(q||'').toLowerCase().trim();
+  let list = q ? COUNTRIES.filter(c=>c[1].toLowerCase().includes(q)) : COUNTRIES;
+  list=list.slice(0,50);
+  if(!list.length){ dd.innerHTML=`<div style="padding:12px 14px;font-size:12px;color:var(--ek-gray)">No matching country</div>`; dd.style.display='block'; return; }
+  dd.innerHTML=list.map(c=>`<div class="autocomplete-item" style="padding:9px 14px;gap:10px" onclick="pickCountry('${c[0]}','${c[1].replace(/'/g,"\\'")}')">
+    <span style="font-size:18px;flex-shrink:0">${flagEmoji(c[0])}</span><div style="flex:1;font-size:13px;font-weight:600;color:var(--ek-ink)">${c[1]}</div></div>`).join('');
+  dd.style.display='block';
+}
+function pickCountry(code,name){
+  addrCountry=code; addrCountryName=name;
+  document.getElementById('cp-search').value=name;
+  document.getElementById('cp-flag').textContent=flagEmoji(code);
+  document.getElementById('cp-tick').style.visibility='visible';
+  document.getElementById('cp-dropdown').style.display='none';
+  setVal('f-country',name);
+  const a=document.getElementById('addr-input');
+  a.disabled=false; a.style.opacity='1'; a.placeholder='Start typing your street and number…'; a.focus();
+  buildStepBar();
+}
+function detectCountry(){
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    if(addrCountry) return;
+    try{
+      const {latitude,longitude}=pos.coords;
+      const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,{headers:{'Accept-Language':'en'}});
+      const d=await r.json();
+      const cc=(d.address&&d.address.country_code||'').toUpperCase();
+      if(cc && !addrCountry){
+        const found=COUNTRIES.find(c=>c[0]===cc);
+        pickCountry(cc, found?found[1]:(d.address.country||cc));
+      }
+    }catch(e){}
+  }, ()=>{}, {timeout:6000, maximumAge:600000});
+}
+
+// ═══ SHARED: apply a parsed address to hidden fields + confirmation + map ═══
+function applyParsed(c, formatted, lat, lng){
+  setVal('f-addr-line',c.line); setVal('f-city',c.city); setVal('f-area',c.area);
+  setVal('f-state',c.state); setVal('f-postcode',c.postcode); setVal('f-country',c.country||addrCountryName);
+  const inp=document.getElementById('addr-input');
+  inp.value = c.line || (formatted||'');
+  inp.classList.add('verified');
+  document.getElementById('addr-spinner').style.display='none';
+  document.getElementById('addr-tick').style.visibility='visible';
+  document.getElementById('addr-dropdown').style.display='none';
+  document.getElementById('addr-verified-text').textContent = formatted || [c.line,c.city,c.postcode,c.country].filter(Boolean).join(', ');
+  document.getElementById('addr-verified-msg').style.display='flex';
+  buildStepBar();
+  checkDuplicate();
+  if(lat&&lng){
+    document.getElementById('map-section').style.display='block';
+    if(!leafMap){initMap();setTimeout(()=>{leafMap.setView([lat,lng],17);updateMarker(lat,lng);},200);}
+    else{leafMap.setView([lat,lng],17);updateMarker(lat,lng);}
+  }
+}
+function parseGoogleComponents(arr){
+  const g=(t)=>{const c=arr.find(x=>x.types.includes(t));return c?c.long_name:'';};
+  const gs=(t)=>{const c=arr.find(x=>x.types.includes(t));return c?c.short_name:'';};
+  return {
+    line:[g('street_number'),g('route')].filter(Boolean).join(' '),
+    city:g('postal_town')||g('locality')||g('administrative_area_level_2')||'',
+    area:g('sublocality')||g('neighborhood')||'',
+    state:g('administrative_area_level_1')||'',
+    postcode:g('postal_code'),
+    country:g('country'), cc:gs('country')
+  };
+}
+function googleSearch(v){
+  const sp=document.getElementById('addr-spinner');
+  if(!gAuto){ fetchAddresses(v); return; }
+  if(!gToken && google.maps.places.AutocompleteSessionToken) gToken=new google.maps.places.AutocompleteSessionToken();
+  gAuto.getPlacePredictions({input:v, componentRestrictions:{country:addrCountry.toLowerCase()}, types:['address'], sessionToken:gToken}, (preds,status)=>{
+    sp.style.display='none';
+    if(status!==google.maps.places.PlacesServiceStatus.OK || !preds || !preds.length){ renderDropdown([]); return; }
+    gPreds=preds; renderGoogleDropdown(preds);
+  });
+}
+function renderGoogleDropdown(preds){
+  const dd=document.getElementById('addr-dropdown');
+  dd.innerHTML=preds.map((p,i)=>{
+    const sf=p.structured_formatting||{};
+    return `<div class="autocomplete-item" style="padding:11px 14px" onclick="selectGoogle(${i})">
+      <div style="width:28px;height:28px;border-radius:8px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-map-pin" style="font-size:14px;color:var(--ek-purple)"></i></div>
+      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--ek-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sf.main_text||p.description}</div>
+      <div style="font-size:11px;color:var(--ek-gray)">${sf.secondary_text||''}</div></div>
+      <i class="ti ti-circle-check-filled" style="font-size:14px;color:#16a34a;flex-shrink:0" title="Verified by Google"></i></div>`;
+  }).join('');
+  dd.style.display='block';
+}
+function selectGoogle(i){
+  const p=gPreds[i]; if(!p)return;
+  gPlaces.getDetails({placeId:p.place_id, fields:['address_components','geometry','formatted_address'], sessionToken:gToken}, (det,status)=>{
+    gToken=null;
+    if(status!==google.maps.places.PlacesServiceStatus.OK || !det){ return; }
+    const c=parseGoogleComponents(det.address_components||[]);
+    const lat=det.geometry&&det.geometry.location?det.geometry.location.lat():null;
+    const lng=det.geometry&&det.geometry.location?det.geometry.location.lng():null;
+    applyParsed(c, det.formatted_address, lat, lng);
+  });
+}
+
+// ═══ STEP STATE ═══
+function getStepState(id){
+  try{
+    if(id===1){
+      const name = (document.getElementById('f-church-name')||{}).value||'';
+      const addr = document.getElementById('addr-input');
+      const countryOk = !!addrCountry;
+      const addrOk = addr && addr.classList.contains('verified');
+      if(name.trim().length>=3 && countryOk && addrOk) return 'done';
+      if(name.trim().length>=3 || countryOk) return 'partial';
+      return 'empty';
+    }
+    if(id===2){
+      const email = document.getElementById('f-email');
+      const emailOk = email && email.classList.contains('verified');
+      const hasSocial = ['s-facebook','s-instagram','s-youtube','s-whatsapp']
+        .some(sid=>{ const el=document.getElementById(sid); return el&&el.value.trim().length>3; });
+      if(emailOk && hasSocial) return 'done';
+      if(emailOk || hasSocial) return 'partial';
+      return 'empty';
+    }
+    if(id===3){
+      const services = document.querySelectorAll('.svc-row').length;
+      const ministries = document.querySelectorAll('#step-3 .chip.on').length;
+      if(services>0 && ministries>0) return 'done';
+      if(services>0 || ministries>0) return 'partial';
+      return 'empty';
+    }
+    if(id===4){
+      const langs = typeof selectedLangs !== 'undefined' ? selectedLangs.size : 0;
+      if(langs>0) return 'done';
+      return 'empty';
+    }
+    if(id===5){
+      const ticked = document.querySelectorAll('.fac-chip.on').length;
+      if(ticked>=3) return 'done';
+      if(ticked>0) return 'partial';
+      return 'empty';
+    }
+    if(id===6){
+      const about = (document.getElementById('f-about')||{}).value||'';
+      const yt    = (document.getElementById('f-youtube')||{}).value||'';
+      if(about.trim().length>20 && yt.trim().length>5) return 'done';
+      if(about.trim().length>20 || yt.trim().length>5) return 'partial';
+      return 'empty';
+    }
+  }catch(e){}
+  return 'empty';
+}
+
+// ═══ PROGRESS BAR — simple segment track ═══
+function buildStepBar(){
+  const bar = document.getElementById('step-bar');
+  if(!bar) return;
+  bar.innerHTML = STEPS.map((s,i)=>{
+    const state = curStep===s.id ? 'active' : getStepState(s.id);
+    const cls = state==='active' ? 'active' : (state==='done'||state==='partial') ? 'done' : 'pending';
+    const iconHtml = cls==='done'
+      ? '<i class="ti ti-check" style="font-size:19px;color:#fff"></i>'
+      : `<i class="ti ${s.icon}" style="font-size:19px;color:${cls==='active'?'#fff':'var(--ek-gray-light)'}"></i>`;
+    const labelColor = cls==='active' ? 'var(--ek-purple)' : cls==='done' ? '#16a34a' : 'var(--ek-gray-light)';
+    const connDone = i>0 ? (getStepState(STEPS[i-1].id)!=='empty' || curStep>STEPS[i-1].id) : false;
+    return `
+    <div class="step-wrap">
+      <div class="step-icon-outer ${cls}" onclick="jumpStep(${s.id})" title="${s.label}">${iconHtml}</div>
+      <div style="font-size:11px;font-weight:700;color:${labelColor}">${s.label}</div>
+    </div>
+    ${i<STEPS.length-1?`<div class="step-connector ${connDone?'done':''}"></div>`:''}`;
+  }).join('');
+  const counter = document.getElementById('step-counter');
+  if(counter) counter.textContent = `Step ${curStep} of ${STEPS.length}`;
+}
+
+function jumpStep(n){
+  if(n<=curStep || getStepState(n)!=='empty') nextStep(n);
+}
+
+function nextStep(n){
+  document.querySelectorAll('.step-content').forEach(s=>s.style.display='none');
+  const t=document.getElementById('step-'+n);
+  if(t){t.style.display='block';t.className='step-content slide-up';}
+  curStep=n;
+  buildStepBar();
+  const cfg = STEPS.find(s=>s.id===n);
+  if(cfg){
+    document.getElementById('step-title').textContent = cfg.title;
+    document.getElementById('step-subtitle').innerHTML = cfg.subtitle;
+  }
+  document.getElementById('ai-hint-text').textContent=AI_HINTS[n];
+  if(n===1&&!leafMap&&document.getElementById('addr-input').classList.contains('verified'))setTimeout(initMap,150);
+  window.scrollTo(0,0);
+}
+
+// ═══ NAVIGATION ═══
+function goScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  if(id==='s-form'){curStep=1;buildStepBar();nextStep(1);}
+  if(id==='s-review'){calcScore();}
+  window.scrollTo(0,0);
+}
+
+// ═══ IMPORT FROM WEBSITE ═══
+let importedData = null;
+
+function resetImportScreen(){
+  document.getElementById('import-state-entry').style.display = 'block';
+  document.getElementById('import-state-scanning').style.display = 'none';
+  document.getElementById('import-state-results').style.display = 'none';
+  document.getElementById('import-url').value = '';
+  document.getElementById('import-url-error').style.display = 'none';
+  document.querySelectorAll('.import-scan-step').forEach(s=>{
+    s.style.color = 'var(--ek-gray-light)';
+    s.querySelector('i').className = 'ti ti-circle-dashed';
+    s.querySelector('i').style.fontSize = '16px';
+  });
+}
+
+function normaliseUrl(v){
+  v = v.trim();
+  if(!v) return null;
+  if(!/^https?:\/\//i.test(v)) v = 'https://' + v;
+  try{ return new URL(v); } catch(e){ return null; }
+}
+
+// A small set of believable demo profiles so the result varies a little
+// depending on what the person typed, rather than always looking identical.
+function buildDemoData(urlObj){
+  const host = urlObj.hostname.replace(/^www\./,'');
+  const base = host.split('.')[0];
+  const knownWords = ['church','chapel','ministries','ministry','cathedral','temple','fellowship','assembly','community','grace','life','faith','hope','city','hill','valley','river','new','st','saint'];
+  // Insert spaces before/after known words if they're glued to other letters
+  let spaced = base.replace(/[-_]/g,' ');
+  knownWords.forEach(w=>{
+    const re = new RegExp(`(${w})`, 'gi');
+    spaced = spaced.replace(re, ' $1 ');
+  });
+  spaced = spaced.replace(/\s+/g,' ').trim();
+  const niceName = spaced
+    .split(' ')
+    .filter(Boolean)
+    .map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase())
+    .join(' ');
+  const churchKeywords = /\b(church|chapel|ministries|ministry|cathedral|temple|fellowship|assembly)\b/i;
+  const churchName = churchKeywords.test(niceName)
+    ? niceName
+    : `${niceName} Church`;
+
+  const denomPool = ['Pentecostal','Baptist','Non-Denominational','Methodist','Anglican'];
+  const denom = denomPool[host.length % denomPool.length];
+
+  return {
+    churchName,
+    denomination: denom,
+    email: `info@${host}`,
+    addressLine: '124 High Street',
+    city: 'London',
+    postcode: 'E1 6AN',
+    about: `${churchName} is a welcoming ${denom} community dedicated to faith, fellowship and service. We found this summary on your homepage — feel free to refine it.`,
+    facebook: `facebook.com/${base}`,
+    instagram: `instagram.com/${base}`,
+    youtube: '',
+    serviceFound: true,
+    foundFields: [
+      {label:'Church name', value: churchName, icon:'ti-building-church', confident:true},
+      {label:'Email address', value:`info@${host}`, icon:'ti-mail', confident:true},
+      {label:'Address (partial)', value:'124 High Street, London', icon:'ti-map-pin', confident:false},
+      {label:'About text', value:'Found on homepage', icon:'ti-file-text', confident:true},
+      {label:'Facebook page', value:`facebook.com/${base}`, icon:'ti-brand-facebook', confident:true},
+      {label:'Service times', value:'Not clearly found — add manually', icon:'ti-clock', confident:false},
+    ]
+  };
+}
+
+function startImport(){
+  const raw = document.getElementById('import-url').value;
+  const urlObj = normaliseUrl(raw);
+  const errEl = document.getElementById('import-url-error');
+  if(!urlObj){
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+
+  document.getElementById('import-state-entry').style.display = 'none';
+  document.getElementById('import-state-scanning').style.display = 'block';
+  document.getElementById('import-scan-url').textContent = urlObj.hostname.replace(/^www\./,'');
+
+  const steps = [...document.querySelectorAll('.import-scan-step')];
+  let i = 0;
+  function advance(){
+    if(i>0){
+      const prev = steps[i-1];
+      prev.style.color = '#16a34a';
+      const ic = prev.querySelector('i');
+      ic.className = 'ti ti-circle-check';
+    }
+    if(i < steps.length){
+      const cur = steps[i];
+      cur.style.color = 'var(--ek-ink)';
+      const ic = cur.querySelector('i');
+      ic.className = 'ti ti-loader-2';
+      ic.style.animation = 'spin 0.8s linear infinite';
+      i++;
+      setTimeout(advance, 650);
+    } else {
+      setTimeout(()=>{
+        importedData = buildDemoData(urlObj);
+        showImportResults(importedData);
+      }, 450);
+    }
+  }
+  advance();
+}
+
+function showImportResults(data){
+  document.getElementById('import-state-scanning').style.display = 'none';
+  document.getElementById('import-state-results').style.display = 'block';
+  const list = document.getElementById('import-results-list');
+  list.innerHTML = data.foundFields.map(f=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--ek-border)">
+      <div style="width:36px;height:36px;border-radius:10px;background:${f.confident?'#f0fdf4':'#fffbeb'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="ti ${f.icon}" style="font-size:16px;color:${f.confident?'#16a34a':'#d97706'}"></i>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--ek-ink)">${f.label}</div>
+        <div style="font-size:12px;color:var(--ek-gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.value}</div>
+      </div>
+      <i class="ti ${f.confident?'ti-circle-check':'ti-alert-triangle'}" style="font-size:16px;color:${f.confident?'#16a34a':'#d97706'};flex-shrink:0"></i>
+    </div>`).join('');
+}
+
+function applyImportAndContinue(){
+  if(!importedData) { goScreen('s-form'); return; }
+  const d = importedData;
+
+  goScreen('s-form');
+
+  const nameFld = document.getElementById('f-church-name');
+  if(nameFld){ nameFld.value = d.churchName; }
+
+  const denomFld = document.getElementById('f-denom');
+  if(denomFld){ denomFld.value = d.denomination; }
+
+  const addrFld = document.getElementById('addr-input');
+  if(addrFld){
+    addrFld.value = `${d.addressLine}, ${d.city}, ${d.postcode}`;
+    addrFld.classList.add('verified');
+  }
+  const tickEl = document.getElementById('addr-tick');
+  if(tickEl) tickEl.style.visibility = 'visible';
+  const cityFld = document.getElementById('f-city');
+  if(cityFld){ cityFld.value = d.city; cityFld.classList.add('verified'); }
+  const pcFld = document.getElementById('f-postcode');
+  if(pcFld){ pcFld.value = d.postcode; pcFld.classList.add('verified'); }
+  const verifiedMsg = document.getElementById('addr-verified-msg');
+  const verifiedText = document.getElementById('addr-verified-text');
+  if(verifiedMsg && verifiedText){
+    verifiedText.textContent = `${d.addressLine}, ${d.city}, ${d.postcode} (imported — please confirm pin)`;
+    verifiedMsg.style.display = 'flex';
+  }
+
+  const emailFld = document.getElementById('f-email');
+  if(emailFld){ emailFld.value = d.email; emailFld.classList.add('verified'); }
+
+  const fbFld = document.getElementById('s-facebook');
+  if(fbFld) fbFld.value = d.facebook;
+  const igFld = document.getElementById('s-instagram');
+  if(igFld) igFld.value = d.instagram;
+
+  const aboutFld = document.getElementById('f-about');
+  if(aboutFld) aboutFld.value = d.about;
+
+  buildStepBar();
+}
+
+// ═══ LISTING TYPE ═══
+function selectListingType(type,el){
+  document.querySelectorAll('.type-card').forEach(c=>{
+    c.classList.remove('on');
+    c.querySelector('.t-icon i').style.color='var(--ek-gray-light)';
+  });
+  el.classList.add('on');
+}
+
+// ═══ DUPLICATE CHECK ═══
+let dupT;
+// ═══ DUPLICATE CHECK (name + postcode) ═══
+// Demo data — in production this is a Supabase query on (postcode, normalized_name).
+const SAMPLE_CHURCHES=[
+  {name:"Grace Chapel International", postcode:"IG1 1QP", city:"Ilford", url:"/church/grace-chapel-international-ig1"},
+  {name:"Liberty Connections",        postcode:"IG1 1FT", city:"Ilford", url:"/church/liberty-connections-ig1"},
+  {name:"Redeemed Christian Church of God", postcode:"E15 4LJ", city:"Stratford", url:"/church/rccg-stratford"},
+  {name:"House on the Rock",          postcode:"SW2 1RW", city:"Brixton", url:"/church/house-on-the-rock-brixton"}
+];
+const NAME_ABBR={int:'international',intl:'international',ch:'church',chs:'church', chr:'christian',min:'ministries',mins:'ministries',ministry:'ministries',assemb:'assembly',assem:'assembly',bapt:'baptist',evang:'evangelical',pent:'pentecostal',st:'saint',ctr:'centre',center:'centre',centre:'centre',intl_:'international',rccg:'redeemed christian church of god',hotr:'house on the rock'};
+function normName(s){
+  return (s||'').toLowerCase().replace(/[^\w\s]/g,' ').replace(/\s+/g,' ').trim()
+    .split(' ').filter(Boolean).map(w=>NAME_ABBR[w]||w).join(' ');
+}
+function normPostcode(s){ return (s||'').toUpperCase().replace(/\s+/g,''); }
+function trimName(el){ el.value=el.value.replace(/\s+/g,' ').trim(); checkDuplicate(); buildStepBar(); }
+function nameSimilarity(a,b){
+  if(a===b) return 1;
+  if(a.length>3 && b.length>3 && (a.includes(b)||b.includes(a))) return 0.95;
+  const A=new Set(a.split(' ')), B=new Set(b.split(' '));
+  const inter=[...A].filter(x=>B.has(x)).length, uni=new Set([...A,...B]).size;
+  const jac=uni?inter/uni:0;
+  const bg=s=>{s=s.replace(/ /g,'');const g=[];for(let i=0;i<s.length-1;i++)g.push(s.substr(i,2));return g;};
+  const ga=bg(a), gb=bg(b), gbc=gb.slice(); let m=0;
+  ga.forEach(g=>{const i=gbc.indexOf(g);if(i>=0){m++;gbc.splice(i,1);}});
+  const dice=(ga.length+gb.length)?(2*m)/(ga.length+gb.length):0;
+  return Math.max(jac,dice);
+}
+let dupDismissed='';
+function dismissDup(sig){ dupDismissed=sig; document.getElementById('dup-msg').style.display='none'; }
+function checkDuplicate(){ clearTimeout(dupT); dupT=setTimeout(runDuplicateCheck,350); }
+function runDuplicateCheck(){
+  const box=document.getElementById('dup-msg');
+  const rawName=(document.getElementById('f-church-name')||{}).value||'';
+  const pc=(document.getElementById('f-postcode')||{}).value||'';
+  const name=normName(rawName), np=normPostcode(pc);
+  if(name.length<3 || !np){ box.style.display='none'; return; }
+  const sig=name+'|'+np;
+  if(dupDismissed===sig){ box.style.display='none'; return; }
+  let exact=null, sim=null, best=0;
+  SAMPLE_CHURCHES.forEach(c=>{
+    if(normPostcode(c.postcode)!==np) return;
+    const cn=normName(c.name);
+    if(cn===name){ exact=c; }
+    else { const s=nameSimilarity(name,cn); if(s>=0.80 && s>best){ sim=c; best=s; } }
+  });
+  const hit=exact||sim;
+  if(!hit){ box.style.display='none'; return; }
+  box.style.display='block';
+  if(exact){
+    box.innerHTML=`<div style="display:flex;gap:11px;align-items:flex-start;background:#fef2f2;border:1.5px solid #fecaca;border-radius:13px;padding:14px 16px">
+      <i class="ti ti-alert-octagon" style="font-size:19px;color:#dc2626;flex-shrink:0;margin-top:1px"></i>
+      <div style="flex:1">
+        <div style="font-size:13.5px;font-weight:800;color:#b91c1c">This church is already listed</div>
+        <div style="font-size:12.5px;color:#7f1d1d;margin-top:3px"><b>${hit.name}</b> at ${hit.postcode} (${hit.city}) already exists on Ekklesia. Publishing again would create a duplicate.</div>
+        <a href="${hit.url}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;margin-top:9px;font-size:12.5px;font-weight:700;color:#fff;background:#dc2626;padding:7px 13px;border-radius:8px;text-decoration:none"><i class="ti ti-external-link" style="font-size:13px"></i> View the existing listing</a>
+      </div></div>`;
+  } else {
+    box.innerHTML=`<div style="display:flex;gap:11px;align-items:flex-start;background:#fffbeb;border:1.5px solid #fde68a;border-radius:13px;padding:14px 16px">
+      <i class="ti ti-alert-triangle" style="font-size:19px;color:#d97706;flex-shrink:0;margin-top:1px"></i>
+      <div style="flex:1">
+        <div style="font-size:13.5px;font-weight:800;color:#b45309">A similar church may already exist here</div>
+        <div style="font-size:12.5px;color:#92400e;margin-top:3px"><b>${hit.name}</b> is listed at the same postcode (${hit.postcode}). If that's your church, please use the existing listing instead of creating a new one.</div>
+        <div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap">
+          <a href="${hit.url}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:#fff;background:#d97706;padding:7px 13px;border-radius:8px;text-decoration:none"><i class="ti ti-external-link" style="font-size:13px"></i> View "${hit.name}"</a>
+          <button onclick="dismissDup('${sig}')" style="font-size:12.5px;font-weight:700;color:#92400e;background:#fff;border:1.5px solid #fde68a;padding:7px 13px;border-radius:8px;cursor:pointer;font-family:inherit">Not the same — continue</button>
+        </div>
+      </div></div>`;
+  }
+}
+
+// ═══ COUNTRY ═══
+function selectCountry(code,name,btn){
+  selCountry=code;
+  document.querySelectorAll('.country-btn').forEach(b=>{b.classList.remove('on');});
+  btn.classList.add('on');
+  document.getElementById('social-country-label').textContent=name;
+  const social={
+    GB:[['ti-brand-twitter','#111','X / Twitter','@yourchurch'],['ti-brand-tiktok','#e91e8c','TikTok','@yourchurch']],
+    US:[['ti-brand-twitter','#111','X / Twitter','@yourchurch'],['ti-brand-tiktok','#e91e8c','TikTok','@yourchurch']],
+    NG:[['ti-brand-twitter','#111','X / Twitter','@yourchurch'],['ti-brand-telegram','#26a5e4','Telegram','t.me/yourchurch']],
+    GH:[['ti-brand-twitter','#111','X / Twitter','@yourchurch'],['ti-brand-telegram','#26a5e4','Telegram','t.me/yourchurch']],
+    ZA:[['ti-brand-twitter','#111','X / Twitter','@yourchurch'],['ti-brand-tiktok','#e91e8c','TikTok','@yourchurch']],
+    CA:[['ti-brand-twitter','#111','X / Twitter','@yourchurch'],['ti-brand-tiktok','#e91e8c','TikTok','@yourchurch']],
+  };
+  const fields=social[code]||social.GB;
+  document.getElementById('country-social-fields').innerHTML=fields.map(([ic,col,l,p])=>
+    `<div><label style="display:flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:5px;background:${col};display:inline-flex;align-items:center;justify-content:center"><i class="ti ${ic}" style="font-size:11px;color:#fff"></i></span> ${l}</label><input placeholder="${p}" oninput="validateSocialGeneric(this,'${l}')"/><div class="social-err" style="display:none;font-size:10px;color:#ef4444;margin-top:3px"></div></div>`
+  ).join('');
+}
+
+// ═══ ADDRESS AUTOCOMPLETE ═══
+let addrT, addrResults=[];
+const FALLBACK_ADDRESSES = [
+  {display_name:"Liberty House, 1 Clarks Road, Ilford, IG1 1FT, United Kingdom",lat:"51.5590",lon:"0.0783",address:{house_number:"1",road:"Clarks Road",building:"Liberty House",city:"Ilford",town:"Ilford",postcode:"IG1 1FT"}},
+  {display_name:"1 Clarks Road, Ilford, IG1 1FT, United Kingdom",lat:"51.5590",lon:"0.0783",address:{house_number:"1",road:"Clarks Road",city:"Ilford",postcode:"IG1 1FT"}},
+  {display_name:"High Road, Ilford, IG1 1QP, United Kingdom",lat:"51.5584",lon:"0.0824",address:{road:"High Road",city:"Ilford",postcode:"IG1 1QP"}},
+  {display_name:"High Road, Barking, IG11 7QT, United Kingdom",lat:"51.5362",lon:"0.0796",address:{road:"High Road",city:"Barking",postcode:"IG11 7QT"}},
+  {display_name:"High Road, Leyton, E10 6QA, United Kingdom",lat:"51.5752",lon:"0.0051",address:{road:"High Road",city:"Leyton",postcode:"E10 6QA"}},
+  {display_name:"Church Road, Barking, IG11 8LN, United Kingdom",lat:"51.5390",lon:"0.0810",address:{road:"Church Road",city:"Barking",postcode:"IG11 8LN"}},
+  {display_name:"Green Lane, Ilford, IG1 1XJ, United Kingdom",lat:"51.5620",lon:"0.0750",address:{road:"Green Lane",city:"Ilford",postcode:"IG1 1XJ"}},
+  {display_name:"Barking Road, East Ham, E6 1PW, United Kingdom",lat:"51.5322",lon:"0.0551",address:{road:"Barking Road",city:"East Ham",postcode:"E6 1PW"}},
+  {display_name:"Forest Road, Walthamstow, E17 6JF, United Kingdom",lat:"51.5850",lon:"-0.0120",address:{road:"Forest Road",city:"Walthamstow",postcode:"E17 6JF"}},
+  {display_name:"Romford Road, Stratford, E15 4LJ, United Kingdom",lat:"51.5467",lon:"0.0230",address:{road:"Romford Road",city:"Stratford",postcode:"E15 4LJ"}},
+];
+
+function searchFallback(v){
+  const vl = v.toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim();
+  const words = vl.split(/\s+/).filter(w=>w.length>1);
+  if(!words.length) return [];
+  return FALLBACK_ADDRESSES.filter(r=>{
+    const a = r.address;
+    const haystack = [
+      r.display_name, a.road||"", a.building||"", a.city||"", a.town||"",
+      a.postcode||"", a.house_number||"", a.suburb||"",
+    ].join(" ").toLowerCase().replace(/[^a-z0-9 ]/g,' ');
+    return words.some(w => haystack.includes(w));
+  });
+}
+
+function addressInput(v){
+  clearTimeout(addrT);
+  const dd = document.getElementById('addr-dropdown');
+  const sp = document.getElementById('addr-spinner');
+  document.getElementById('addr-input').classList.remove('verified');
+  document.getElementById('addr-tick').style.visibility = 'hidden';
+  document.getElementById('addr-verified-msg').style.display = 'none';
+  document.getElementById('map-section').style.display = 'none';
+  ['f-addr-line','f-city','f-postcode','f-area','f-state'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  if(!addrCountry){ return; }
+  if(v.length < 2){ dd.style.display='none'; sp.style.display='none'; return; }
+  sp.style.display = 'block';
+  addrT = setTimeout(()=>{ USE_GOOGLE ? googleSearch(v) : fetchAddresses(v); }, 380);
+}
+function setVal(id,v){ const e=document.getElementById(id); if(e)e.value=v||''; }
+function typedLocality(){
+  // prefer the town the user typed (they know it best) when OSM only offers region/suburb
+  let q=(document.getElementById('addr-input')||{}).value||'';
+  q=q.replace(/\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/ig,'').replace(/\b\d{5}(?:-\d{4})?\b/g,'');
+  const parts=q.split(',').map(s=>s.trim()).filter(Boolean);
+  if(parts.length>=2){
+    const loc=parts[parts.length-1].replace(/,+$/,'').trim();
+    if(loc.length>1 && /[a-zA-Z]/.test(loc)) return loc;
+  }
+  return '';
+}
+function flagEmoji(cc){ if(!cc||cc.length!==2)return'🌍'; return cc.toUpperCase().replace(/./g,c=>String.fromCodePoint(127397+c.charCodeAt(0))); }
+function splitTypedAddress(v){
+  const parts=v.split(',').map(s=>s.trim()).filter(Boolean);
+  const ukPost=v.match(/\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i);
+  const usZip=v.match(/\b(\d{5}(?:-\d{4})?)\b/);
+  let pc='';
+  if(ukPost) pc=ukPost[1].toUpperCase().replace(/\s+/,' ');
+  else if(usZip) pc=usZip[1];
+  let city='',line=v;
+  if(parts.length){
+    let last=parts[parts.length-1];
+    if(ukPost)last=last.replace(ukPost[1],'').trim();
+    if(usZip)last=last.replace(usZip[1],'').trim();
+    city=last.replace(/,+$/,'').trim();
+    line=parts.slice(0,Math.max(1,parts.length-1)).join(', ')||parts[0];
+  }
+  setVal('f-addr-line',line); setVal('f-city',city); setVal('f-postcode',pc);
+  document.getElementById('addr-input').classList.add('verified');
+  buildStepBar();
+}
+
+function renderDropdown(results){
+  const dd = document.getElementById('addr-dropdown');
+  const typedNum=((document.getElementById('addr-input')||{}).value||'').match(/^\s*(\d+[a-zA-Z]?)\b/);
+  const hn = typedNum?typedNum[1]:'';
+  if(!results.length){
+    dd.innerHTML = `<div style="padding:14px 16px;font-size:12px;color:var(--ek-gray);display:flex;align-items:center;gap:7px">
+      <i class="ti ti-map-pin-off" style="font-size:15px;color:var(--ek-gray-light)"></i>
+      No results found — try adding a postcode e.g. IG1 1FT
+    </div>`;
+    dd.style.display = 'block';
+    return;
+  }
+  dd.innerHTML = results.map((r,i)=>{
+    const a = r.address||{};
+    const building = a.building||a.amenity||a.place||'';
+    const num = a.house_number||hn||'';
+    const road = [num, a.road||a.pedestrian||a.path].filter(Boolean).join(' ');
+    const line1 = [building, road].filter(Boolean).join(', ') || r.display_name.split(',')[0];
+    const town = typedLocality() || a.city||a.town||a.village||a.municipality||'';
+    const line2 = [town, a.postcode, a.country].filter(Boolean).join(', ');
+    return `<div class="autocomplete-item" onclick="selectAddr(${i})" style="padding:11px 14px">
+      <div style="width:28px;height:28px;border-radius:8px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="ti ti-map-pin" style="font-size:14px;color:var(--ek-purple)"></i>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--ek-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${line1}</div>
+        <div style="font-size:11px;color:var(--ek-gray);margin-top:2px">${line2}</div>
+      </div>
+      <i class="ti ti-arrow-right" style="font-size:13px;color:var(--ek-gray-light);flex-shrink:0"></i>
+    </div>`;
+  }).join('');
+  dd.style.display = 'block';
+}
+
+function pcNorm(p){ return (p||'').toUpperCase().replace(/\s+/g,''); }
+function typedPostcode(){
+  const q=(document.getElementById('addr-input')||{}).value||'';
+  const uk=q.match(/\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i);
+  if(uk) return pcNorm(uk[1]);
+  const us=q.match(/\b(\d{5})(?:-\d{4})?\b/);
+  if(us) return us[1];
+  return '';
+}
+function pcOutward(pc){
+  pc=pcNorm(pc);
+  if(/^\d{5}/.test(pc)) return pc.slice(0,5);          // US ZIP — match whole
+  return pc.length>3 ? pc.slice(0, pc.length-3) : pc;  // UK — drop inward 3 chars
+}
+async function fetchAddresses(v){
+  const dd = document.getElementById('addr-dropdown');
+  const sp = document.getElementById('addr-spinner');
+  const fallback = searchFallback(v);
+  let data=[];
+  try{
+    const cc = addrCountry ? `&countrycodes=${addrCountry.toLowerCase()}` : '';
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(v)}${cc}&addressdetails=1&limit=8&dedupe=1`;
+    const res = await fetch(url, { headers:{'Accept-Language':'en'}, signal: AbortSignal.timeout(5000) });
+    data = await res.json();
+  }catch(e){
+    sp.style.display='none';
+    renderNoMatch(v, true);   // offline → offer manual entry
+    return;
+  }
+  sp.style.display='none';
+  if(!Array.isArray(data)) data=[];
+  let merged = [...data, ...fallback.filter(r=>!data.some(d=>pcNorm(d.address&&d.address.postcode)===pcNorm(r.address&&r.address.postcode)))];
+
+  // If the user typed a postcode, ONLY show results that actually match it —
+  // stops OSM returning a wrong street (e.g. Barking Road for an E12 query).
+  const tpc=typedPostcode();
+  if(tpc){
+    const out=pcOutward(tpc);
+    const exact = merged.filter(r=>pcNorm(r.address&&r.address.postcode)===tpc);
+    const near  = merged.filter(r=>{const p=pcNorm(r.address&&r.address.postcode); return p && pcOutward(p)===out;});
+    merged = exact.length ? exact : near;
+  }
+  if(!merged.length){ renderNoMatch(v); return; }
+  addrResults = merged;
+  renderDropdown(merged.slice(0,6));
+}
+function renderNoMatch(v, offline){
+  const dd=document.getElementById('addr-dropdown');
+  const tpc=typedPostcode();
+  dd.innerHTML=`<div style="padding:14px 16px 18px">
+    <div style="font-size:12.5px;color:var(--ek-gray);display:flex;align-items:flex-start;gap:8px;margin-bottom:11px">
+      <i class="ti ${offline?'ti-wifi-off':'ti-map-search'}" style="font-size:16px;color:var(--ek-gray-light);margin-top:1px"></i>
+      <span>${offline?"Couldn't reach the address service here.":`We couldn't verify this exact address${tpc?` at <b>${tpc.replace(/(.{3})$/,' $1')}</b>`:''}.`} You can continue with the address you typed — we'll save it as entered.</span>
+    </div>
+    <button onclick="useTypedAddress()" style="font-size:12.5px;font-weight:700;color:#fff;background:var(--ek-purple);border:none;padding:9px 16px;border-radius:9px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px"><i class="ti ti-check" style="font-size:14px"></i> Use the address I typed</button>
+  </div>`;
+  dd.style.zIndex='1000';
+  dd.style.display='block';
+}
+function useTypedAddress(){
+  const v=(document.getElementById('addr-input')||{}).value||'';
+  const tpc=typedPostcode();
+  const town=typedLocality();
+  const stripped=v.replace(/\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/ig,'').replace(/\b\d{5}(?:-\d{4})?\b/g,'');
+  const parts=stripped.split(',').map(s=>s.trim()).filter(Boolean);
+  // line = everything except the trailing locality part; city = that locality (or typed town)
+  let line, city;
+  if(parts.length>=2){ line=parts.slice(0,parts.length-1).join(', '); city=town||parts[parts.length-1]; }
+  else { line=parts[0]||v; city=town||''; }
+  let pcDisp=tpc;
+  if(/^[A-Z]/.test(tpc) && tpc.length>3) pcDisp=tpc.slice(0,tpc.length-3)+' '+tpc.slice(-3);
+  setVal('f-addr-line',line); setVal('f-city',city); setVal('f-area',''); setVal('f-state','');
+  setVal('f-postcode',pcDisp); setVal('f-country',addrCountryName);
+  const inp=document.getElementById('addr-input'); inp.classList.add('verified');
+  document.getElementById('addr-tick').style.visibility='visible';
+  document.getElementById('addr-dropdown').style.display='none';
+  const msg=document.getElementById('addr-verified-msg');
+  msg.style.display='flex'; msg.style.background='#fffbeb'; msg.style.borderColor='#fde68a';
+  const ic=msg.querySelector('i'); if(ic)ic.style.color='#d97706';
+  const t=document.getElementById('addr-verified-text');
+  t.style.color='#92400e';
+  t.innerHTML=`<b>Saved as you entered it</b> (not auto-verified): ${[line,city,pcDisp,addrCountryName].filter(Boolean).join(', ')}`;
+  document.getElementById('map-section').style.display='none';
+  buildStepBar(); checkDuplicate();
+}
+// If the owner typed an address but never picked a suggestion, still capture it so the
+// preview/score reflect it (instead of showing only the country).
+function captureTypedAddress(){
+  const inp=document.getElementById('addr-input');
+  if(!inp) return;
+  const hasText=inp.value.trim().length>3;
+  const alreadyCaptured=(document.getElementById('f-addr-line')||{}).value.trim().length>0;
+  if(hasText && !inp.classList.contains('verified') && !alreadyCaptured){ useTypedAddress(); }
+}
+function captureTypedAddressSoon(){
+  // delay so clicking a real suggestion wins over the blur
+  setTimeout(()=>{
+    const dd=document.getElementById('addr-dropdown');
+    const ddOpen = dd && dd.style.display!=='none' && dd.offsetParent!==null;
+    if(!ddOpen) captureTypedAddress();
+  }, 250);
+}
+
+function selectAddr(i){
+  const r=addrResults[i];
+  const a=r.address||{};
+  const typed=(document.getElementById('addr-input')||{}).value||'';
+  const typedNum=(typed.match(/^\s*(\d+[a-zA-Z]?)\b/)||[])[1]||'';
+  const houseNum=a.house_number||typedNum||'';
+  const building=a.building||a.amenity||'';
+  const road=a.road||a.pedestrian||a.path||a.footway||'';
+  const line=[building,[houseNum,road].filter(Boolean).join(' ')].filter(Boolean).join(', ') || r.display_name.split(',')[0];
+  // city: trust what the user typed first (they know their town) → then OSM's town → suburb; never region/county like "Greater London"
+  const typedTown = typedLocality();
+  let city = typedTown || a.city||a.town||a.village||a.municipality||a.suburb||a.city_district||'';
+  // guard: if OSM's city is a region we don't want it overriding; typed already wins above
+  let area=a.neighbourhood||a.suburb||a.city_district||a.quarter||a.borough||a.hamlet||'';
+  if(area && area===city) area='';
+  const c={
+    line, city, area,
+    state:a.state||a.region||a.province||a.state_district||'',
+    postcode:a.postcode||'',
+    country:a.country||addrCountryName,
+    cc:(a.country_code||'').toUpperCase()
+  };
+  const cleanLoc=[line, city, c.postcode, c.country].filter(Boolean).join(', ');
+  const formatted = (houseNum && !a.house_number)
+    ? `${cleanLoc} — we kept your number “${houseNum}”; please confirm the pin`
+    : cleanLoc;
+  applyParsed(c, formatted, parseFloat(r.lat), parseFloat(r.lon));
+}
+
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#addr-input')&&!e.target.closest('#addr-dropdown')){
+    const d=document.getElementById('addr-dropdown');
+    if(d)d.style.display='none';
+  }
+  if(!e.target.closest('#cp-search')&&!e.target.closest('#cp-dropdown')){
+    const d=document.getElementById('cp-dropdown');
+    if(d)d.style.display='none';
+  }
+});
+
+// ═══ INIT: address provider + geolocation country ═══
+(function initAddress(){
+  function go(){ try{ loadGooglePlaces(); }catch(e){} try{ detectCountry(); }catch(e){} }
+  if(document.readyState!=='loading') go();
+  else document.addEventListener('DOMContentLoaded', go);
+})();
+
+// ═══ LEAFLET MAP ═══
+function initMap(){
+  if(leafMap)return;
+  leafMap=L.map('leaflet-map',{center:[51.5074,-0.1278],zoom:13,zoomControl:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a>',maxZoom:19
+  }).addTo(leafMap);
+}
+
+function updateMarker(lat,lng){
+  if(leafMarker)leafMap.removeLayer(leafMarker);
+  const icon=L.divIcon({
+    html:`<div style="width:32px;height:32px;border-radius:50% 50% 50% 0;background:linear-gradient(135deg,#7c3aed,#f43f5e);transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 4px 16px rgba(124,58,237,0.4)"><div style="position:absolute;inset:6px;border-radius:50%;background:#fff"></div></div>`,
+    iconSize:[32,32],iconAnchor:[16,32],className:''
+  });
+  leafMarker=L.marker([lat,lng],{icon,draggable:false}).addTo(leafMap);
+}
+
+// ═══ VALIDATION ═══
+function validateField(input, minLen){
+  const val=input.value.trim();
+  input.classList.toggle('verified', val.length>=minLen);
+  input.classList.remove('error');
+  buildStepBar();
+}
+
+function validateEmail(input){
+  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value.trim());
+  input.classList.toggle('verified', ok);
+  input.classList.toggle('error', input.value.trim().length>0 && !ok);
+  buildStepBar();
+}
+
+function validatePhone(input){
+  const ok = input.value.replace(/[^0-9]/g,'').length>=9;
+  input.classList.toggle('verified', ok);
+  buildStepBar();
+}
+
+function prefillSocial(input, prefix){
+  if(!input.value) input.value = prefix;
+}
+const SOCIAL_RULES={
+  facebook:{ rx:/^(https?:\/\/)?(www\.)?(facebook\.com|fb\.com|fb\.me)\/[A-Za-z0-9._\-\/?=&%]+$/i, others:/(instagram\.com|linkedin\.com|youtube\.com|youtu\.be|twitter\.com|x\.com|tiktok\.com|t\.me)/i, name:'Facebook', ex:'facebook.com/yourchurch' },
+  instagram:{ rx:/(^@[A-Za-z0-9._]{2,30}$)|^(https?:\/\/)?(www\.)?instagram\.com\/[A-Za-z0-9._\-\/?=&%]+$/i, others:/(facebook\.com|linkedin\.com|youtube\.com|youtu\.be|twitter\.com|x\.com|tiktok\.com|t\.me)/i, name:'Instagram', ex:'instagram.com/yourchurch or @handle' },
+  youtube:{ rx:/^(https?:\/\/)?(www\.)?(youtube\.com\/[A-Za-z0-9@._\-\/?=&%]+|youtu\.be\/[A-Za-z0-9\-]+)$/i, others:/(facebook\.com|instagram\.com|linkedin\.com|twitter\.com|x\.com|tiktok\.com|t\.me)/i, name:'YouTube', ex:'youtube.com/@yourchurch' }
+};
+function prettyPlatform(domain){
+  const map={'facebook.com':'Facebook','instagram.com':'Instagram','linkedin.com':'LinkedIn','youtube.com':'YouTube','youtu.be':'YouTube','twitter.com':'Twitter / X','x.com':'Twitter / X','tiktok.com':'TikTok','t.me':'Telegram'};
+  return map[domain.toLowerCase()]||domain;
+}
+function socialMsg(input, html, color){
+  let m=input.parentElement.querySelector('.social-msg');
+  if(!m){ m=document.createElement('div'); m.className='social-msg'; m.style.cssText='font-size:11px;margin-top:6px;font-weight:600;display:flex;align-items:center;gap:5px'; input.parentElement.appendChild(m); }
+  if(!html){ m.style.display='none'; return; }
+  m.style.display='flex'; m.style.color=color; m.innerHTML=html;
+}
+function validateSocial(input, mustContain){
+  const key = mustContain.includes('facebook')?'facebook' : mustContain.includes('instagram')?'instagram' : 'youtube';
+  const R=SOCIAL_RULES[key];
+  let v=input.value.trim();
+  // a bare prefilled domain with nothing after it counts as empty
+  if(/^https?:\/\/(www\.)?(facebook|instagram|youtube)\.com\/?$/i.test(v)) v='';
+  if(!v){ input.classList.remove('verified','error'); socialMsg(input,''); buildStepBar(); return; }
+  // wrong platform pasted in? (e.g. a LinkedIn or Instagram link in the Facebook box)
+  const wrong=R.others.exec(v);
+  if(wrong){
+    input.classList.remove('verified'); input.classList.add('error');
+    socialMsg(input,`<i class="ti ti-alert-triangle" style="font-size:13px"></i> That looks like a ${prettyPlatform(wrong[0])} link — please put your ${R.name} link here.`,'#dc2626');
+    buildStepBar(); return;
+  }
+  const ok=R.rx.test(v);
+  input.classList.toggle('verified', ok);
+  input.classList.toggle('error', !ok);
+  socialMsg(input, ok?'':`<i class="ti ti-alert-triangle" style="font-size:13px"></i> Enter a valid ${R.name} link (e.g. ${R.ex}).`, '#dc2626');
+  buildStepBar();
+}
+function validateSocialGeneric(input, label){ buildStepBar(); }
+
+// ═══ SERVICES ═══
+function titleCaseService(el){
+  el.value = el.value.replace(/\s+/g,' ').trim().replace(/(^|\s)(\w)/g,(m,p,c)=>p+c.toUpperCase());
+}
+function addService(){
+  const list = document.getElementById('svc-list');
+  const row = document.querySelector('.svc-row').cloneNode(true);
+  row.querySelectorAll('input').forEach(i=>i.value='');
+  row.querySelectorAll('.time-parsed').forEach(p=>{p.style.display='none';p.innerHTML='';});
+  row.querySelectorAll('.format-btn').forEach((b,i)=>{
+    if(i===0){ b.className='format-btn on'; b.style.background='#f5f3ff'; b.style.borderColor='var(--ek-purple)'; b.style.color='var(--ek-purple-dark)'; }
+    else { b.className='format-btn'; b.style.background='#fff'; b.style.borderColor='var(--ek-border)'; b.style.color='var(--ek-gray)'; }
+  });
+  list.appendChild(row);
+  buildStepBar();
+}
+
+function toggleFormat(btn, type){
+  btn.parentElement.querySelectorAll('.format-btn').forEach(b=>{
+    b.className='format-btn';
+    b.style.background='#fff'; b.style.borderColor='var(--ek-border)'; b.style.color='var(--ek-gray)';
+  });
+  btn.className='format-btn on';
+  btn.style.background='#f5f3ff'; btn.style.borderColor='var(--ek-purple)'; btn.style.color='var(--ek-purple-dark)';
+}
+
+function parseTimeString(v){
+  v = v.trim();
+  if(!v) return null;
+  // Accept: 10am, 10 am, 10:30am, 10.30am, 10am, 1330, 13:30, 1:30pm, noon, midnight
+  if(/^noon$/i.test(v)) return {h:12,m:'00',ampm:'PM',ambiguous:false};
+  if(/^midnight$/i.test(v)) return {h:12,m:'00',ampm:'AM',ambiguous:false};
+  const match = v.match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?$/i);
+  if(!match) return null;
+  let h = parseInt(match[1]);
+  let m = match[2]||'00';
+  let explicitAmPm = match[3] ? match[3].replace(/\./g,'').toUpperCase() : null;
+  if(h>23 || parseInt(m)>59) return null;
+  let ampm, ambiguous;
+  if(explicitAmPm){
+    ampm = explicitAmPm;
+    if(h>12) return null; // "14pm" is invalid
+    if(h===0) h=12;
+    ambiguous = false;
+  } else if(h>12){
+    // 24-hour style input e.g. 13:30, 18:00 — unambiguous
+    ampm = h>=12 ? 'PM' : 'AM';
+    h = h%12; if(h===0) h=12;
+    ambiguous = false;
+  } else {
+    // Bare hour 1-12 with no am/pm — genuinely ambiguous, ask the person
+    ampm = (h>=8 && h<=12) ? 'AM' : 'PM'; // best-guess default for the picker's highlighted option
+    ambiguous = true;
+  }
+  return {h, m: m.padStart(2,'0'), ampm, ambiguous};
+}
+
+function formatTime(p){
+  return `${p.h}:${p.m} ${p.ampm}`;
+}
+
+function parseTimeInput(input){
+  const v = input.value.trim();
+  const parsedDiv = input.parentElement.querySelector('.time-parsed');
+  if(!v){ parsedDiv.style.display='none'; input.classList.remove('verified','error'); delete input.dataset.parsed; return; }
+  const parsed = parseTimeString(v);
+  if(!parsed){
+    parsedDiv.innerHTML = `<div style="padding:9px 12px;font-size:12px;color:#ef4444">Couldn't read that time — try 10am or 10:30am</div>`;
+    parsedDiv.style.display='block';
+    delete input.dataset.parsed;
+    input.classList.remove('verified');
+    return;
+  }
+  input.classList.remove('error');
+  if(parsed.ambiguous){
+    const morning = {...parsed, ampm:'AM'};
+    const evening = {...parsed, ampm:'PM'};
+    parsedDiv.innerHTML = `
+      <div onclick="commitTime(this,'${formatTime(morning)}')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--ek-border)" onmouseover="this.style.background='var(--ek-surface)'" onmouseout="this.style.background='#fff'">
+        <i class="ti ti-clock" style="font-size:14px;color:var(--ek-purple)"></i>
+        <span style="font-size:13px;font-weight:700;color:var(--ek-ink)">${formatTime(morning)}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--ek-gray-light)">Morning</span>
+      </div>
+      <div onclick="commitTime(this,'${formatTime(evening)}')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer" onmouseover="this.style.background='var(--ek-surface)'" onmouseout="this.style.background='#fff'">
+        <i class="ti ti-clock" style="font-size:14px;color:var(--ek-purple)"></i>
+        <span style="font-size:13px;font-weight:700;color:var(--ek-ink)">${formatTime(evening)}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--ek-gray-light)">Evening</span>
+      </div>`;
+    parsedDiv.style.display='block';
+    delete input.dataset.parsed; // not committed until they pick
+  } else {
+    parsedDiv.innerHTML = `<div style="padding:9px 12px;font-size:12px;color:var(--ek-purple-dark)">→ ${formatTime(parsed)}</div>`;
+    parsedDiv.style.display='block';
+    input.dataset.parsed = formatTime(parsed);
+  }
+}
+
+function commitTime(optionEl, value){
+  const container = optionEl.closest('div[style*="position:relative"]');
+  const input = container.querySelector('.time-input');
+  input.value = value;
+  input.classList.add('verified');
+  input.classList.remove('error');
+  input.dataset.parsed = value;
+  optionEl.closest('.time-parsed').style.display='none';
+  buildStepBar();
+}
+
+function finaliseTime(input){
+  const parsedDiv = input.parentElement.querySelector('.time-parsed');
+  // If a picker is open (ambiguous, not yet committed), give the click on
+  // an option time to register before we collapse anything on blur.
+  setTimeout(()=>{
+    const v = input.value.trim();
+    if(v){
+      if(input.dataset.parsed){
+        input.value = input.dataset.parsed;
+        input.classList.add('verified');
+        input.classList.remove('error');
+      } else {
+        const parsed = parseTimeString(v);
+        if(parsed){
+          // Ambiguous and never explicitly picked — fall back to the best-guess default
+          input.value = formatTime(parsed);
+          input.classList.add('verified');
+          input.classList.remove('error');
+        } else {
+          input.classList.add('error');
+          input.classList.remove('verified');
+        }
+      }
+    }
+    if(parsedDiv) parsedDiv.style.display='none';
+    buildStepBar();
+  }, 180);
+}
+
+// ═══ CHIPS ═══
+function toggleChip(el){
+  el.classList.toggle('on');
+  buildStepBar();
+}
+function ministryTitle(s){ return (s||'').replace(/\s+/g,' ').trim().replace(/(^|\s)(\w)/g,(m,p,c)=>p+c.toUpperCase()); }
+function flashChip(el){ el.style.transition='transform .2s'; el.style.transform='scale(1.1)'; setTimeout(()=>el.style.transform='scale(1)',220); }
+function customMinMsg(html,color){ const m=document.getElementById('custom-min-msg'); if(!m)return; if(!html){m.style.display='none';return;} m.style.display='block'; m.style.color=color||'var(--ek-gray)'; m.innerHTML=html; }
+function addCustomMinistry(){
+  const inp=document.getElementById('custom-ministry');
+  const val=ministryTitle(inp.value);
+  if(val.length<2){ inp.focus(); customMinMsg('Type a ministry name to add it.','#d97706'); return; }
+  // already in the list anywhere? (quick-pick row or the browse-all categories) — select it, don't duplicate
+  const chips=[...document.querySelectorAll('#step-3 .chip')];
+  const existing=chips.find(c=>c.textContent.trim().toLowerCase()===val.toLowerCase());
+  if(existing){
+    existing.classList.add('on');
+    if(existing.closest('#cat-browser')){ document.getElementById('cat-browser').style.display='block'; }
+    existing.scrollIntoView({block:'nearest',behavior:'smooth'});
+    flashChip(existing);
+    customMinMsg(`<i class="ti ti-circle-check" style="font-size:13px"></i> “${val}” already exists — selected it for you.`,'#16a34a');
+    inp.value=''; buildStepBar(); return;
+  }
+  // genuinely new → add it, selected, to the current ministries row
+  const chip=document.createElement('div');
+  chip.className='chip on';
+  chip.setAttribute('onclick','toggleChip(this)');
+  chip.innerHTML=`<i class="ti ti-plus" style="font-size:12px"></i> ${val}`;
+  document.getElementById('ministry-chips').appendChild(chip);
+  flashChip(chip);
+  customMinMsg(`<i class="ti ti-circle-check-filled" style="font-size:13px;color:#16a34a"></i> Added “${val}” to your ministries.`,'#16a34a');
+  inp.value=''; inp.focus(); buildStepBar();
+  setTimeout(()=>customMinMsg(''),2500);
+}
+
+function toggleCats(){
+  const cb = document.getElementById('cat-browser');
+  cb.style.display = cb.style.display==='none' ? 'block' : 'none';
+}
+
+// ═══ LANGUAGES ═══
+const ALL_LANGUAGES = ['English','Spanish','French','Portuguese','German','Italian','Dutch','Polish','Romanian','Hungarian','Czech','Slovak','Bulgarian','Serbian','Croatian','Bosnian','Slovenian','Macedonian','Montenegrin','Albanian','Greek','Turkish','Russian','Ukrainian','Belarusian','Lithuanian','Latvian','Estonian','Finnish','Swedish','Norwegian','Danish','Icelandic','Irish','Welsh','Scottish Gaelic','Manx','Cornish','Breton','Catalan','Basque','Galician','Luxembourgish','Frisian','Maltese','Romani','Yiddish','Ladino','Sorbian','Yoruba','Igbo','Hausa','Twi','Ga','Ewe','Fante','Akan','Fula','Wolof','Mandinka','Bambara','Mossi','Krio','Mende','Temne','Kanuri','Tiv','Edo','Efik','Ibibio','Nupe','Kpelle','Dan','Amharic','Tigrinya','Tigre','Oromo','Somali','Afar','Harari','Sidamo','Swahili','Lingala','Kikongo','Tshiluba','Kinyarwanda','Kirundi','Luganda','Runyankole','Acholi','Lango','Ateso','Chichewa','Bemba','Tonga','Lozi','Nyanja','Shona','Ndebele','Zulu','Xhosa','Swazi','Sesotho','Setswana','Sepedi','Tsonga','Venda','Afrikaans','Sango','Berber','Tamazight','Tashelhit','Kabyle','Malagasy','Comorian','Arabic','Hebrew','Aramaic','Kurdish','Sorani','Kurmanji','Farsi','Dari','Pashto','Balochi','Brahui','Luri','Persian','Azerbaijani','Armenian','Georgian','Turkmen','Uzbek','Kazakh','Kyrgyz','Tajik','Uyghur','Mongolian','Tibetan','Dzongkha','Urdu','Punjabi','Saraiki','Sindhi','Gujarati','Marathi','Konkani','Hindi','Bhojpuri','Maithili','Awadhi','Rajasthani','Bengali','Sylheti','Chittagonian','Assamese','Odia','Tamil','Telugu','Kannada','Malayalam','Tulu','Sinhala','Nepali','Newari','Santali','Kashmiri','Dogri','Manipuri','Mizo','Khasi','Bodo','Garo','Naga','Dhivehi','Mandarin','Cantonese','Hakka','Hokkien','Teochew','Shanghainese','Korean','Japanese','Vietnamese','Thai','Lao','Khmer','Burmese','Shan','Karen','Mon','Chin','Kachin','Rohingya','Hmong','Mien','Tagalog','Cebuano','Ilocano','Hiligaynon','Waray','Bikol','Kapampangan','Pangasinan','Maranao','Chavacano','Indonesian','Javanese','Sundanese','Balinese','Minangkabau','Buginese','Madurese','Acehnese','Batak','Malay','Tetum','Maori','Samoan','Tongan','Fijian','Hawaiian','Tahitian','Bislama','Tok Pisin','Hiri Motu','Chamorro','Marshallese','Palauan','Gilbertese','Nauruan','Quechua','Aymara','Guarani','Nahuatl','Maya','Mapudungun','Haitian Creole','Papiamento','Jamaican Patois','Trinidadian Creole','Cape Verdean Creole','Sranan Tongo','Garifuna','Belizean Creole'];
+let selectedLangs = new Set();
+
+function addLang(lang){
+  if(selectedLangs.has(lang)) return;
+  selectedLangs.add(lang);
+  renderSelectedLangs();
+  const ls = document.getElementById('lang-search');
+  if(ls) ls.value='';
+  document.getElementById('lang-dropdown').style.display='none';
+  buildStepBar();
+}
+
+function removeLang(lang){
+  selectedLangs.delete(lang);
+  renderSelectedLangs();
+  buildStepBar();
+}
+
+function renderSelectedLangs(){
+  const container = document.getElementById('lang-chips');
+  const label = document.getElementById('lang-selected-label');
+  if(!container) return;
+  if(selectedLangs.size===0){
+    container.innerHTML='<span style="font-size:12px;color:var(--ek-gray-light);padding:6px 2px">None selected yet — search above or pick below</span>';
+    if(label) label.style.display='none';
+    return;
+  }
+  if(label) label.style.display='block';
+  container.innerHTML=[...selectedLangs].map(lang=>`
+    <div style="display:inline-flex;align-items:center;gap:5px;background:var(--ek-purple);color:#fff;border-radius:20px;padding:6px 10px 6px 14px;font-size:13px;font-weight:600;margin:3px">
+      ${lang}
+      <button onclick="removeLang('${lang}')" style="background:rgba(255,255,255,0.25);border:none;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:11px;line-height:1;padding:0;font-family:inherit">×</button>
+    </div>`).join('');
+}
+
+function renderLangList(list, emptyMsg){
+  const dd = document.getElementById('lang-dropdown');
+  if(!list.length){
+    dd.innerHTML=`<div style="padding:10px 14px;font-size:12px;color:var(--ek-gray)">${emptyMsg}</div>`;
+    dd.style.display='block';
+    return;
+  }
+  dd.innerHTML = list.map(l=>`
+    <div onclick="addLang('${l}')" style="padding:9px 14px;cursor:pointer;font-size:13px;color:${selectedLangs.has(l)?'var(--ek-gray-light)':'var(--ek-ink)'};display:flex;align-items:center;gap:8px;border-bottom:0.5px solid #f3f3f6" onmouseover="this.style.background='var(--ek-surface)'" onmouseout="this.style.background='#fff'">
+      ${selectedLangs.has(l)?'<i class="ti ti-check" style="font-size:13px;color:var(--ek-purple)"></i>':'<i class="ti ti-language" style="font-size:13px;color:var(--ek-gray-light)"></i>'}
+      ${l}
+      ${selectedLangs.has(l)?'<span style="margin-left:auto;font-size:10px;color:var(--ek-gray-light)">Added</span>':''}
+    </div>`).join('');
+  dd.style.display='block';
+}
+
+function langSearch(v){
+  v = v.trim();
+  if(!v){ renderLangList(ALL_LANGUAGES.slice(), 'No languages available'); return; }
+  const vl = v.toLowerCase();
+  const starts = ALL_LANGUAGES.filter(l=>l.toLowerCase().startsWith(vl));
+  const contains = ALL_LANGUAGES.filter(l=>!l.toLowerCase().startsWith(vl) && l.toLowerCase().includes(vl));
+  const matches = [...starts, ...contains];
+  renderLangList(matches, `No language found for "${v}" — you can still add it as a custom language below`);
+}
+
+function langFocus(){
+  const dd = document.getElementById('lang-dropdown');
+  const v = document.getElementById('lang-search').value.trim();
+  if(v) { langSearch(v); return; }
+  renderLangList(ALL_LANGUAGES.slice(), 'No languages available');
+}
+
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#lang-search')&&!e.target.closest('#lang-dropdown')){
+    const d=document.getElementById('lang-dropdown');
+    if(d) d.style.display='none';
+  }
+});
+
+// ═══ IMAGE PREVIEW ═══
+function previewImage(input, previewId, placeholderId){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById(previewId);
+    const ph = document.getElementById(placeholderId);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    ph.style.display = 'none';
+    const removeBtnId = previewId.replace('preview','remove');
+    const removeBtn = document.getElementById(removeBtnId);
+    if(removeBtn) removeBtn.style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeImage(e, fileId, previewId, placeholderId, dropId){
+  e.stopPropagation();
+  document.getElementById(fileId).value = '';
+  document.getElementById(previewId).style.display = 'none';
+  document.getElementById(previewId).src = '';
+  document.getElementById(placeholderId).style.display = 'block';
+  document.getElementById(fileId).nextElementSibling;
+  const removeBtnId = previewId.replace('preview','remove');
+  const removeBtn = document.getElementById(removeBtnId);
+  if(removeBtn) removeBtn.style.display = 'none';
+}
+
+function writeWithAI(){
+  const name = (document.getElementById('f-church-name')||{}).value||'your church';
+  const denom = (document.getElementById('f-denom')||{}).value||'';
+  const el=document.getElementById('f-about');
+  el.value = `${name} is a warm and welcoming ${denom?denom+' ':''}community dedicated to faith, fellowship and service. Whether you're visiting for the first time or looking for a church home, you'll find a place to belong, grow and connect with God and others.`;
+  buildStepBar();
+}
+
+// ═══ COMPLETION SCORE / PREVIEW ═══
+function pvEsc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function pvChips(arr){ return `<div style="display:flex;flex-wrap:wrap;gap:6px">${arr.map(x=>`<span style="font-size:12px;font-weight:600;color:var(--ek-purple-dark);background:#f5f3ff;border:1px solid #ede9fe;padding:5px 11px;border-radius:20px">${pvEsc(x)}</span>`).join('')}</div>`; }
+function gatherServices(){
+  return [...document.querySelectorAll('.svc-row')].map(row=>{
+    const day=(row.querySelector('.svc-day')||{}).value||'';
+    const nm=(row.querySelector('.svc-name')||{}).value||'';
+    const times=[...row.querySelectorAll('.time-input')].map(t=>t.value.trim()).filter(Boolean);
+    const onBtn=row.querySelector('.format-btn.on');
+    const fmt=onBtn?onBtn.textContent.trim():'';
+    return {day,nm,from:times[0]||'',to:times[1]||'',fmt};
+  }).filter(s=>s.nm||s.from);
+}
+function syncPreviewImages(){
+  const setImg=(fileId,imgId,iconId)=>{
+    const f=document.getElementById(fileId), img=document.getElementById(imgId);
+    if(f&&f.files&&f.files[0]&&img){
+      const r=new FileReader();
+      r.onload=e=>{
+        img.src=e.target.result; img.style.display='block';
+        if(iconId){ const ic=document.getElementById(iconId); if(ic)ic.style.display='none'; }
+      };
+      r.readAsDataURL(f.files[0]);
+    }
+  };
+  setImg('logo-file','preview-logo-src','preview-logo-icon');
+  setImg('cover-file','preview-cover-img','preview-cover-icon');
+}
+function syncPreview(){
+  captureTypedAddress();
+  const g=id=>(document.getElementById(id)||{}).value||'';
+  const name=g('f-church-name').trim();
+  document.getElementById('preview-church-name').textContent = name||'Your Church Name';
+  const denom=g('f-denom'); const badge=document.getElementById('preview-denom-badge');
+  if(denom){ badge.textContent=denom; badge.style.display='inline-block'; } else badge.style.display='none';
+  const addrParts=[g('f-addr-line'),g('f-city'),g('f-postcode'),g('f-country')].filter(Boolean);
+  const addrEl=document.getElementById('preview-address-line');
+  addrEl.innerHTML = addrParts.length?`<i class="ti ti-map-pin" style="font-size:12px"></i> ${pvEsc(addrParts.join(', '))}`:'';
+  syncPreviewImages();
+
+  const sec=[];
+  const head=(icon,t)=>`<div style="display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:800;color:var(--ek-purple-dark);text-transform:uppercase;letter-spacing:.04em;margin:0 0 10px"><i class="ti ${icon}" style="font-size:14px"></i> ${t}</div>`;
+  const wrap=(inner)=>`<div style="padding:16px 0;border-top:1px solid var(--ek-border)">${inner}</div>`;
+
+  const email=g('f-email'), phone=g('s-whatsapp'), fb=g('s-facebook'), ig=g('s-instagram'), yt=g('s-youtube');
+  const contacts=[];
+  if(email)contacts.push(`<i class="ti ti-mail" style="font-size:14px;color:var(--ek-purple)"></i> ${pvEsc(email)}`);
+  if(phone)contacts.push(`<i class="ti ti-phone" style="font-size:14px;color:var(--ek-purple)"></i> ${pvEsc(phone)}`);
+  if(fb)contacts.push(`<i class="ti ti-brand-facebook" style="font-size:14px;color:var(--ek-purple)"></i> Facebook`);
+  if(ig)contacts.push(`<i class="ti ti-brand-instagram" style="font-size:14px;color:var(--ek-purple)"></i> Instagram`);
+  if(yt)contacts.push(`<i class="ti ti-brand-youtube" style="font-size:14px;color:var(--ek-purple)"></i> YouTube`);
+  if(contacts.length) sec.push(wrap(head('ti-address-book','Contact')+`<div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--ek-ink)">${contacts.map(c=>`<div style="display:flex;align-items:center;gap:8px">${c}</div>`).join('')}</div>`));
+
+  const svcs=gatherServices();
+  if(svcs.length){
+    const rows=svcs.map(s=>{
+      const time=[s.from,s.to].filter(Boolean).join(' – ');
+      const fmtTag=s.fmt?`<span style="font-size:10px;font-weight:700;color:var(--ek-purple-dark);background:#f5f3ff;padding:2px 7px;border-radius:20px;margin-left:auto">${pvEsc(s.fmt)}</span>`:'';
+      return `<div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ek-ink);padding:6px 0"><b style="min-width:78px">${pvEsc(s.day)}</b><span>${pvEsc(s.nm)||'Service'}</span><span style="color:var(--ek-gray)">${pvEsc(time)}</span>${fmtTag}</div>`;
+    }).join('');
+    sec.push(wrap(head('ti-clock','Service times')+rows));
+  }
+  const mins=[...document.querySelectorAll('#step-3 .chip.on')].map(c=>c.textContent.trim()).filter(Boolean);
+  if(mins.length) sec.push(wrap(head('ti-heart-handshake','Ministries & outreach')+pvChips(mins)));
+  const langs=(typeof selectedLangs!=='undefined')?[...selectedLangs]:[];
+  if(langs.length) sec.push(wrap(head('ti-language','Languages')+pvChips(langs)));
+  const facs=[...document.querySelectorAll('.fac-chip.on')].map(c=>c.textContent.trim()).filter(Boolean);
+  if(facs.length) sec.push(wrap(head('ti-accessible','Facilities')+pvChips(facs)));
+  const about=g('f-about').trim();
+  if(about) sec.push(wrap(head('ti-info-circle','About')+`<div style="font-size:13px;color:var(--ek-ink);line-height:1.65">${pvEsc(about)}</div>`));
+
+  document.getElementById('preview-sections').innerHTML = sec.join('') ||
+    `<div style="padding:16px 0;border-top:1px solid var(--ek-border);font-size:13px;color:var(--ek-gray)">Add details on the previous steps — services, ministries, languages, about — and they'll appear here.</div>`;
+
+  const name2=name;
+  const successUrl=document.getElementById('success-url'), successSub=document.getElementById('success-subtitle');
+  if(name2){
+    const slug=name2.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+    if(successUrl) successUrl.textContent=`ekklesia.app/church/${slug}`;
+    if(successSub) successSub.textContent=`${name2} is now on Ekklesia`;
+  }
+}
+
+function calcScore(){
+  syncPreview();
+  const fields=[
+    {label:'Church name',       pts:15, val:()=>document.getElementById('f-church-name').value.trim().length>2},
+    {label:'Denomination',      pts:5,  val:()=>document.getElementById('f-denom').value!=''},
+    {label:'Address',           pts:15, val:()=>(document.getElementById('f-addr-line').value.trim().length>1)||document.getElementById('addr-input').classList.contains('verified')},
+    {label:'City & country',    pts:5,  val:()=>document.getElementById('f-city').value.trim().length>1&&document.getElementById('f-country').value.trim().length>1},
+    {label:'Email',             pts:10, val:()=>document.getElementById('f-email').value.trim().length>3},
+    {label:'Service times',     pts:10, val:()=>gatherServices().length>0},
+    {label:'Ministries',        pts:10, val:()=>document.querySelectorAll('#step-3 .chip.on').length>0},
+    {label:'Languages',         pts:5,  val:()=>selectedLangs.size>0},
+    {label:'Facilities',        pts:5,  val:()=>document.querySelectorAll('.fac-chip.on').length>0},
+    {label:'Logo / cover',      pts:10, val:()=>{const c=document.getElementById('cover-file'),l=document.getElementById('logo-file');return (c&&c.files.length>0)||(l&&l.files.length>0);}},
+    {label:'About description', pts:10, val:()=>document.getElementById('f-about').value.trim().length>20},
+  ];
+  let total=0, earned=0;
+  fields.forEach(f=>{total+=f.pts;if(f.val())earned+=f.pts;});
+  const pct=Math.round(earned/total*100);
+  setTimeout(()=>{
+    document.getElementById('review-score').textContent=pct+'%';
+    document.getElementById('review-bar').style.width=pct+'%';
+    const missing=fields.filter(f=>!f.val());
+    document.getElementById('review-tip').textContent=
+      missing.length?'Add '+missing.slice(0,2).map(f=>f.label.toLowerCase()).join(' & ')+' to improve visibility':'Your profile is strong — ready to publish!';
+    document.getElementById('review-fields').innerHTML=fields.map(f=>{
+      const done=f.val();
+      return `<div style="display:flex;align-items:center;gap:8px;padding:8px 11px;border-radius:10px;background:${done?'#f0fdf4':'#f9fafb'};border:1px solid ${done?'#bbf7d0':'#eef0f3'}">
+        <i class="ti ${done?'ti-circle-check-filled':'ti-circle'}" style="font-size:15px;color:${done?'#16a34a':'#cbd0d8'}"></i>
+        <span style="font-size:12.5px;font-weight:600;color:${done?'var(--ek-ink)':'var(--ek-gray-light)'}">${f.label}</span>
+        <span style="margin-left:auto;font-size:11px;font-weight:700;color:${done?'#16a34a':'#cbd0d8'}">+${f.pts}%</span>
+      </div>`;
+    }).join('');
+  },100);
+}
+
+// ═══ INIT ═══
+selectCountry('GB','United Kingdom',document.querySelector('.country-btn'));
+renderSelectedLangs();
+buildStepBar();
+</script>
+</body>
+</html>

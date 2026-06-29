@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ekklesia — Events</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.30.0/tabler-icons.min.css" rel="stylesheet">
+<style>
+:root{
+  --grad:linear-gradient(135deg,#f43f5e 0%,#7c3aed 100%);
+  --grad-soft:linear-gradient(135deg,rgba(244,63,94,.12),rgba(124,58,237,.12));
+  --purple:#7c3aed;--purple-d:#6d28d9;--coral:#f43f5e;
+  --ink:#0f0f1a;--gray:#6b7280;--gray-l:#9ca3af;--border:#e9e9ef;--surface:#f5f3ff;--bg:#f7f7fb;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}button{font-family:inherit;cursor:pointer;border:none;background:none}
+.wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;padding:10px 16px;border-radius:11px;transition:.15s}
+.btn-primary{background:var(--grad);color:#fff}
+.btn-ghost{background:#fff;border:1.5px solid var(--border);color:var(--ink)}
+.topnav{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+.topnav .row{display:flex;align-items:center;gap:8px;height:62px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:19px;margin-right:14px}
+.brand .mark{width:30px;height:30px;border-radius:9px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff}
+.navtab{font-size:13.5px;font-weight:700;color:var(--gray);padding:8px 14px;border-radius:10px}
+.navtab.on{background:var(--surface);color:var(--purple-d)}
+.navtab:hover{color:var(--ink)}
+.view{display:none}.view.on{display:block;animation:fade .25s}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.section{padding:26px 0 60px}
+.ev-hero{background:linear-gradient(135deg,#1e1b3a,#3b2a6b);color:#fff;padding:34px 0 28px}
+.ev-hero h1{font-size:30px;font-weight:800;letter-spacing:-.02em}
+.ev-hero p{color:rgba(255,255,255,.7);font-size:14px;margin-top:6px}
+.searchbar{display:flex;gap:10px;background:#fff;border-radius:14px;padding:8px;margin-top:20px;flex-wrap:wrap}
+.searchbar .f{display:flex;align-items:center;gap:8px;padding:8px 12px;flex:1;min-width:150px;color:var(--gray)}
+.searchbar .f i{font-size:18px}
+.searchbar input,.searchbar select{border:none;outline:none;font-family:inherit;font-size:13.5px;color:var(--ink);width:100%;background:none}
+.searchbar .div{width:1px;background:var(--border)}
+.filters{display:flex;gap:9px;flex-wrap:wrap;margin:18px 0 4px}
+.fchip{font-size:12.5px;font-weight:700;padding:7px 14px;border-radius:20px;border:1.5px solid var(--border);background:#fff;color:var(--gray)}
+.fchip.on{background:var(--grad);color:#fff;border-color:transparent}
+.ev-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:18px}
+.ev-card{background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden;cursor:pointer;transition:.15s}
+.ev-card:hover{box-shadow:0 16px 38px -20px rgba(15,15,26,.35);transform:translateY(-2px)}
+.ev-cover{height:130px;position:relative;display:flex;align-items:flex-end;padding:12px}
+.ev-cover .date{background:rgba(255,255,255,.92);border-radius:11px;padding:5px 10px;text-align:center;line-height:1}
+.ev-cover .date .d{font-size:18px;font-weight:800;color:var(--ink)}
+.ev-cover .date .m{font-size:10px;font-weight:700;color:var(--coral)}
+.ev-cover .price{position:absolute;top:12px;right:12px;background:rgba(0,0,0,.45);color:#fff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px}
+.ev-body{padding:14px}
+.ev-type{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--purple-d)}
+.ev-title{font-size:15.5px;font-weight:800;margin:4px 0 6px;line-height:1.25}
+.ev-meta{font-size:12.5px;color:var(--gray);display:flex;flex-direction:column;gap:3px}
+.ev-meta span{display:flex;align-items:center;gap:6px}
+.ev-foot{display:flex;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.ev-att{font-size:12px;color:var(--gray)}
+.ev-foot .btn{margin-left:auto;padding:7px 13px;font-size:12.5px}
+.etag{display:inline-flex;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--surface);color:var(--purple-d);margin:6px 5px 0 0}
+.det-cover{height:280px;border-radius:18px;position:relative;display:flex;align-items:flex-end;padding:22px;color:#fff;overflow:hidden}
+.det-cover::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.6),transparent)}
+.det-cover .inner{position:relative;z-index:2}
+.det-cover .t{font-size:30px;font-weight:800;letter-spacing:-.02em;text-shadow:0 2px 10px rgba(0,0,0,.4)}
+.det-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:22px;margin-top:22px;align-items:start}
+.card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:18px}
+.card h3{font-size:15px;font-weight:800;margin-bottom:12px}
+.kv{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13.5px}
+.kv:last-child{border-bottom:none}
+.kv .ic{width:34px;height:34px;border-radius:10px;background:var(--surface);color:var(--purple-d);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.kv .l{color:var(--gray);font-size:12px}.kv .v{font-weight:700}
+.reg-box{background:var(--grad-soft);border:1px solid #e4ddf7;border-radius:14px;padding:16px;text-align:center;margin-bottom:14px}
+.reg-box .n{font-size:24px;font-weight:800}.reg-box .l{font-size:12px;color:var(--gray)}
+.prog{height:8px;background:#eef0f2;border-radius:20px;overflow:hidden;margin:10px 0 6px}
+.prog i{display:block;height:100%;background:var(--grad);border-radius:20px}
+.form-card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:26px;max-width:720px;margin:0 auto}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12.5px;font-weight:700;margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;font-family:inherit;font-size:13.5px;padding:11px 13px;border:1.5px solid var(--border);border-radius:11px;outline:none}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--purple)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.cover-pick{display:flex;gap:9px;margin-top:4px}
+.cover-opt{width:54px;height:38px;border-radius:9px;cursor:pointer;border:2px solid transparent}
+.cover-opt.on{border-color:var(--ink)}
+.toggle-row{display:flex;align-items:center;gap:11px;padding:13px;background:var(--surface);border-radius:12px}
+.tg{width:42px;height:24px;border-radius:20px;background:#cfcfe0;position:relative;transition:.2s;flex-shrink:0}
+.tg.on{background:var(--purple)}
+.tg::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s}
+.tg.on::after{left:21px}
+.cards4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}
+.scard{background:#fff;border:1px solid var(--border);border-radius:16px;padding:18px}
+.scard .ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px;margin-bottom:12px}
+.scard .v{font-size:25px;font-weight:800;line-height:1}.scard .l{font-size:12.5px;color:var(--gray);margin-top:3px}
+.grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;align-items:start}
+.funnel-row{margin-bottom:12px}
+.funnel-row .top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.funnel-bar{height:30px;border-radius:9px;background:var(--grad);display:flex;align-items:center;padding:0 12px;color:#fff;font-size:12px;font-weight:700}
+.src-row{display:flex;align-items:center;gap:11px;margin-bottom:13px;font-size:13px}
+.src-row .nm{width:90px;font-weight:600}
+.src-row .bar{flex:1;height:9px;background:#eef0f2;border-radius:20px;overflow:hidden}
+.src-row .bar i{display:block;height:100%;border-radius:20px}
+.src-row .pc{width:36px;text-align:right;color:var(--gray);font-weight:700}
+.reg-row{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--border)}
+.reg-row:last-child{border-bottom:none}
+.reg-row .av{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;flex-shrink:0}
+.pill{font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:20px}
+.pill-new{background:#eff6ff;color:#1d4ed8}.pill-ret{background:#f0fdf4;color:#15803d}
+.ph{display:flex;align-items:center;margin-bottom:14px}.ph h3{font-size:15px;font-weight:800}.ph .link{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--purple-d)}
+@media(max-width:900px){.ev-grid{grid-template-columns:1fr 1fr}.det-grid,.grid2{grid-template-columns:1fr}.cards4{grid-template-columns:repeat(2,1fr)}.frow,.frow3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="topnav"><div class="wrap row">
+  <div class="brand"><span class="mark"><i class="ti ti-cross"></i></span> Ekklesia</div>
+  <button class="navtab on" data-v="discover" onclick="go(this)"><i class="ti ti-calendar-event"></i> Discover events</button>
+  <button class="navtab" data-v="detail" onclick="go(this)">Event page</button>
+  <button class="navtab" data-v="create" onclick="go(this)"><i class="ti ti-plus"></i> Create event</button>
+  <button class="navtab" data-v="insights" onclick="go(this)"><i class="ti ti-chart-line"></i> Insights & visitors</button>
+</div></div>
+
+<div class="view on" id="v-discover">
+  <div class="ev-hero"><div class="wrap">
+    <h1>Find a Christian event near you</h1>
+    <p>Conferences, services, crusades, camps and summits — across the UK and beyond.</p>
+    <div class="searchbar">
+      <div class="f"><i class="ti ti-search"></i><input placeholder="Search events, hosts, topics…"></div>
+      <div class="div"></div>
+      <div class="f"><i class="ti ti-map-pin"></i><input placeholder="City or postcode"></div>
+      <div class="div"></div>
+      <div class="f"><i class="ti ti-calendar"></i><select><option>Any date</option><option>This week</option><option>This month</option><option>Next 3 months</option></select></div>
+      <button class="btn btn-primary"><i class="ti ti-search"></i> Search</button>
+    </div>
+  </div></div>
+  <div class="wrap section">
+    <div class="filters" id="filters"></div>
+    <div style="font-size:13px;color:var(--gray);margin-top:14px"><b id="ev-count">0</b> events found</div>
+    <div class="ev-grid" id="ev-grid"></div>
+  </div>
+</div>
+
+<div class="view" id="v-detail"><div class="wrap section">
+  <a onclick="document.querySelector('[data-v=discover]').click()" style="font-size:13px;font-weight:700;color:var(--gray);cursor:pointer"><i class="ti ti-arrow-left"></i> All events</a>
+  <div id="detail-body" style="margin-top:14px"></div>
+</div></div>
+
+<div class="view" id="v-create"><div class="wrap section">
+  <div class="form-card">
+    <h2 style="font-size:21px;font-weight:800;margin-bottom:4px">Create an event</h2>
+    <p style="font-size:13px;color:var(--gray);margin-bottom:20px">List a conference, service, crusade, camp or summit. It appears in Discover and on your church/pastor page.</p>
+    <div class="field"><label>Event title</label><input placeholder="e.g. Kingdom Power Conference 2025"></div>
+    <div class="frow">
+      <div class="field"><label>Event type</label><select><option>Conference</option><option>Service</option><option>Crusade</option><option>Camp / Retreat</option><option>Summit</option><option>Concert</option></select></div>
+      <div class="field"><label>Hosted by</label><select><option>Liberty Christian Connections (church)</option><option>Pastor James Okafor</option><option>+ Add host</option></select></div>
+    </div>
+    <div class="frow3">
+      <div class="field"><label>Date</label><input type="date"></div>
+      <div class="field"><label>Start time</label><input type="time"></div>
+      <div class="field"><label>End time</label><input type="time"></div>
+    </div>
+    <div class="frow">
+      <div class="field"><label>Venue</label><input placeholder="e.g. Liberty House"></div>
+      <div class="field"><label>City</label><input placeholder="e.g. Ilford, London"></div>
+    </div>
+    <div class="field"><label>Description</label><textarea rows="4" placeholder="What's the event about, who's it for, what to expect…"></textarea></div>
+    <div class="frow">
+      <div class="field"><label>Capacity</label><input type="number" placeholder="e.g. 500"></div>
+      <div class="field"><label>Price</label><input placeholder="Free, or e.g. £15"></div>
+    </div>
+    <div class="field"><label>Cover style</label><div class="cover-pick" id="cover-pick"></div></div>
+    <div class="field"><label>Tags (comma separated)</label><input placeholder="Conference, Free entry, Worship"></div>
+    <div class="field"><div class="toggle-row"><div class="tg on" onclick="this.classList.toggle('on')"></div><div><div style="font-weight:700;font-size:13.5px">Enable registration</div><div style="font-size:12px;color:var(--gray)">Collect sign-ups and track attendees (feeds visitor insights).</div></div></div></div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-ghost">Save draft</button>
+      <button class="btn btn-primary" style="margin-left:auto"><i class="ti ti-check"></i> Publish event</button>
+    </div>
+  </div>
+</div></div>
+
+<div class="view" id="v-insights"><div class="wrap section">
+  <div style="display:flex;align-items:center;margin-bottom:6px">
+    <h2 style="font-size:21px;font-weight:800">Event insights & visitor tracking</h2>
+    <select style="margin-left:auto;font-size:13px;padding:9px 13px;border:1.5px solid var(--border);border-radius:11px;font-family:inherit"><option>Kingdom Power Conference 2025</option><option>All events</option></select>
+  </div>
+  <p style="font-size:13px;color:var(--gray);margin-bottom:20px">Who's viewing, registering and showing up — including new vs returning visitors.</p>
+  <div class="cards4" id="ins-cards"></div>
+  <div class="grid2">
+    <div>
+      <div class="card"><div class="ph"><h3>Registration funnel</h3></div><div id="funnel"></div></div>
+      <div class="card"><div class="ph"><h3>Recent registrations</h3><span class="link">Export CSV</span></div><div id="reg-list"></div></div>
+    </div>
+    <div>
+      <div class="card"><div class="ph"><h3>New vs returning</h3></div>
+        <div style="display:flex;gap:14px;text-align:center;margin-bottom:6px">
+          <div style="flex:1"><div style="font-size:24px;font-weight:800;color:var(--purple-d)">68%</div><div style="font-size:11px;color:var(--gray)">New visitors</div></div>
+          <div style="flex:1"><div style="font-size:24px;font-weight:800;color:#16a34a">32%</div><div style="font-size:11px;color:var(--gray)">Returning</div></div>
+        </div>
+        <div class="prog"><i style="width:68%"></i></div>
+      </div>
+      <div class="card"><div class="ph"><h3>How they found it</h3></div><div id="sources"></div></div>
+    </div>
+  </div>
+</div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const COVERS=['linear-gradient(135deg,#7c3aed,#f43f5e)','linear-gradient(135deg,#0f172a,#7c3aed)','linear-gradient(135deg,#0891b2,#7c3aed)','linear-gradient(135deg,#16a34a,#0891b2)','linear-gradient(135deg,#f59e0b,#db2777)','linear-gradient(135deg,#1e1b3a,#6d28d9)'];
+const TYPES=['All','Conference','Service','Crusade','Camp','Summit'];
+const EVENTS=[
+  {id:1,type:'Conference',title:'Kingdom Power Conference 2025',host:'Liberty Christian Connections',day:'14',mon:'JUN',time:'10:00 AM',city:'Ilford, London',venue:'Liberty House',price:'Free',cover:0,tags:['Worship','Free entry'],att:312,cap:500},
+  {id:2,type:'Summit',title:'Ministers Leadership Summit',host:'Pastor James Okafor',day:'28',mon:'JUN',time:'9:00 AM',city:'Lagos, NG',venue:'Eko Convention Centre',price:'£25',cover:1,tags:['International','Leaders'],att:840,cap:1200},
+  {id:3,type:'Camp',title:'Youth Fire Camp 2025',host:'Liberty Christian Connections',day:'12',mon:'JUL',time:'Fri–Sun',city:'Bristol',venue:'Kingswood Camp',price:'£60',cover:3,tags:['Youth','Weekend'],att:120,cap:150},
+  {id:4,type:'Crusade',title:'Healing & Miracle Crusade',host:'Grace Covenant Cathedral',day:'03',mon:'AUG',time:'6:00 PM',city:'Shoreditch, London',venue:'ExCeL London',price:'Free',cover:4,tags:['Healing','Free entry'],att:2100,cap:4000},
+  {id:5,type:'Service',title:'Sunday Celebration Service',host:'Grace Covenant Cathedral',day:'10',mon:'AUG',time:'10:30 AM',city:'Shoreditch, London',venue:'Grace Cathedral',price:'Free',cover:2,tags:['Worship'],att:480,cap:600},
+  {id:6,type:'Conference',title:'Women of Destiny Conference',host:'New Covenant Manchester',day:'22',mon:'SEP',time:'9:30 AM',city:'Manchester',venue:'Manchester Central',price:'£15',cover:5,tags:["Women's",'Worship'],att:640,cap:900},
+];
+let activeFilter='All';
+function go(el){
+  document.querySelectorAll('.navtab').forEach(t=>t.classList.remove('on'));el.classList.add('on');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));$('v-'+el.dataset.v).classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function renderFilters(){
+  $('filters').innerHTML=TYPES.map(t=>`<button class="fchip ${t===activeFilter?'on':''}" onclick="setFilter('${t}')">${t}</button>`).join('');
+}
+function setFilter(t){activeFilter=t;renderFilters();renderGrid();}
+function renderGrid(){
+  const list=EVENTS.filter(e=>activeFilter==='All'||e.type===activeFilter);
+  $('ev-count').textContent=list.length;
+  $('ev-grid').innerHTML=list.map(e=>`
+    <div class="ev-card" onclick="openEvent(${e.id})">
+      <div class="ev-cover" style="background:${COVERS[e.cover]}">
+        <div class="date"><div class="d">${e.day}</div><div class="m">${e.mon}</div></div>
+        <div class="price">${e.price}</div>
+      </div>
+      <div class="ev-body">
+        <div class="ev-type">${e.type}</div>
+        <div class="ev-title">${e.title}</div>
+        <div class="ev-meta">
+          <span><i class="ti ti-building-church"></i> ${e.host}</span>
+          <span><i class="ti ti-map-pin"></i> ${e.venue}, ${e.city}</span>
+          <span><i class="ti ti-clock"></i> ${e.mon} ${e.day} · ${e.time}</span>
+        </div>
+        <div>${e.tags.map(t=>`<span class="etag">${t}</span>`).join('')}</div>
+        <div class="ev-foot"><span class="ev-att"><i class="ti ti-users" style="font-size:13px"></i> ${e.att} attending</span><button class="btn btn-primary" onclick="event.stopPropagation();openEvent(${e.id})">Register</button></div>
+      </div>
+    </div>`).join('');
+}
+function openEvent(id){
+  const e=EVENTS.find(x=>x.id===id);const pct=Math.round(e.att/e.cap*100);
+  $('detail-body').innerHTML=`
+    <div class="det-cover" style="background:${COVERS[e.cover]}">
+      <div class="inner"><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;opacity:.85">${e.type}</div>
+      <div class="t">${e.title}</div>
+      <div style="margin-top:6px;font-size:13.5px;opacity:.9"><i class="ti ti-building-church"></i> ${e.host}</div></div>
+    </div>
+    <div class="det-grid">
+      <div>
+        <div class="card"><h3>About this event</h3><p style="font-size:13.5px;line-height:1.7;color:var(--ink)">Join us for ${e.title}, hosted by ${e.host}. A powerful gathering of believers for worship, the Word and ministry. Doors open 30 minutes before start. ${e.price==='Free'?'Free entry — registration helps us plan seating.':'Tickets '+e.price+' — secure your place below.'}</p>
+          <div style="margin-top:12px">${e.tags.map(t=>`<span class="etag">${t}</span>`).join('')}</div>
+        </div>
+        <div class="card"><h3>Details</h3>
+          <div class="kv"><div class="ic"><i class="ti ti-calendar-event"></i></div><div><div class="l">Date & time</div><div class="v">${e.mon} ${e.day}, 2025 · ${e.time}</div></div></div>
+          <div class="kv"><div class="ic"><i class="ti ti-map-pin"></i></div><div><div class="l">Venue</div><div class="v">${e.venue}, ${e.city}</div></div></div>
+          <div class="kv"><div class="ic"><i class="ti ti-ticket"></i></div><div><div class="l">Entry</div><div class="v">${e.price}</div></div></div>
+          <div class="kv"><div class="ic"><i class="ti ti-users"></i></div><div><div class="l">Capacity</div><div class="v">${e.att} / ${e.cap} registered</div></div></div>
+        </div>
+        <div class="card"><h3>Location</h3><div style="height:160px;border-radius:12px;background:var(--surface);display:flex;align-items:center;justify-content:center;color:var(--gray-l)"><i class="ti ti-map-2" style="font-size:30px"></i></div></div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="reg-box"><div class="n">${e.att}</div><div class="l">people registered</div><div class="prog"><i style="width:${pct}%"></i></div><div style="font-size:11px;color:var(--gray)">${e.cap-e.att} places left</div></div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:9px"><i class="ti ti-calendar-plus"></i> Register now</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost" style="flex:1;justify-content:center"><i class="ti ti-share"></i> Share</button>
+            <button class="btn btn-ghost" style="flex:1;justify-content:center"><i class="ti ti-qrcode"></i> QR</button>
+          </div>
+        </div>
+        <div class="card"><h3>Hosted by</h3>
+          <div style="display:flex;align-items:center;gap:11px"><div style="width:42px;height:42px;border-radius:12px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800">${e.host.split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div><div style="font-weight:700;font-size:13.5px">${e.host}</div><div style="font-size:12px;color:var(--gray)">View profile →</div></div></div>
+        </div>
+      </div>
+    </div>`;
+  document.querySelector('[data-v=detail]').click();
+}
+$('cover-pick').innerHTML=COVERS.map((c,i)=>`<div class="cover-opt ${i===0?'on':''}" style="background:${c}" onclick="document.querySelectorAll('.cover-opt').forEach(o=>o.classList.remove('on'));this.classList.add('on')"></div>`).join('');
+$('ins-cards').innerHTML=[
+  {ic:'ti-eye',c:'linear-gradient(135deg,#a855f7,#7c3aed)',v:'8,420',l:'Event page views'},
+  {ic:'ti-calendar-plus',c:'linear-gradient(135deg,#f43f5e,#e11d48)',v:'312',l:'Registrations'},
+  {ic:'ti-users',c:'linear-gradient(135deg,#2dd4bf,#0891b2)',v:'276',l:'Checked in'},
+  {ic:'ti-percentage',c:'linear-gradient(135deg,#fbbf24,#d97706)',v:'3.7%',l:'View → register'},
+].map(s=>`<div class="scard"><div class="ic" style="background:${s.c}"><i class="ti ${s.ic}"></i></div><div class="v">${s.v}</div><div class="l">${s.l}</div></div>`).join('');
+const FUNNEL=[['Viewed event',8420],['Clicked register',980],['Registered',312],['Checked in',276]];
+const FW=[100,55,34,30],FP=['100%','68%','48%','88%'];
+$('funnel').innerHTML=FUNNEL.map((f,i)=>`<div class="funnel-row"><div class="top"><span>${f[0]}</span><b>${f[1].toLocaleString()}</b></div><div class="funnel-bar" style="width:${FW[i]}%">${FP[i]}</div></div>`).join('');
+const SRC=[['Search',38,'#7c3aed'],['Ekklesia directory',27,'#f43f5e'],['Shared links',21,'#2dd4bf'],['Social',14,'#f59e0b']];
+$('sources').innerHTML=SRC.map(s=>`<div class="src-row"><span class="nm">${s[0]}</span><div class="bar"><i style="width:${s[1]}%;background:${s[2]}"></i></div><span class="pc">${s[1]}%</span></div>`).join('');
+const REGS=[
+  {n:'Adeola Mensah',e:'2 hours ago',nw:1,av:'linear-gradient(135deg,#ec4899,#a855f7)'},
+  {n:'David Okonkwo',e:'5 hours ago',nw:1,av:'linear-gradient(135deg,#34d399,#16a34a)'},
+  {n:'Grace Mwangi',e:'Yesterday',nw:0,av:'linear-gradient(135deg,#2dd4bf,#0891b2)'},
+  {n:'Samuel Boateng',e:'Yesterday',nw:1,av:'linear-gradient(135deg,#f59e0b,#d97706)'},
+  {n:'Ruth Adeyemi',e:'2 days ago',nw:0,av:'linear-gradient(135deg,#6366f1,#4f46e5)'},
+];
+$('reg-list').innerHTML=REGS.map(r=>`<div class="reg-row"><div class="av" style="background:${r.av}">${r.n.split(' ').map(w=>w[0]).join('')}</div><div style="flex:1"><div style="font-weight:700;font-size:13.5px">${r.n}</div><div style="font-size:12px;color:var(--gray)">Registered ${r.e}</div></div><span class="pill ${r.nw?'pill-new':'pill-ret'}">${r.nw?'New visitor':'Returning'}</span></div>`).join('');
+renderFilters();renderGrid();
+</script>
+</body>
+</html>

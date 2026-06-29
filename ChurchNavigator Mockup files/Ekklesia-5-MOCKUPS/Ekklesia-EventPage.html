@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ekklesia — Event</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.30.0/tabler-icons.min.css" rel="stylesheet">
+<style>
+:root{
+  --grad:linear-gradient(135deg,#f43f5e 0%,#7c3aed 100%);
+  --grad-soft:linear-gradient(135deg,rgba(244,63,94,.12),rgba(124,58,237,.12));
+  --purple:#7c3aed;--purple-d:#6d28d9;--coral:#f43f5e;
+  --ink:#0f0f1a;--gray:#6b7280;--gray-l:#9ca3af;--border:#e9e9ef;--surface:#f5f3ff;--bg:#f7f7fb;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:none;background:none}a{color:inherit;text-decoration:none}
+.wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:13.5px;font-weight:700;padding:11px 16px;border-radius:12px;transition:.15s}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 10px 26px -10px rgba(124,58,237,.6)}
+.btn-ghost{background:#fff;border:1.5px solid var(--border);color:var(--ink)}
+.btn-light{background:rgba(255,255,255,.16);color:#fff;backdrop-filter:blur(6px)}
+
+/* topbar */
+.topbar{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:30}
+.topbar .row{display:flex;align-items:center;gap:10px;height:58px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:18px}
+.brand .mark{width:28px;height:28px;border-radius:8px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff}
+
+/* hero */
+.hero{position:relative;min-height:420px;overflow:hidden;color:#fff;background:linear-gradient(135deg,#7c3aed,#f43f5e)}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(circle at 20% 20%,rgba(255,255,255,.18),transparent 40%),linear-gradient(135deg,#5b21b6,#be185d)}
+.hero-shade{position:absolute;inset:0;background:linear-gradient(to top,rgba(8,6,20,.78),rgba(8,6,20,.15))}
+.hero-in{position:relative;z-index:2;padding:30px 0 26px;min-height:420px;display:flex;flex-direction:column}
+.crumb{font-size:13px;font-weight:600;color:rgba(255,255,255,.8)}
+.type-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);backdrop-filter:blur(6px);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:6px 13px;border-radius:20px;margin-bottom:14px;width:fit-content}
+.hero h1{font-size:40px;font-weight:900;letter-spacing:-.025em;line-height:1.08;max-width:760px;text-shadow:0 2px 16px rgba(0,0,0,.35)}
+.hero-meta{display:flex;flex-wrap:wrap;gap:18px;margin-top:16px;font-size:14px;font-weight:600}
+.hero-meta span{display:flex;align-items:center;gap:7px}
+.hero-bottom{margin-top:auto;display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap}
+.countdown{display:flex;gap:9px}
+.cd{background:rgba(255,255,255,.14);backdrop-filter:blur(6px);border-radius:12px;padding:9px 14px;text-align:center;min-width:62px}
+.cd .n{font-size:23px;font-weight:800;line-height:1}
+.cd .l{font-size:10px;text-transform:uppercase;letter-spacing:.06em;opacity:.8;margin-top:3px}
+.going{margin-left:auto;display:flex;align-items:center;gap:10px}
+.avs{display:flex}
+.avs .a{width:36px;height:36px;border-radius:50%;border:2px solid #fff;margin-left:-10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700}
+.avs .a:first-child{margin-left:0}
+.hero-actions{display:flex;gap:9px;margin-top:18px;flex-wrap:wrap}
+
+/* body */
+.layout{display:grid;grid-template-columns:1fr 348px;gap:26px;align-items:start;padding:26px 0 70px}
+.card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:18px}
+.card h2{font-size:18px;font-weight:800;margin-bottom:4px}
+.sec-sub{font-size:13px;color:var(--gray);margin-bottom:16px}
+.card p{font-size:14px;line-height:1.7;color:#23232e}
+.etag{display:inline-flex;font-size:11px;font-weight:700;padding:4px 11px;border-radius:20px;background:var(--surface);color:var(--purple-d);margin:10px 6px 0 0}
+
+/* agenda */
+.agenda-item{display:flex;gap:16px;padding:14px 0;border-bottom:1px solid var(--border)}
+.agenda-item:last-child{border-bottom:none}
+.agenda-time{font-size:13px;font-weight:800;color:var(--purple-d);width:74px;flex-shrink:0;padding-top:1px}
+.agenda-item .t{font-weight:700;font-size:14.5px}
+.agenda-item .d{font-size:12.5px;color:var(--gray);margin-top:2px}
+.agenda-item .sp{font-size:12px;color:var(--purple-d);font-weight:600;margin-top:4px}
+
+/* speakers */
+.speakers{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.sp-card{text-align:center;border:1px solid var(--border);border-radius:14px;padding:16px 10px}
+.sp-av{width:64px;height:64px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:21px}
+.sp-card .n{font-weight:800;font-size:13.5px}
+.sp-card .r{font-size:11.5px;color:var(--gray);margin-top:2px}
+
+/* venue/map */
+.map{height:220px;border-radius:14px;background:linear-gradient(135deg,#ede9fe,#fce7f3);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.map .pin{width:44px;height:44px;border-radius:50% 50% 50% 0;background:var(--grad);transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px -6px rgba(124,58,237,.6)}
+.map .pin i{transform:rotate(45deg);color:#fff;font-size:20px}
+.venue-info{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px}
+.venue-info .vi{display:flex;align-items:center;gap:9px;font-size:13px}
+.venue-info .vi i{width:32px;height:32px;border-radius:9px;background:var(--surface);color:var(--purple-d);display:flex;align-items:center;justify-content:center;font-size:16px}
+
+/* gallery */
+.gal{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.gal div{aspect-ratio:4/3;border-radius:11px}
+
+/* faq */
+.faq{border-bottom:1px solid var(--border)}
+.faq:last-child{border-bottom:none}
+.faq button{width:100%;display:flex;align-items:center;gap:10px;padding:14px 0;font-size:14px;font-weight:700;text-align:left}
+.faq button i{margin-left:auto;transition:.2s;color:var(--gray)}
+.faq.open button i{transform:rotate(180deg)}
+.faq .a{font-size:13px;color:var(--gray);line-height:1.6;max-height:0;overflow:hidden;transition:.25s;padding-right:24px}
+.faq.open .a{max-height:160px;padding-bottom:14px}
+
+/* related */
+.rel{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.rel-card{border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer}
+.rel-cov{height:84px;display:flex;align-items:flex-end;padding:9px}
+.rel-cov .d{background:rgba(255,255,255,.92);border-radius:8px;padding:3px 8px;font-size:11px;font-weight:800}
+.rel-card .b{padding:11px}
+.rel-card .t{font-weight:700;font-size:13px}.rel-card .m{font-size:11.5px;color:var(--gray);margin-top:3px}
+
+/* sticky sidebar */
+.side{position:sticky;top:74px}
+.tickets .tk{border:1.5px solid var(--border);border-radius:13px;padding:13px;margin-bottom:10px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:12px}
+.tickets .tk.on{border-color:var(--purple);background:var(--surface)}
+.tickets .tk .radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;position:relative}
+.tickets .tk.on .radio{border-color:var(--purple)}
+.tickets .tk.on .radio::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--purple)}
+.tickets .tk .nm{font-weight:700;font-size:13.5px}
+.tickets .tk .ds{font-size:11.5px;color:var(--gray)}
+.tickets .tk .pr{margin-left:auto;font-weight:800;font-size:14px}
+.cap-box{background:var(--grad-soft);border-radius:12px;padding:13px;margin:4px 0 14px}
+.prog{height:8px;background:#fff;border-radius:20px;overflow:hidden;margin:8px 0 6px}
+.prog i{display:block;height:100%;background:var(--grad);border-radius:20px}
+.side-row{display:flex;gap:8px;margin-top:9px}
+.mini{flex:1;font-size:12.5px;font-weight:700;padding:10px;border-radius:11px;background:#fff;border:1.5px solid var(--border);color:var(--ink);display:flex;align-items:center;justify-content:center;gap:6px}
+.org{display:flex;align-items:center;gap:11px}
+.org .av{width:46px;height:46px;border-radius:13px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800}
+
+@media(max-width:900px){.layout{grid-template-columns:1fr}.side{position:static}.hero h1{font-size:30px}.speakers,.gal,.rel{grid-template-columns:1fr 1fr}.hero-in{min-height:auto}}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="wrap row">
+  <div class="brand"><span class="mark"><i class="ti ti-cross"></i></span> Ekklesia</div>
+  <div style="flex:1"></div>
+  <button class="btn btn-ghost" style="padding:8px 13px"><i class="ti ti-bookmark"></i> Save</button>
+  <button class="btn btn-ghost" style="padding:8px 13px"><i class="ti ti-share"></i> Share</button>
+</div></div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-bg"></div><div class="hero-shade"></div>
+  <div class="wrap hero-in">
+    <div class="crumb"><i class="ti ti-arrow-left"></i> Events / Conferences</div>
+    <div style="margin-top:auto">
+      <div class="type-badge"><i class="ti ti-flame"></i> Conference</div>
+      <h1>Kingdom Power Conference 2025</h1>
+      <div class="hero-meta">
+        <span><i class="ti ti-calendar-event"></i> Sat, 14 June 2025</span>
+        <span><i class="ti ti-clock"></i> 10:00 AM – 8:00 PM</span>
+        <span><i class="ti ti-map-pin"></i> Liberty House, Ilford, London</span>
+        <span><i class="ti ti-building-church"></i> Liberty Christian Connections</span>
+      </div>
+      <div class="hero-bottom">
+        <div>
+          <div style="font-size:12px;font-weight:700;opacity:.8;margin-bottom:7px">STARTS IN</div>
+          <div class="countdown" id="countdown"></div>
+        </div>
+        <div class="going">
+          <div class="avs" id="going-avs"></div>
+          <div style="font-size:13px;font-weight:600"><b>312</b> going</div>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button class="btn btn-light"><i class="ti ti-calendar-plus"></i> Add to calendar</button>
+        <button class="btn btn-light"><i class="ti ti-brand-youtube"></i> Watch livestream</button>
+        <button class="btn btn-light"><i class="ti ti-qrcode"></i> Get QR</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap layout">
+  <!-- MAIN -->
+  <div>
+    <div class="card">
+      <h2>About this event</h2>
+      <p>Kingdom Power Conference 2025 is a three-session gathering of believers from across the UK and beyond — a day of Spirit-filled worship, the preached Word, and ministry. Whether you're a leader, a young believer, or seeking, you'll find encounter and equipping. Doors open 30 minutes before each session. Free entry; registration helps us plan seating and send updates.</p>
+      <div>
+        <span class="etag">Worship</span><span class="etag">Free entry</span><span class="etag">Hybrid · in-person + online</span><span class="etag">Family friendly</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Schedule</h2>
+      <div class="sec-sub">Saturday, 14 June 2025</div>
+      <div id="agenda"></div>
+    </div>
+
+    <div class="card">
+      <h2>Speakers & ministers</h2>
+      <div class="sec-sub">Ministering across the day</div>
+      <div class="speakers" id="speakers"></div>
+    </div>
+
+    <div class="card">
+      <h2>Venue & directions</h2>
+      <div class="sec-sub">Liberty House, 120 High Road, Ilford, London IG1</div>
+      <div class="map"><div class="pin"><i class="ti ti-map-pin"></i></div></div>
+      <div class="venue-info">
+        <div class="vi"><i class="ti ti-car"></i> Free parking on site</div>
+        <div class="vi"><i class="ti ti-train"></i> 6 min from Ilford station</div>
+        <div class="vi"><i class="ti ti-wheelchair"></i> Step-free access</div>
+        <div class="vi"><i class="ti ti-baby-carriage"></i> Crèche available</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>From past events</h2>
+      <div class="gal" id="gallery"></div>
+    </div>
+
+    <div class="card">
+      <h2>FAQ</h2>
+      <div id="faq"></div>
+    </div>
+
+    <div class="card">
+      <h2>You might also like</h2>
+      <div class="rel" id="related"></div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="side">
+    <div class="card">
+      <div class="cap-box">
+        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700"><span>312 registered</span><span style="color:var(--gray)">500 capacity</span></div>
+        <div class="prog"><i style="width:62%"></i></div>
+        <div style="font-size:11.5px;color:var(--gray)">188 places left · filling fast</div>
+      </div>
+      <div class="tickets" id="tickets"></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:6px" id="reg-btn"><i class="ti ti-ticket"></i> Register — Free</button>
+      <div class="side-row">
+        <button class="mini"><i class="ti ti-calendar-plus"></i> Calendar</button>
+        <button class="mini"><i class="ti ti-share"></i> Share</button>
+        <button class="mini"><i class="ti ti-qrcode"></i> QR</button>
+      </div>
+      <div style="font-size:11px;color:var(--gray-l);text-align:center;margin-top:10px"><i class="ti ti-lock"></i> Secure registration via Ekklesia</div>
+    </div>
+    <div class="card">
+      <h2 style="font-size:14px;margin-bottom:12px">Hosted by</h2>
+      <div class="org">
+        <div class="av">LC</div>
+        <div><div style="font-weight:800;font-size:13.5px">Liberty Christian Connections</div><div style="font-size:12px;color:var(--gray)">Pentecostal · Ilford</div></div>
+      </div>
+      <button class="btn btn-ghost" style="width:100%;margin-top:13px;font-size:12.5px"><i class="ti ti-arrow-right"></i> View church page</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+// countdown
+const target=new Date(); target.setDate(target.getDate()+18); target.setHours(10,0,0,0);
+function tick(){
+  const diff=Math.max(0,target-new Date());
+  const d=Math.floor(diff/86400000), h=Math.floor(diff%86400000/3600000), m=Math.floor(diff%3600000/60000), s=Math.floor(diff%60000/1000);
+  const map=[['Days',d],['Hours',h],['Mins',m],['Secs',s]];
+  $('countdown').innerHTML=map.map(x=>`<div class="cd"><div class="n">${String(x[1]).padStart(2,'0')}</div><div class="l">${x[0]}</div></div>`).join('');
+}
+tick(); setInterval(tick,1000);
+
+// going avatars
+const AVC=['linear-gradient(135deg,#ec4899,#a855f7)','linear-gradient(135deg,#34d399,#16a34a)','linear-gradient(135deg,#2dd4bf,#0891b2)','linear-gradient(135deg,#f59e0b,#d97706)','linear-gradient(135deg,#6366f1,#4f46e5)'];
+$('going-avs').innerHTML=['AM','DO','GM','SB','RA'].map((x,i)=>`<div class="a" style="background:${AVC[i]}">${x}</div>`).join('')+`<div class="a" style="background:rgba(255,255,255,.25)">+</div>`;
+
+// agenda
+const AGENDA=[
+  {t:'9:30',title:'Doors open & pre-service worship',d:'Welcome, coffee and worship team',sp:''},
+  {t:'10:00',title:'Opening session — Kingdom Authority',d:'Main auditorium',sp:'Pastor James Okafor'},
+  {t:'11:45',title:'Breakout tracks',d:'Leadership · Youth · Women · Marketplace',sp:'Multiple speakers'},
+  {t:'13:00',title:'Lunch & fellowship',d:'On-site catering (VIP) / food court',sp:''},
+  {t:'14:30',title:'Panel — Faith in the marketplace',d:'Q&A with the panel',sp:'Dr Faith Asante + guests'},
+  {t:'16:00',title:'Ministry & impartation',d:'Prayer and laying on of hands',sp:'Rev. Ngozi Obi'},
+  {t:'18:00',title:'Evening celebration',d:'Worship, the Word, and communion',sp:'Pastor James Okafor'},
+];
+$('agenda').innerHTML=AGENDA.map(a=>`<div class="agenda-item"><div class="agenda-time">${a.t}</div><div><div class="t">${a.title}</div><div class="d">${a.d}</div>${a.sp?`<div class="sp"><i class="ti ti-microphone" style="font-size:12px"></i> ${a.sp}</div>`:''}</div></div>`).join('');
+
+// speakers
+const SPK=[
+  {n:'Pastor James Okafor',r:'Senior Pastor, Liberty',c:AVC[0]},
+  {n:'Rev. Ngozi Obi',r:'New Covenant Manchester',c:AVC[1]},
+  {n:'Dr Faith Asante',r:'Women\'s Ministry, London',c:AVC[2]},
+  {n:'Bishop Samuel Mensah',r:'RCCG, Birmingham',c:AVC[3]},
+  {n:'Pastor Ruth Adeyemi',r:'Youth Pastor, Liberty',c:AVC[4]},
+  {n:'Min. David Okonkwo',r:'Worship Director',c:'linear-gradient(135deg,#db2777,#7c3aed)'},
+];
+$('speakers').innerHTML=SPK.map(s=>`<div class="sp-card"><div class="sp-av" style="background:${s.c}">${s.n.replace(/^(Pastor|Rev\.?|Dr|Bishop|Min\.?) /,'').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="n">${s.n}</div><div class="r">${s.r}</div></div>`).join('');
+
+// gallery
+const GC=['linear-gradient(135deg,#7c3aed,#f43f5e)','linear-gradient(135deg,#0f172a,#7c3aed)','linear-gradient(135deg,#0891b2,#7c3aed)','linear-gradient(135deg,#16a34a,#0891b2)','linear-gradient(135deg,#f59e0b,#db2777)','linear-gradient(135deg,#1e1b3a,#6d28d9)'];
+$('gallery').innerHTML=GC.map(c=>`<div style="background:${c}"></div>`).join('');
+
+// faq
+const FAQ=[
+  ['Is the event free?','Yes — general admission is free, but registration is required so we can plan seating and send you updates. VIP and group tickets are also available.'],
+  ['Can I attend online?','Yes. This is a hybrid event — register for the livestream option and we\'ll email you the link before each session.'],
+  ['Is there parking?','Free parking is available on site, and Ilford station is a 6-minute walk away.'],
+  ['Can I bring my children?','Absolutely — it\'s family friendly and there\'s a supervised crèche for under-5s.'],
+];
+$('faq').innerHTML=FAQ.map((f,i)=>`<div class="faq" id="faq-${i}"><button onclick="document.getElementById('faq-${i}').classList.toggle('open')">${f[0]}<i class="ti ti-chevron-down"></i></button><div class="a">${f[1]}</div></div>`).join('');
+
+// related
+const REL=[
+  {d:'28 JUN',t:'Ministers Leadership Summit',m:'Lagos · Summit',c:GC[1]},
+  {d:'12 JUL',t:'Youth Fire Camp 2025',m:'Bristol · Camp',c:GC[3]},
+  {d:'03 AUG',t:'Healing & Miracle Crusade',m:'London · Crusade',c:GC[4]},
+];
+$('related').innerHTML=REL.map(r=>`<div class="rel-card"><div class="rel-cov" style="background:${r.c}"><div class="d">${r.d}</div></div><div class="b"><div class="t">${r.t}</div><div class="m">${r.m}</div></div></div>`).join('');
+
+// tickets
+const TK=[
+  {nm:'Free RSVP',ds:'General admission',pr:'£0'},
+  {nm:'Standard',ds:'Reserved seating',pr:'£15'},
+  {nm:'VIP',ds:'Front seats · lunch · meet & greet',pr:'£45'},
+  {nm:'Group of 5',ds:'Save 20%',pr:'£60'},
+];
+function renderTickets(sel){
+  $('tickets').innerHTML=TK.map((t,i)=>`<div class="tk ${i===sel?'on':''}" onclick="renderTickets(${i})"><div class="radio"></div><div><div class="nm">${t.nm}</div><div class="ds">${t.ds}</div></div><div class="pr">${t.pr}</div></div>`).join('');
+  $('reg-btn').innerHTML=`<i class="ti ti-ticket"></i> Register${TK[sel].pr==='£0'?' — Free':' · '+TK[sel].pr}`;
+}
+renderTickets(0);
+</script>
+</body>
+</html>

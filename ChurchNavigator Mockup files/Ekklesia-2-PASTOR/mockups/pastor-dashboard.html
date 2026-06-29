@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ekklesia — Pastor Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.30.0/tabler-icons.min.css" rel="stylesheet">
+<style>
+:root{
+  --grad:linear-gradient(135deg,#f43f5e 0%,#7c3aed 100%);
+  --grad-soft:linear-gradient(135deg,rgba(244,63,94,.12),rgba(124,58,237,.12));
+  --purple:#7c3aed;--purple-d:#6d28d9;--coral:#f43f5e;
+  --ink:#0f0f1a;--gray:#6b7280;--gray-l:#9ca3af;--border:#e9e9ef;--surface:#f5f3ff;--bg:#f7f7fb;
+  --shadow:0 12px 34px -18px rgba(15,15,26,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}button{font-family:inherit;cursor:pointer;border:none;background:none}
+.layout{display:flex;min-height:100vh}
+
+/* sidebar */
+.sidebar{width:250px;background:#fff;border-right:1px solid var(--border);position:fixed;top:0;bottom:0;display:flex;flex-direction:column;padding:18px 14px;z-index:10}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:19px;padding:6px 8px 16px}
+.brand .mark{width:30px;height:30px;border-radius:9px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff}
+.me{display:flex;align-items:center;gap:11px;padding:12px;background:var(--surface);border-radius:13px;margin-bottom:14px}
+.me .av{width:40px;height:40px;border-radius:11px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px}
+.me .nm{font-size:13.5px;font-weight:800}.me .rl{font-size:11px;color:var(--gray)}
+.nav{display:flex;flex-direction:column;gap:2px;flex:1}
+.nav .lbl{font-size:10.5px;font-weight:800;letter-spacing:.06em;color:var(--gray-l);text-transform:uppercase;padding:12px 10px 5px}
+.nav a{display:flex;align-items:center;gap:11px;padding:10px 11px;border-radius:11px;font-size:13.5px;font-weight:600;color:var(--gray);transition:.12s}
+.nav a i{font-size:18px}
+.nav a:hover{background:var(--bg);color:var(--ink)}
+.nav a.on{background:var(--grad);color:#fff;font-weight:700}
+.nav a .badge{margin-left:auto;background:var(--coral);color:#fff;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px}
+.nav a.on .badge{background:rgba(255,255,255,.25)}
+.side-foot{border-top:1px solid var(--border);padding-top:10px}
+
+/* main */
+.main{flex:1;margin-left:250px}
+.topbar{background:rgba(247,247,251,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:8;display:flex;align-items:center;gap:14px;padding:14px 28px}
+.topbar h1{font-size:19px;font-weight:800}
+.topsearch{flex:1;max-width:300px;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--border);border-radius:11px;padding:9px 13px;font-size:13px;color:var(--gray-l)}
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;padding:10px 16px;border-radius:11px;transition:.15s}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 8px 22px -8px rgba(124,58,237,.5)}
+.btn-ghost{background:#fff;border:1.5px solid var(--border);color:var(--ink)}
+.iconbtn{width:38px;height:38px;border-radius:11px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--gray);position:relative}
+.iconbtn .dot{position:absolute;top:9px;right:10px;width:7px;height:7px;border-radius:50%;background:var(--coral)}
+.content{padding:26px 28px 60px}
+.view{display:none}.view.on{display:block;animation:fade .25s}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+.greet{font-size:23px;font-weight:800;margin-bottom:3px}
+.greet-sub{color:var(--gray);font-size:14px;margin-bottom:22px}
+
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}
+.scard{background:#fff;border:1px solid var(--border);border-radius:16px;padding:18px}
+.scard .ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px;margin-bottom:12px}
+.scard .v{font-size:26px;font-weight:800;line-height:1}
+.scard .l{font-size:12.5px;color:var(--gray);margin-top:3px}
+.scard .tr{font-size:11.5px;font-weight:700;margin-top:7px;display:inline-flex;align-items:center;gap:3px}
+.tr.up{color:#16a34a}.tr.down{color:#dc2626}
+
+.grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:18px;align-items:start}
+.panel-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:18px}
+.panel-card h3{font-size:15px;font-weight:800;margin-bottom:2px}
+.panel-card .sub{font-size:12.5px;color:var(--gray);margin-bottom:16px}
+.ph{display:flex;align-items:center;margin-bottom:16px}
+.ph h3{font-size:15px;font-weight:800}.ph .link{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--purple-d)}
+
+/* completeness */
+.comp-ring{display:flex;align-items:center;gap:18px;margin-bottom:16px}
+.ring{width:84px;height:84px;border-radius:50%;background:conic-gradient(var(--purple) 0% 85%,#eee 85% 100%);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ring .inner{width:64px;height:64px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .pct{font-size:19px;font-weight:800}.ring .t{font-size:9px;color:var(--gray)}
+.checklist{display:flex;flex-direction:column;gap:9px}
+.chk{display:flex;align-items:center;gap:9px;font-size:13px}
+.chk i{font-size:17px}.chk .done{color:#16a34a}.chk .todo{color:var(--gray-l)}
+.chk.todo-row{color:var(--gray)}
+.chk .go{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--purple-d)}
+
+/* mini chart */
+.chart{display:flex;align-items:flex-end;gap:8px;height:130px;margin-top:8px}
+.bar{flex:1;background:var(--grad);border-radius:7px 7px 0 0;min-height:6px;position:relative;transition:.2s}
+.bar:hover{opacity:.85}
+.bar span{position:absolute;bottom:-20px;left:0;right:0;text-align:center;font-size:10px;color:var(--gray)}
+
+/* enquiries */
+.enq{display:flex;gap:13px;align-items:center;padding:13px 0;border-bottom:1px solid var(--border)}
+.enq:last-child{border-bottom:none}
+.enq .av{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0}
+.enq .nm{font-size:13.5px;font-weight:700}
+.enq .ev{font-size:12px;color:var(--gray)}
+.pill{font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:20px}
+.pill-new{background:#eff6ff;color:#1d4ed8}.pill-read{background:#f3f4f6;color:var(--gray)}
+.pill-rep{background:#f0fdf4;color:#15803d}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;font-weight:800;color:var(--gray-l);text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;border-bottom:1px solid var(--border)}
+.tbl td{padding:13px 12px;border-bottom:1px solid var(--border);font-size:13px}
+.tbl tr:hover{background:var(--bg)}
+.mini-act{font-size:12px;font-weight:700;color:var(--purple-d);margin-right:12px}
+
+/* sermons */
+.srm{display:flex;gap:13px;align-items:center;padding:13px;border:1px solid var(--border);border-radius:13px;margin-bottom:11px}
+.srm .th{width:96px;height:58px;border-radius:10px;background:var(--grad);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px}
+.srm .st{font-size:14px;font-weight:700}.srm .ss{font-size:12px;color:var(--gray)}
+
+.source-row{display:flex;align-items:center;gap:11px;margin-bottom:13px;font-size:13px}
+.source-row .nm{width:96px;font-weight:600}
+.source-row .bar2{flex:1;height:9px;background:#eef0f2;border-radius:20px;overflow:hidden}
+.source-row .bar2 i{display:block;height:100%;border-radius:20px}
+.source-row .pc{width:38px;text-align:right;color:var(--gray);font-weight:700}
+
+@media(max-width:1000px){.cards{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.sidebar{width:70px}.sidebar .brand span:not(.mark),.me .nm,.me .rl,.nav .lbl,.nav a span,.side-foot span{display:none}.main{margin-left:70px}.nav a{justify-content:center}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <!-- sidebar -->
+  <aside class="sidebar">
+    <div class="brand"><span class="mark"><i class="ti ti-cross"></i></span><span>Ekklesia</span></div>
+    <div class="me"><div class="av">JO</div><div><div class="nm">Pastor James Okafor</div><div class="rl">Senior Pastor</div></div></div>
+    <nav class="nav">
+      <a class="on" data-view="overview" onclick="go(this)"><i class="ti ti-layout-dashboard"></i><span>Overview</span></a>
+      <a data-view="enquiries" onclick="go(this)"><i class="ti ti-mail"></i><span>Enquiries</span><span class="badge">8</span></a>
+      <a data-view="sermons" onclick="go(this)"><i class="ti ti-player-play"></i><span>Sermons</span></a>
+      <a data-view="events" onclick="go(this)"><i class="ti ti-calendar-event"></i><span>Events</span></a>
+      <a data-view="reviews" onclick="go(this)"><i class="ti ti-star"></i><span>Reviews</span></a>
+      <a data-view="analytics" onclick="go(this)"><i class="ti ti-chart-line"></i><span>Analytics</span></a>
+      <div class="lbl">Profile</div>
+      <a data-view="profile" onclick="go(this)"><i class="ti ti-user"></i><span>My profile</span></a>
+      <a data-view="settings" onclick="go(this)"><i class="ti ti-settings"></i><span>Settings</span></a>
+    </nav>
+    <div class="side-foot">
+      <a class="nav" style="display:flex;align-items:center;gap:11px;padding:10px 11px;color:var(--gray);font-size:13.5px;font-weight:600"><i class="ti ti-external-link" style="font-size:18px"></i><span>View public profile</span></a>
+    </div>
+  </aside>
+
+  <!-- main -->
+  <div class="main">
+    <div class="topbar">
+      <h1 id="page-title">Overview</h1>
+      <div style="flex:1"></div>
+      <div class="topsearch"><i class="ti ti-search"></i> Search…</div>
+      <button class="iconbtn"><i class="ti ti-bell"></i><span class="dot"></span></button>
+      <button class="btn btn-primary"><i class="ti ti-pencil"></i> Edit profile</button>
+    </div>
+
+    <div class="content">
+      <!-- OVERVIEW -->
+      <div class="view on" id="v-overview">
+        <div class="greet">Welcome back, Pastor James 👋</div>
+        <div class="greet-sub">Here's how your profile is performing this month.</div>
+
+        <div class="cards" id="stat-cards"></div>
+
+        <div class="grid2">
+          <div>
+            <div class="panel-card">
+              <div class="ph"><h3>Profile views — last 7 days</h3><span class="link">View analytics</span></div>
+              <div class="chart" id="ov-chart"></div>
+            </div>
+            <div class="panel-card">
+              <div class="ph"><h3>Recent enquiries</h3><span class="link" onclick="document.querySelector('[data-view=enquiries]').click()">See all</span></div>
+              <div id="ov-enq"></div>
+            </div>
+          </div>
+          <div>
+            <div class="panel-card">
+              <h3>Profile strength</h3>
+              <div class="sub">Complete your profile to rank higher in search.</div>
+              <div class="comp-ring">
+                <div class="ring"><div class="inner"><div class="pct">85%</div><div class="t">complete</div></div></div>
+                <div style="font-size:12.5px;color:var(--gray);line-height:1.6">A complete profile gets <b style="color:var(--ink)">3× more</b> enquiries. You're almost there!</div>
+              </div>
+              <div class="checklist" id="checklist"></div>
+            </div>
+            <div class="panel-card">
+              <div class="ph"><h3>This month</h3></div>
+              <div id="ov-month"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENQUIRIES -->
+      <div class="view" id="v-enquiries">
+        <div class="panel-card">
+          <div class="ph"><h3>Enquiries inbox</h3><span class="link">Export CSV</span></div>
+          <table class="tbl"><thead><tr><th>From</th><th>Event</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody id="enq-rows"></tbody></table>
+        </div>
+      </div>
+
+      <!-- SERMONS -->
+      <div class="view" id="v-sermons">
+        <div class="panel-card">
+          <div class="ph"><h3>Your sermons</h3><button class="btn btn-primary" style="margin-left:auto"><i class="ti ti-plus"></i> Add sermon</button></div>
+          <div id="srm-list"></div>
+        </div>
+      </div>
+
+      <!-- EVENTS -->
+      <div class="view" id="v-events">
+        <div class="panel-card">
+          <div class="ph"><h3>Your events</h3><button class="btn btn-primary" style="margin-left:auto"><i class="ti ti-plus"></i> Add event</button></div>
+          <div id="evt-list"></div>
+        </div>
+      </div>
+
+      <!-- REVIEWS -->
+      <div class="view" id="v-reviews">
+        <div class="panel-card">
+          <div class="ph"><h3>Reviews & testimonials</h3></div>
+          <div style="display:flex;gap:20px;align-items:center;margin-bottom:18px">
+            <div style="text-align:center"><div style="font-size:40px;font-weight:800">4.9</div><div style="color:#f59e0b">★★★★★</div><div style="font-size:12px;color:var(--gray)">84 reviews</div></div>
+            <div style="font-size:13px;color:var(--gray)">Respond to reviews to build trust with event organisers. Replying within 48 hours boosts your profile ranking.</div>
+          </div>
+          <div id="rev-list"></div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS -->
+      <div class="view" id="v-analytics">
+        <div class="grid2">
+          <div class="panel-card">
+            <div class="ph"><h3>Profile views — last 14 days</h3></div>
+            <div class="chart" id="an-chart"></div>
+          </div>
+          <div class="panel-card">
+            <div class="ph"><h3>Where visitors come from</h3></div>
+            <div id="an-sources"></div>
+          </div>
+        </div>
+        <div class="cards" id="an-cards"></div>
+      </div>
+
+      <!-- PROFILE / SETTINGS (placeholder) -->
+      <div class="view" id="v-profile"><div class="panel-card"><div class="ph"><h3>My profile</h3><button class="btn btn-primary" style="margin-left:auto"><i class="ti ti-external-link"></i> Open profile editor</button></div><p style="font-size:13.5px;color:var(--gray);line-height:1.7">Edit every section of your public profile — biography, specialisms, sermons, vision, education, events, gallery and church links — from the profile page in <b>Owner view</b>. All changes preview live before they publish.</p></div></div>
+      <div class="view" id="v-settings"><div class="panel-card"><div class="ph"><h3>Settings</h3></div><p style="font-size:13.5px;color:var(--gray);line-height:1.7">Account, notifications, availability status, and privacy controls. (Email notifications on new enquiries, visibility toggle, and data export live here.)</p></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const STATS=[
+  {ic:'ti-eye',c:'linear-gradient(135deg,#a855f7,#7c3aed)',v:'4,820',l:'Profile views',tr:'+12%',up:1},
+  {ic:'ti-mail',c:'linear-gradient(135deg,#f43f5e,#e11d48)',v:'8',l:'New enquiries',tr:'+3 this week',up:1},
+  {ic:'ti-user-plus',c:'linear-gradient(135deg,#2dd4bf,#0891b2)',v:'1,247',l:'Followers',tr:'+23',up:1},
+  {ic:'ti-star',c:'linear-gradient(135deg,#fbbf24,#d97706)',v:'4.9',l:'Avg rating',tr:'84 reviews',up:1},
+];
+const VIEWS7=[320,410,380,520,610,470,690];
+const VIEWS14=[210,260,240,300,280,350,320,410,380,520,610,470,690,640];
+const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const ENQ=[
+  {nm:'Grace Community Church',ev:'Guest speaker — Easter convention',date:'Today',status:'new',av:'linear-gradient(135deg,#ec4899,#a855f7)'},
+  {nm:'David Okonkwo',ev:'Youth conference keynote',date:'Yesterday',status:'new',av:'linear-gradient(135deg,#34d399,#16a34a)'},
+  {nm:'Calvary Chapel Leeds',ev:'Leadership summit panel',date:'2 days ago',status:'read',av:'linear-gradient(135deg,#2dd4bf,#0891b2)'},
+  {nm:'New Life Fellowship',ev:'Revival meeting — 3 nights',date:'4 days ago',status:'replied',av:'linear-gradient(135deg,#f59e0b,#d97706)'},
+  {nm:'Sarah Mensah',ev:'Wedding ceremony officiant',date:'5 days ago',status:'replied',av:'linear-gradient(135deg,#6366f1,#4f46e5)'},
+];
+const CHECK=[
+  {t:'Basic profile & photo',done:1},{t:'Biography',done:1},{t:'Preaching specialisms',done:1},
+  {t:'Sermons (add 2 more)',done:0},{t:'Link a verified church',done:1},{t:'Add a vision statement',done:0},
+];
+const SERM=[
+  {t:'Walking in Kingdom Authority',s:'Luke 10:19 · 2 weeks ago · 12K views'},
+  {t:'The Power of Persistent Prayer',s:'Luke 18:1-8 · 1 month ago · 8.4K views'},
+  {t:'Raising Kingdom Leaders',s:'2 Timothy 2:2 · 2 months ago · 15K views'},
+];
+const SOURCES=[
+  {nm:'Search',v:42,c:'#7c3aed'},{nm:'Directory',v:28,c:'#f43f5e'},{nm:'Shared links',v:18,c:'#2dd4bf'},{nm:'Social',v:12,c:'#f59e0b'},
+];
+const REV=[
+  {nm:'Adeola Mensah',meta:'Pastor, Calvary Chapel Birmingham · 2 weeks ago',av:'linear-gradient(135deg,#ec4899,#a855f7)',txt:'His word was precise, his spirit genuine, the whole congregation transformed.'},
+  {nm:'Rev. Ngozi Obi',meta:'Senior Pastor, New Covenant Manchester · 1 month ago',av:'linear-gradient(135deg,#34d399,#16a34a)',txt:'Our youth group grew by 40 after his conference. Deeply impactful.'},
+];
+
+function render(){
+  $('stat-cards').innerHTML=STATS.map(s=>`<div class="scard"><div class="ic" style="background:${s.c}"><i class="ti ${s.ic}"></i></div><div class="v">${s.v}</div><div class="l">${s.l}</div><div class="tr ${s.up?'up':'down'}"><i class="ti ti-trending-${s.up?'up':'down'}"></i> ${s.tr}</div></div>`).join('');
+  drawChart('ov-chart',VIEWS7,DAYS);
+  $('ov-enq').innerHTML=ENQ.slice(0,4).map(e=>enqRow(e)).join('');
+  $('checklist').innerHTML=CHECK.map(c=>`<div class="chk ${c.done?'':'todo-row'}"><i class="ti ${c.done?'ti-circle-check-filled done':'ti-circle todo'}"></i> ${c.t} ${c.done?'':'<span class="go">Add →</span>'}</div>`).join('');
+  $('ov-month').innerHTML=[
+    ['Enquiries received','12'],['Profile views','4,820'],['New followers','+23'],['Sermon plays','35.4K'],
+  ].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--gray)">${k}</span><b>${v}</b></div>`).join('');
+
+  $('enq-rows').innerHTML=ENQ.map(e=>`<tr><td><div style="display:flex;align-items:center;gap:10px"><div class="enq" style="padding:0;border:none"><div class="av" style="background:${e.av};width:34px;height:34px">${e.nm.split(' ').map(w=>w[0]).slice(0,2).join('')}</div></div><b>${e.nm}</b></div></td><td style="color:var(--gray)">${e.ev}</td><td style="color:var(--gray)">${e.date}</td><td>${statusPill(e.status)}</td><td style="text-align:right"><span class="mini-act">Reply</span><span class="mini-act" style="color:var(--gray)">Archive</span></td></tr>`).join('');
+
+  $('srm-list').innerHTML=SERM.map(s=>`<div class="srm"><div class="th"><i class="ti ti-player-play-filled"></i></div><div style="flex:1"><div class="st">${s.t}</div><div class="ss">${s.s}</div></div><span class="mini-act">Edit</span></div>`).join('');
+  $('evt-list').innerHTML=['Kingdom Power Conference 2025 · 14 Jun · Ilford','Ministers Leadership Summit · 28 Jun · Lagos','Youth Fire Camp 2025 · 12 Jul · Bristol'].map(e=>`<div class="srm"><div class="th" style="width:58px"><i class="ti ti-calendar-event"></i></div><div style="flex:1"><div class="st">${e.split(' · ')[0]}</div><div class="ss">${e.split(' · ').slice(1).join(' · ')}</div></div><span class="mini-act">Edit</span></div>`).join('');
+
+  $('rev-list').innerHTML=REV.map(r=>`<div class="enq"><div class="av" style="background:${r.av}">${r.nm.replace(/^(Pastor|Rev\.?|Dr) /,'').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div style="flex:1"><div class="nm">${r.nm} <span style="color:#f59e0b;font-size:12px">★★★★★</span></div><div class="ev">${r.meta}</div><div style="font-size:13px;font-style:italic;color:var(--ink);margin-top:5px">"${r.txt}"</div></div><span class="mini-act">Reply</span></div>`).join('');
+
+  drawChart('an-chart',VIEWS14,VIEWS14.map((_,i)=>i%2?'':''+(i+1)));
+  $('an-sources').innerHTML=SOURCES.map(s=>`<div class="source-row"><span class="nm">${s.nm}</span><div class="bar2"><i style="width:${s.v}%;background:${s.c}"></i></div><span class="pc">${s.v}%</span></div>`).join('');
+  $('an-cards').innerHTML=[
+    {ic:'ti-eye',v:'4,820',l:'Total views (14d)'},{ic:'ti-click',v:'1,290',l:'Profile clicks'},{ic:'ti-mail-forward',v:'8',l:'Enquiries'},{ic:'ti-percentage',v:'6.2%',l:'Enquiry rate'},
+  ].map(s=>`<div class="scard"><div class="ic" style="background:var(--grad)"><i class="ti ${s.ic}"></i></div><div class="v">${s.v}</div><div class="l">${s.l}</div></div>`).join('');
+}
+function drawChart(id,data,labels){const max=Math.max(...data);$(id).innerHTML=data.map((v,i)=>`<div class="bar" style="height:${Math.round(v/max*100)}%" title="${v} views"><span>${labels[i]||''}</span></div>`).join('');}
+function enqRow(e){return `<div class="enq"><div class="av" style="background:${e.av}">${e.nm.split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div style="flex:1"><div class="nm">${e.nm}</div><div class="ev">${e.ev} · ${e.date}</div></div>${statusPill(e.status)}</div>`;}
+function statusPill(s){const m={new:['pill-new','New'],read:['pill-read','Read'],replied:['pill-rep','Replied']};return `<span class="pill ${m[s][0]}">${m[s][1]}</span>`;}
+
+const TITLES={overview:'Overview',enquiries:'Enquiries',sermons:'Sermons',events:'Events',reviews:'Reviews',analytics:'Analytics',profile:'My profile',settings:'Settings'};
+function go(el){
+  document.querySelectorAll('.nav a[data-view]').forEach(a=>a.classList.remove('on'));el.classList.add('on');
+  const v=el.dataset.view;
+  document.querySelectorAll('.view').forEach(p=>p.classList.remove('on'));$('v-'+v).classList.add('on');
+  $('page-title').textContent=TITLES[v];
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+render();
+</script>
+</body>
+</html>

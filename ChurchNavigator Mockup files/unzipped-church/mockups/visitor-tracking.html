@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ekklesia — Visitor Insights</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.30.0/tabler-icons.min.css" rel="stylesheet">
+<style>
+:root{
+  --grad:linear-gradient(135deg,#f43f5e 0%,#7c3aed 100%);
+  --purple:#7c3aed;--purple-d:#6d28d9;--coral:#f43f5e;
+  --ink:#0f0f1a;--gray:#6b7280;--gray-l:#9ca3af;--border:#e9e9ef;--surface:#f5f3ff;--bg:#f7f7fb;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+.top{background:#fff;border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:18px}
+.brand .mark{width:28px;height:28px;border-radius:8px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff}
+.crumb{color:var(--gray);font-size:13.5px}
+.seg{margin-left:auto;display:flex;background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:3px}
+.seg button{font-size:12.5px;font-weight:700;color:var(--gray);padding:6px 13px;border-radius:8px}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 2px 6px -3px rgba(0,0,0,.3)}
+.content{padding:24px 28px 60px;max-width:1080px;margin:0 auto}
+h1{font-size:22px;font-weight:800;margin-bottom:3px}
+.sub{color:var(--gray);font-size:14px;margin-bottom:22px}
+
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.scard{background:#fff;border:1px solid var(--border);border-radius:16px;padding:18px}
+.scard .ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px;margin-bottom:12px}
+.scard .v{font-size:26px;font-weight:800;line-height:1}
+.scard .l{font-size:12.5px;color:var(--gray);margin-top:3px}
+.scard .tr{font-size:11.5px;font-weight:700;margin-top:7px;color:#16a34a}
+
+.grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;align-items:start;margin-bottom:18px}
+.panel{background:#fff;border:1px solid var(--border);border-radius:16px;padding:20px}
+.ph{display:flex;align-items:center;margin-bottom:16px}
+.ph h3{font-size:15px;font-weight:800}
+.ph .hint{margin-left:auto;font-size:12px;color:var(--gray-l)}
+
+/* funnel */
+.funnel{display:flex;flex-direction:column;gap:9px}
+.fstage{display:flex;align-items:center;gap:12px}
+.fbar{height:42px;border-radius:11px;display:flex;align-items:center;padding:0 14px;color:#fff;font-weight:700;font-size:13.5px;min-width:90px;transition:width .5s}
+.fstage .lbl{font-size:13px;font-weight:600;width:130px;flex-shrink:0}
+.fstage .pct{font-size:12px;color:var(--gray);margin-left:auto;font-weight:700}
+
+/* sources */
+.src{display:flex;align-items:center;gap:11px;margin-bottom:13px;font-size:13px}
+.src .nm{width:120px;font-weight:600;display:flex;align-items:center;gap:7px}
+.src .nm i{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px}
+.src .bar{flex:1;height:9px;background:#eef0f2;border-radius:20px;overflow:hidden}
+.src .bar i{display:block;height:100%;border-radius:20px}
+.src .pc{width:36px;text-align:right;color:var(--gray);font-weight:700}
+
+/* table */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;font-weight:800;color:var(--gray-l);text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;border-bottom:1px solid var(--border)}
+.tbl td{padding:13px 12px;border-bottom:1px solid var(--border);font-size:13px}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover{background:var(--bg)}
+.av{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+.stage-pill{font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px}
+.followup{font-size:12px;font-weight:700;color:var(--purple-d)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px}
+@media(max-width:980px){.cards{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand"><span class="mark"><i class="ti ti-cross"></i></span> Ekklesia</div>
+  <span class="crumb">Grace Covenant Cathedral · Dashboard</span>
+  <div class="seg"><button onclick="setRange('7d',this)">7 days</button><button class="on" onclick="setRange('30d',this)">30 days</button><button onclick="setRange('90d',this)">90 days</button></div>
+</div>
+
+<div class="content">
+  <h1>Visitor insights</h1>
+  <div class="sub">See who's discovering your church and where they are in their journey — so you can follow up at the right moment.</div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="ph"><h3>Visitor journey funnel</h3><span class="hint">how many move from one stage to the next</span></div>
+      <div class="funnel" id="funnel"></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h3>How they found you</h3></div>
+      <div id="sources"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><h3>Recent visitors</h3><button class="followup" style="margin-left:auto"><i class="ti ti-download"></i> Export CSV</button></div>
+    <table class="tbl"><thead><tr><th>Visitor</th><th>Found via</th><th>Stage</th><th>Last seen</th><th>Follow-up</th></tr></thead>
+    <tbody id="rows"></tbody></table>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const STAGES=[
+  {k:'viewed',l:'Viewed profile',n:1240,c:'#7c3aed'},
+  {k:'clicked',l:'Clicked contact',n:430,c:'#8b5cf6'},
+  {k:'enquired',l:'Enquired',n:180,c:'#a855f7'},
+  {k:'visited',l:'Visited / checked in',n:96,c:'#ec4899'},
+  {k:'returned',l:'Returned',n:54,c:'#f43f5e'},
+  {k:'joined',l:'Joined',n:28,c:'#16a34a'},
+];
+const SOURCES=[
+  {nm:'Search',v:38,c:'#7c3aed',ic:'ti-search'},
+  {nm:'Ekklesia directory',v:29,c:'#f43f5e',ic:'ti-list-search'},
+  {nm:'Shared links',v:17,c:'#2dd4bf',ic:'ti-link'},
+  {nm:'Social media',v:11,c:'#f59e0b',ic:'ti-brand-instagram'},
+  {nm:'QR / in person',v:5,c:'#6366f1',ic:'ti-qrcode'},
+];
+const VISITORS=[
+  {nm:'Sarah Mensah',src:'Search',stage:'enquired',seen:'2 hours ago',av:'linear-gradient(135deg,#ec4899,#a855f7)',follow:'Send welcome'},
+  {nm:'David Okonkwo',src:'Directory',stage:'visited',seen:'Yesterday',av:'linear-gradient(135deg,#34d399,#16a34a)',follow:'Invite to connect group'},
+  {nm:'Anonymous visitor',src:'Social media',stage:'viewed',seen:'Yesterday',av:'linear-gradient(135deg,#94a3b8,#64748b)',follow:'—'},
+  {nm:'Grace Adeyemi',src:'Shared link',stage:'returned',seen:'2 days ago',av:'linear-gradient(135deg,#2dd4bf,#0891b2)',follow:'Follow up call'},
+  {nm:'Michael Thompson',src:'QR / in person',stage:'visited',seen:'3 days ago',av:'linear-gradient(135deg,#f59e0b,#d97706)',follow:'Send welcome'},
+  {nm:'Ruth Owusu',src:'Search',stage:'enquired',seen:'4 days ago',av:'linear-gradient(135deg,#6366f1,#4f46e5)',follow:'Reply to enquiry'},
+  {nm:'Anonymous visitor',src:'Directory',stage:'clicked',seen:'5 days ago',av:'linear-gradient(135deg,#94a3b8,#64748b)',follow:'—'},
+];
+const STAGE_STYLE={viewed:['#f5f3ff','#6d28d9'],clicked:['#ede9fe','#7c3aed'],enquired:['#fce7f3','#be185d'],visited:['#dcfce7','#15803d'],returned:['#fef3c7','#b45309'],joined:['#dcfce7','#15803d']};
+
+function render(){
+  const total=STAGES[0].n, visited=STAGES[3].n, joined=STAGES[5].n;
+  const conv=((joined/total)*100).toFixed(1);
+  $('cards').innerHTML=[
+    {ic:'ti-users',g:'linear-gradient(135deg,#a855f7,#7c3aed)',v:total.toLocaleString(),l:'Total visitors',tr:'+12% vs last period'},
+    {ic:'ti-user-plus',g:'linear-gradient(135deg,#f43f5e,#e11d48)',v:'186',l:'New this period',tr:'+24 this week'},
+    {ic:'ti-map-pin-check',g:'linear-gradient(135deg,#2dd4bf,#0891b2)',v:visited.toLocaleString(),l:'Visited / checked in',tr:'+8 this week'},
+    {ic:'ti-trending-up',g:'linear-gradient(135deg,#16a34a,#22c55e)',v:conv+'%',l:'Visitor → member',tr:joined+' joined'},
+  ].map(c=>`<div class="scard"><div class="ic" style="background:${c.g}"><i class="ti ${c.ic}"></i></div><div class="v">${c.v}</div><div class="l">${c.l}</div><div class="tr"><i class="ti ti-arrow-up-right"></i> ${c.tr}</div></div>`).join('');
+
+  const max=STAGES[0].n;
+  $('funnel').innerHTML=STAGES.map((s,i)=>{
+    const pct=Math.round(s.n/max*100), drop=i>0?Math.round(s.n/STAGES[i-1].n*100):100;
+    return `<div class="fstage"><span class="lbl">${s.l}</span><div class="fbar" style="width:${Math.max(pct,8)}%;background:${s.c}">${s.n.toLocaleString()}</div><span class="pct">${i>0?drop+'% kept':''}</span></div>`;
+  }).join('');
+
+  $('sources').innerHTML=SOURCES.map(s=>`<div class="src"><span class="nm"><i style="background:${s.c}" class="ti ${s.ic}"></i> ${s.nm}</span><div class="bar"><i style="width:${s.v}%;background:${s.c}"></i></div><span class="pc">${s.v}%</span></div>`).join('');
+
+  $('rows').innerHTML=VISITORS.map(v=>{
+    const ss=STAGE_STYLE[v.stage]||['#f3f4f6','#6b7280'];
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:10px"><div class="av" style="background:${v.av}">${v.nm==='Anonymous visitor'?'<i class="ti ti-user"></i>':v.nm.split(' ').map(w=>w[0]).slice(0,2).join('')}</div><b>${v.nm}</b></div></td>
+      <td style="color:var(--gray)">${v.src}</td>
+      <td><span class="stage-pill" style="background:${ss[0]};color:${ss[1]}">${v.stage}</span></td>
+      <td style="color:var(--gray)">${v.seen}</td>
+      <td>${v.follow==='—'?'<span style="color:var(--gray-l)">—</span>':`<span class="followup">${v.follow} →</span>`}</td>
+    </tr>`;
+  }).join('');
+}
+function setRange(r,el){document.querySelectorAll('.seg button').forEach(b=>b.classList.remove('on'));el.classList.add('on');render();}
+render();
+</script>
+</body>
+</html>

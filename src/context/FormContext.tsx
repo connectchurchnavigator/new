@@ -2,7 +2,36 @@
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
-interface FormData {
+export interface Team {
+  id: string;
+  name: string;
+  ministryType: string;
+  accentColor: string;
+  tagline: string;
+  coverImage: string;
+  about: string;
+  activities: string; // newline separated
+  joinInfo: string;
+  impact: string;
+  schedule: string;
+  leaderName: string;
+  leaderRole: string;
+  leaderPhoto: string;
+  membersPhotos: string[];
+  galleryImages: string[];
+  videoUrl: string;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  country: string;
+  address: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface FormData {
   listingType: string;
   churchName: string;
   denomination: string;
@@ -11,6 +40,15 @@ interface FormData {
   phone: string;
   email: string;
   website: string;
+  establishedYear: string;
+  liveStreamUrl: string;
+  socialInstagram: string;
+  socialFacebook: string;
+  socialX: string;
+  galleryImages: string[];
+  coverBanners: string[];
+  branches: Branch[];
+  teams: Team[];
   [key: string]: any;
 }
 
@@ -28,6 +66,15 @@ const defaultFormData: FormData = {
   phone: "",
   email: "",
   website: "",
+  establishedYear: "",
+  liveStreamUrl: "",
+  socialInstagram: "",
+  socialFacebook: "",
+  socialX: "",
+  galleryImages: [],
+  coverBanners: [],
+  branches: [],
+  teams: [],
 };
 
 const FormContext = createContext<FormContextType | undefined>(undefined);
@@ -53,7 +100,25 @@ export function FormProvider({ children }: { children: ReactNode }) {
     setFormData((prev) => {
       const newData = { ...prev, ...data };
       if (typeof window !== 'undefined') {
-        localStorage.setItem('churchFormData', JSON.stringify(newData));
+        try {
+          // Create a copy for storage and strip out potentially huge base64 strings
+          const storageData = { ...newData };
+          
+          // Helper to remove base64 strings from an object or array
+          const stripBase64 = (val: any): any => {
+            if (typeof val === 'string' && val.startsWith('data:image')) return '';
+            if (Array.isArray(val)) return val.map(stripBase64);
+            return val;
+          };
+          
+          for (const key in storageData) {
+            storageData[key] = stripBase64(storageData[key]);
+          }
+          
+          localStorage.setItem('churchFormData', JSON.stringify(storageData));
+        } catch (error) {
+          console.warn("Could not save to localStorage (quota likely exceeded):", error);
+        }
       }
       return newData;
     });

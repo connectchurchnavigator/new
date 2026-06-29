@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ekklesia — Pastor Profile</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.30.0/tabler-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+<style>
+:root{
+  --grad:linear-gradient(135deg,#f43f5e 0%,#7c3aed 100%);
+  --grad-soft:linear-gradient(135deg,rgba(244,63,94,.12),rgba(124,58,237,.12));
+  --purple:#7c3aed;--purple-d:#6d28d9;--coral:#f43f5e;
+  --ink:#0f0f1a;--gray:#6b7280;--gray-l:#9ca3af;--border:#e9e9ef;--surface:#f5f3ff;--bg:#f7f7fb;
+  --shadow:0 12px 34px -18px rgba(15,15,26,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+/* top bar */
+.topbar{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:30}
+.topbar .wrap{display:flex;align-items:center;gap:16px;height:58px}
+.tb-link{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--gray)}
+.tb-search{flex:1;max-width:340px;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:9px 13px;font-size:13px;color:var(--gray-l)}
+.owner-toggle{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;background:var(--surface);color:var(--purple-d);padding:7px 13px;border-radius:20px}
+.switch{width:36px;height:20px;border-radius:20px;background:#d1d5db;position:relative;transition:.2s}
+.switch.on{background:var(--purple)}
+.switch::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.2s}
+.switch.on::after{left:18px}
+
+/* hero */
+.hero{background:#fff;border-bottom:1px solid var(--border)}
+.hero-inner{padding:22px 0 0}
+.hero-meta{display:flex;align-items:center;gap:14px;font-size:12.5px;color:var(--gray);margin-bottom:16px;flex-wrap:wrap}
+.live{display:inline-flex;align-items:center;gap:6px;color:#16a34a;font-weight:700}
+.live .dot{width:7px;height:7px;border-radius:50%;background:#16a34a;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* cover photo slider — full overlaid hero */
+.cover{position:relative;min-height:440px;overflow:hidden;background:#1e1b3a}
+.cover-track{position:absolute;inset:0;display:flex;height:100%;transition:transform .55s cubic-bezier(.4,0,.2,1)}
+.cover-slide{min-width:100%;height:100%;background-size:cover;background-position:center}
+.cover-shade{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(10,8,25,.35) 0%,rgba(10,8,25,.12) 35%,rgba(10,8,25,.8) 100%);z-index:1}
+.cover-content{position:relative;z-index:3;display:flex;flex-direction:column;min-height:440px;padding:20px 20px 30px}
+.cover-top{display:flex;align-items:center;gap:10px}
+.cov-pill{background:rgba(0,0,0,.4);backdrop-filter:blur(6px);color:#fff;font-size:13px;font-weight:700;padding:7px 13px;border-radius:20px;display:inline-flex;align-items:center;gap:6px}
+.cov-pill.live .dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 1.6s infinite}
+.cov-count{margin-left:auto;background:rgba(0,0,0,.4);color:#fff;font-size:12px;font-weight:700;padding:6px 13px;border-radius:20px}
+.cover-bottom{margin-top:auto}
+.cover-bottom .avatar{width:84px;height:84px;border-radius:22px;border:3px solid rgba(255,255,255,.85);margin-bottom:14px;box-shadow:0 10px 30px -12px rgba(0,0,0,.6)}
+.cover-name{font-size:34px;font-weight:800;letter-spacing:-.02em;color:#fff;margin-bottom:11px;text-shadow:0 2px 12px rgba(0,0,0,.4)}
+.cover .badges{margin-bottom:16px}
+.cover .badge{background:rgba(255,255,255,.16);color:#fff;backdrop-filter:blur(6px)}
+.cover-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.cover .actions{gap:9px}
+.cover .socials-inline{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.cover .soc-stat{background:#fff;color:var(--ink);font-size:13px;font-weight:800;padding:5px 13px 5px 5px;border-radius:22px;display:inline-flex;align-items:center;gap:7px}
+.cover .soc-dot{width:26px;height:26px;border-radius:50%}
+.cover-dots{position:absolute;bottom:16px;right:24px;display:flex;gap:7px;z-index:4}
+.cover-dots .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.45);cursor:pointer;transition:.2s}
+.cover-dots .dot.on{background:#fff;width:22px;border-radius:5px}
+.cov-arrow{position:absolute;top:46%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;color:var(--ink);font-size:18px;z-index:4}
+.cov-arrow:hover{background:#fff}.cov-arrow.prev{left:18px}.cov-arrow.next{right:18px}
+.btn-cover-edit{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff}
+@media(max-width:880px){.cover,.cover-content{min-height:auto}.cover-name{font-size:26px}.cover .socials-inline{margin-left:0;width:100%}}
+.avatar{width:96px;height:96px;border-radius:26px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;font-weight:800;flex-shrink:0;background-size:cover;background-position:center}
+.hero-name{font-size:28px;font-weight:800;letter-spacing:-.02em;margin-bottom:9px}
+.badges{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.badge{font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:20px;display:inline-flex;align-items:center;gap:5px}
+.b-role{background:var(--surface);color:var(--purple-d)}
+.b-church{background:#eff6ff;color:#1d4ed8}
+.b-loc{background:#f3f4f6;color:var(--gray)}
+.b-rev{background:#fffbeb;color:#b45309}
+.b-ver{background:#f0fdf4;color:#15803d}
+.actions{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;padding:11px 17px;border-radius:12px;transition:.15s}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 8px 22px -8px rgba(124,58,237,.5)}
+.btn-primary:hover{transform:translateY(-1px)}
+.btn-ghost{background:#fff;border:1.5px solid var(--border);color:var(--ink)}
+.btn-edit{background:var(--surface);color:var(--purple-d);border:1.5px solid #ddd6fe}
+.socials-inline{display:flex;gap:9px;margin-left:auto}
+.soc-stat{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700}
+.soc-dot{width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px}
+
+/* stats strip */
+.stats-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:22px 0;margin-top:18px;border-top:1px solid var(--border)}
+.stat-cell{text-align:center}
+.stat-cell .v{font-size:22px;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.stat-cell .l{font-size:11px;color:var(--gray);margin-top:2px}
+
+/* enquiry banner */
+.enquiry-banner{background:var(--grad);border-radius:16px;padding:16px 20px;display:flex;align-items:center;gap:14px;color:#fff;margin:20px 0}
+.enquiry-banner .t{font-size:15px;font-weight:800}
+.enquiry-banner .s{font-size:12.5px;opacity:.9}
+
+/* tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);overflow-x:auto;margin-bottom:22px}
+.tab{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;color:var(--gray);padding:12px 14px;border-bottom:2px solid transparent;white-space:nowrap}
+.tab i{font-size:16px}
+.tab.on{color:var(--purple-d);border-bottom-color:var(--purple)}
+.tab .cnt{font-size:10px;background:var(--surface);color:var(--purple-d);padding:1px 6px;border-radius:10px;margin-left:4px}
+
+/* cards / sections */
+.section{padding:36px 0 20px}
+.card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:18px}
+.card-h{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.card-h .ic{width:32px;height:32px;border-radius:9px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px}
+.card-h h3{font-size:16px;font-weight:800}
+.card-h .edit{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--purple-d);display:none;align-items:center;gap:5px}
+body.owner .card-h .edit{display:inline-flex}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{font-size:13px;font-weight:600;padding:7px 14px;border-radius:20px;background:var(--surface);color:var(--purple-d);border:1.5px solid #ddd6fe}
+.chip.coral{background:#fef2f2;color:#e11d48;border-color:#fecdd3}
+.chip.amber{background:#fffbeb;color:#b45309;border-color:#fde68a}
+.chip.green{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
+.bio p{font-size:14px;line-height:1.75;color:var(--ink);margin-top:12px}
+
+/* journey timeline */
+.timeline{margin-top:16px;position:relative;padding-left:8px}
+.tl-item{display:flex;gap:14px;padding-bottom:18px;position:relative}
+.tl-item:not(:last-child)::before{content:'';position:absolute;left:5px;top:18px;bottom:-2px;width:2px;background:var(--border)}
+.tl-dot{width:12px;height:12px;border-radius:50%;background:var(--grad);flex-shrink:0;margin-top:4px;z-index:1}
+.tl-year{font-size:11px;font-weight:800;color:var(--purple-d)}
+.tl-title{font-size:14px;font-weight:700;margin:1px 0 3px}
+.tl-desc{font-size:12.5px;color:var(--gray);line-height:1.55}
+
+/* dark contact card */
+.contact-dark{background:linear-gradient(135deg,#1e1b3a,#2d1b4e);border-radius:18px;padding:22px;color:#fff;margin-bottom:18px}
+.contact-dark h3{font-size:16px;font-weight:800}
+.contact-dark .s{font-size:12.5px;opacity:.7;margin:3px 0 14px}
+.contact-dark .enq{width:100%;background:var(--grad);color:#fff;font-weight:700;padding:12px;border-radius:12px;font-size:14px}
+.contact-dark .chips .chip{background:rgba(255,255,255,.1);color:#fff}
+
+/* church link card */
+.church-link{display:flex;gap:13px;align-items:flex-start;border:1px solid var(--border);border-radius:14px;padding:15px;margin-bottom:11px}
+.church-link .cmark{width:46px;height:46px;border-radius:12px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;flex-shrink:0}
+.church-link .role{font-size:11.5px;font-weight:700;color:var(--purple-d)}
+.church-link .meta{font-size:12px;color:var(--gray);margin-top:6px;line-height:1.7}
+.church-link a.viewpage{font-size:12.5px;font-weight:700;color:var(--purple-d);margin-top:8px;display:inline-block}
+
+/* spec rows (travel) */
+.spec-row{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border);font-size:13.5px}
+.spec-row:last-child{border-bottom:none}
+.spec-row .k{color:var(--gray)}
+.spec-row .v{font-weight:700}
+
+/* affiliations / awards list */
+.list-item{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--border)}
+.list-item:last-child{border-bottom:none}
+.li-mark{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px;flex-shrink:0}
+.li-t{font-size:13.5px;font-weight:700}
+.li-n{font-size:11.5px;color:var(--gray)}
+
+.two-col{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start}
+@media(max-width:880px){.two-col{grid-template-columns:1fr}.stats-strip{grid-template-columns:repeat(3,1fr);gap:16px}.socials-inline{margin-left:0;width:100%;margin-top:10px}}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(15,15,26,.35);z-index:50;opacity:0;pointer-events:none;transition:.25s}
+.scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:460px;max-width:94vw;background:#fff;z-index:51;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:-20px 0 50px -20px rgba(15,15,26,.3)}
+.drawer.open{transform:none}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
+.drawer-head h3{font-size:16px;font-weight:800}
+.drawer-body{flex:1;overflow-y:auto;padding:20px 22px}
+.drawer-foot{display:flex;gap:10px;padding:14px 22px;border-top:1px solid var(--border)}
+.drawer-foot .btn{flex:1;justify-content:center}
+.xbtn{width:32px;height:32px;border-radius:9px;background:#f3f4f6;font-size:16px;color:var(--gray);display:flex;align-items:center;justify-content:center}
+.field{margin-bottom:15px}
+.field label{display:block;font-size:12.5px;font-weight:700;margin-bottom:7px}
+.field input,.field select,.field textarea{width:100%;font-family:inherit;font-size:13.5px;padding:11px 13px;border:1.5px solid var(--border);border-radius:11px;outline:none}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--purple)}
+.field textarea{resize:vertical;min-height:90px;line-height:1.6}
+.chip-edit{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;background:var(--surface);color:var(--purple-d);padding:6px 11px;border-radius:20px;margin:0 6px 8px 0}
+.chip-edit button{color:var(--purple);font-size:13px}
+.addbtn{width:100%;border:1.5px dashed #c4b5fd;background:#faf9ff;color:var(--purple-d);font-weight:700;font-size:13px;padding:11px;border-radius:11px}
+.rowc{border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:11px;position:relative}
+.rowc .rm{position:absolute;top:9px;right:9px;background:#fef2f2;color:#dc2626;border-radius:7px;width:26px;height:26px;font-size:14px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-size:13px;font-weight:600;padding:12px 20px;border-radius:12px;z-index:60;opacity:0;transition:.3s;display:flex;align-items:center;gap:8px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.owner-tip{display:none;background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:12.5px;font-weight:600;border-radius:11px;padding:10px 14px;margin-bottom:16px}
+body.owner .owner-tip{display:block}
+
+/* tab panels + content */
+.panel{display:none}
+.panel.on{display:block;animation:fade .25s}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.sermon{display:flex;gap:14px;border:1px solid var(--border);border-radius:14px;padding:13px;margin-bottom:12px;transition:.15s}
+.sermon:hover{border-color:var(--purple);box-shadow:var(--shadow)}
+.sermon .thumb{width:120px;height:74px;border-radius:11px;background:var(--grad);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px;position:relative}
+.sermon .thumb .dur{position:absolute;bottom:5px;right:5px;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px}
+.sermon .st{font-size:14px;font-weight:700;margin-bottom:3px}
+.sermon .sm{font-size:12px;color:var(--gray)}
+/* vision */
+.vision-card{background:linear-gradient(135deg,#1e1b3a 0%,#3b2a6b 100%);border-radius:16px;padding:24px;margin-top:14px;color:#fff}
+.vision-card .vlabel{font-size:11px;font-weight:800;letter-spacing:.1em;opacity:.6;margin-bottom:12px}
+.vision-card .vstmt{font-size:18px;font-style:italic;font-weight:600;line-height:1.6;margin-bottom:14px}
+.vision-card .vattr{font-size:13px;opacity:.7}
+.avail-pill{display:inline-flex;align-items:center;gap:7px;background:#f0fdf4;color:#15803d;border:1.5px solid #bbf7d0;font-size:13px;font-weight:700;padding:8px 15px;border-radius:20px;margin:16px 0 4px}
+.avail-pill .d{width:7px;height:7px;border-radius:50%;background:#22c55e}
+.values{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
+.value-card{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--border);border-radius:13px;padding:15px;background:var(--surface)}
+.value-card .vi{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0}
+.value-card .vt{font-weight:700;font-size:14px;margin-bottom:3px}
+.value-card .vd{font-size:12px;color:var(--gray);line-height:1.5}
+/* education */
+.edu{display:flex;gap:14px;align-items:flex-start;border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;background:var(--surface)}
+.edu .ei{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;flex-shrink:0}
+.edu .et{font-weight:800;font-size:15px;color:var(--ink)}
+.edu .eo{font-weight:700;font-size:13px;margin:2px 0}
+.edu .ed{font-size:12.5px;color:var(--gray)}
+/* events */
+.event{display:flex;gap:15px;align-items:center;padding:16px 0;border-bottom:1px solid var(--border)}
+.event:last-child{border-bottom:none}
+.event .date{width:58px;height:58px;border-radius:13px;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.event .date .d{font-size:20px;font-weight:800;line-height:1}
+.event .date .m{font-size:10px;font-weight:700;opacity:.9;margin-top:2px}
+.event .etitle{font-weight:800;font-size:15px}
+.event .eloc{font-size:12.5px;color:var(--gray);margin:2px 0 7px}
+.etag{display:inline-flex;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-right:6px;border:1.5px solid}
+.etag.purple{background:#f5f3ff;color:#6d28d9;border-color:#ddd6fe}
+.etag.green{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
+.etag.blue{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+.etag.amber{background:#fffbeb;color:#b45309;border-color:#fde68a}
+.ecta{flex-shrink:0;font-size:13px;font-weight:700;padding:9px 18px;border-radius:11px}
+.ecta.primary{background:var(--grad);color:#fff}
+.ecta.ghost{background:#fff;border:1.5px solid var(--border);color:var(--ink)}
+.gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.gphoto{aspect-ratio:1;border-radius:13px;background:var(--grad);display:flex;align-items:flex-end;padding:10px;color:#fff;font-size:11px;font-weight:600}
+/* reviews */
+.review{border-top:1px solid var(--border);padding:16px 0}
+.rev-head{display:flex;align-items:flex-start;gap:11px;margin-bottom:9px}
+.rev-av{width:38px;height:38px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.stars{color:#f59e0b;font-size:13px;letter-spacing:1px}
+.rating-summary{display:flex;gap:28px;align-items:center;padding:8px 0 20px}
+.rating-summary .big{font-size:46px;font-weight:800;line-height:1}
+.dist{flex:1;display:flex;flex-direction:column;gap:5px}
+.dist-row{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--gray)}
+.dist-bar{flex:1;height:9px;background:#eef0f2;border-radius:20px;overflow:hidden}
+.dist-bar i{display:block;height:100%;background:#f59e0b;border-radius:20px}
+.map-embed{width:100%;height:150px;border:none;border-radius:12px;margin:12px 0}
+.tab-edit{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--purple-d);display:none;align-items:center;gap:5px}
+body.owner .tab-edit{display:inline-flex}
+
+/* QR */
+.qr-mini{width:46px;height:46px;border-radius:12px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.qr-modal{position:fixed;inset:0;background:rgba(15,15,26,.55);z-index:70;display:none;align-items:center;justify-content:center;padding:20px}
+.qr-modal.open{display:flex}
+.qr-box{background:#fff;border-radius:20px;padding:26px;width:340px;max-width:100%;text-align:center;position:relative}
+.qr-x{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:8px;background:#f3f4f6;color:var(--gray);display:flex;align-items:center;justify-content:center}
+#qrcode-big{display:flex;justify-content:center;padding:10px;background:#fff;border:1px solid var(--border);border-radius:14px;width:fit-content;margin:0 auto}
+.qr-url{font-size:12px;color:var(--gray);margin-top:12px;word-break:break-all}
+.thumb-x{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#dc2626;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+
+/* PDF one-pager (professional) */
+.pdf-sheet{display:none}
+.pdf-sheet{font-family:'Inter',sans-serif;color:#0f0f1a;background:#fff}
+.pdf-head{display:flex;gap:18px;align-items:center;border-bottom:3px solid var(--purple);padding-bottom:16px;margin-bottom:16px}
+.pdf-av{width:80px;height:80px;border-radius:18px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:800;flex-shrink:0}
+.pdf-name{font-size:24px;font-weight:800}
+.pdf-title{font-size:14px;color:var(--purple-d);font-weight:700}
+.pdf-meta{font-size:12px;color:#6b7280;margin-top:4px}
+.pdf-qr{margin-left:auto;text-align:center}
+.pdf-section{margin-bottom:14px}
+.pdf-section h4{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--purple-d);border-bottom:1px solid #e9e9ef;padding-bottom:4px;margin-bottom:8px}
+.pdf-section p{font-size:12px;line-height:1.6}
+.pdf-stats{display:flex;gap:18px;flex-wrap:wrap}
+.pdf-stat b{font-size:17px;color:var(--purple-d)}.pdf-stat span{font-size:11px;color:#6b7280;display:block}
+.pdf-tags{display:flex;flex-wrap:wrap;gap:6px}
+.pdf-tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:12px;background:#f5f3ff;color:#6d28d9}
+.pdf-edu-row{font-size:12px;margin-bottom:5px}.pdf-edu-row b{font-weight:700}
+.pdf-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+
+@media print{
+  body{background:#fff}
+  body>*:not(.pdf-sheet){display:none!important}
+  .pdf-sheet{display:block!important;padding:0}
+  @page{margin:14mm;size:A4}
+}
+</style>
+</head>
+<body>
+
+<!-- top bar -->
+<div class="topbar"><div class="wrap">
+  <a href="#" class="tb-link"><i class="ti ti-arrow-left"></i> All pastors</a>
+  <div class="tb-search"><i class="ti ti-search"></i> Search pastors, churches, ministries…</div>
+  <div style="flex:1"></div>
+  <a href="#" class="tb-link"><i class="ti ti-chart-bar"></i> Insights</a>
+  <button class="owner-toggle" onclick="toggleOwner()">
+    <span id="mode-label">Visitor view</span>
+    <span class="switch" id="mode-switch"></span>
+  </button>
+</div></div>
+
+<!-- cover (full hero, overlaid like church) -->
+<div class="cover" id="cover">
+  <div class="cover-track" id="cover-track"></div>
+  <div class="cover-shade"></div>
+  <button class="cov-arrow prev" onclick="coverGo(-1)"><i class="ti ti-chevron-left"></i></button>
+  <button class="cov-arrow next" onclick="coverGo(1)"><i class="ti ti-chevron-right"></i></button>
+  <div class="wrap cover-content">
+    <div class="cover-top">
+      <span class="cov-pill"><i class="ti ti-eye"></i> <span id="views">4,820</span> views</span>
+      <span class="cov-pill live"><span class="dot"></span> <span id="live">447</span> viewing now</span>
+      <span class="cov-count" id="cov-count">1 / 3</span>
+    </div>
+    <div class="cover-bottom">
+      <div class="avatar" id="p-avatar">JO</div>
+      <h1 class="cover-name" id="p-name">Pastor James Okafor</h1>
+      <div class="badges" id="p-badges"></div>
+      <div class="cover-row">
+        <div class="actions" id="p-actions"></div>
+        <div class="socials-inline" id="p-socials"></div>
+      </div>
+    </div>
+    <div class="cover-dots" id="cover-dots"></div>
+  </div>
+</div>
+
+<!-- owner tip + stats -->
+<div class="hero"><div class="wrap hero-inner">
+  <div class="owner-tip"><i class="ti ti-pencil"></i> Owner view — tap <b>Edit</b> on any section to update your profile. Changes preview instantly.</div>
+  <div class="stats-strip" id="p-stats"></div>
+</div></div>
+
+<div class="wrap">
+  <div class="enquiry-banner">
+    <div style="flex:1"><div class="t">Book Pastor James for your event</div><div class="s">Conferences · Retreats · Sunday services · International — usually replies within 24 hours</div></div>
+    <button class="btn" style="background:#fff;color:var(--purple-d)">Send enquiry</button>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="two-col">
+    <!-- LEFT -->
+    <div>
+      <!-- ABOUT -->
+      <div class="panel on" id="panel-about">
+      <div class="card">
+        <div class="card-h"><div class="ic"><i class="ti ti-user"></i></div><h3>Biography</h3><button class="edit" onclick="openDrawer('bio')"><i class="ti ti-pencil"></i> Edit</button></div>
+        <div class="bio" id="p-bio"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><div class="ic"><i class="ti ti-microphone-2"></i></div><h3>Preaching specialisms</h3><button class="edit" onclick="openChips('specialisms','Preaching specialisms')"><i class="ti ti-pencil"></i> Edit</button></div>
+        <div class="chips" id="p-spec"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><div class="ic"><i class="ti ti-heart-handshake"></i></div><h3>Ministry areas</h3><button class="edit" onclick="openChips('areas','Ministry areas')"><i class="ti ti-pencil"></i> Edit</button></div>
+        <div class="chips" id="p-areas"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><div class="ic"><i class="ti ti-calendar-event"></i></div><h3>Available for</h3><button class="edit" onclick="openChips('availableFor','Available for')"><i class="ti ti-pencil"></i> Edit</button></div>
+        <div class="chips" id="p-available"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><div class="ic"><i class="ti ti-timeline"></i></div><h3>Ministry journey</h3><button class="edit" onclick="openDrawer('journey')"><i class="ti ti-pencil"></i> Edit</button></div>
+        <div class="timeline" id="p-journey"></div>
+      </div>
+      </div>
+
+      <!-- SERMONS -->
+      <div class="panel" id="panel-sermons">
+        <div class="card">
+          <div class="card-h"><div class="ic"><i class="ti ti-player-play"></i></div><h3>Sermons & messages</h3><button class="tab-edit" onclick="listEditor('sermons','Sermons',[{k:'title',l:'Title'},{k:'scripture',l:'Scripture',ph:'e.g. Luke 10:19'},{k:'duration',l:'Duration',ph:'48 min'},{k:'date',l:'When',ph:'2 weeks ago'},{k:'views',l:'Views',ph:'12K'}],()=>({title:'',scripture:'',duration:'',date:'',views:''}))"><i class="ti ti-pencil"></i> Manage</button></div>
+          <div id="p-sermons" style="margin-top:14px"></div>
+        </div>
+      </div>
+
+      <!-- VISION -->
+      <div class="panel" id="panel-vision">
+        <div class="card">
+          <div class="card-h"><div class="ic"><i class="ti ti-eye"></i></div><h3>Vision & Mission</h3><button class="tab-edit" onclick="openDrawer('vision')"><i class="ti ti-pencil"></i> Edit</button></div>
+          <div id="p-vision"></div>
+        </div>
+      </div>
+
+      <!-- EDUCATION -->
+      <div class="panel" id="panel-education">
+        <div class="card">
+          <div class="card-h"><div class="ic"><i class="ti ti-school"></i></div><h3>Education & Training</h3><button class="tab-edit" onclick="listEditor('education','Education',[{k:'title',l:'Qualification',ph:'Doctor of Ministry (DMin)'},{k:'org',l:'Institution',ph:'Regent University, Virginia Beach'},{k:'years',l:'Years',ph:'2014 – 2017'},{k:'detail',l:'Detail',ph:'Field of study / honours'}],()=>({title:'',org:'',years:'',detail:'',ic:'ti-school',color:'linear-gradient(135deg,#a855f7,#7c3aed)'}))"><i class="ti ti-pencil"></i> Manage</button></div>
+          <div id="p-education" style="margin-top:14px"></div>
+        </div>
+      </div>
+
+      <!-- EVENTS -->
+      <div class="panel" id="panel-events">
+        <div class="card">
+          <div class="card-h"><div class="ic"><i class="ti ti-calendar-event"></i></div><h3>Upcoming Events</h3><button class="tab-edit" onclick="listEditor('events','Events',[{k:'day',l:'Day',ph:'14'},{k:'month',l:'Month',ph:'JUN'},{k:'title',l:'Title'},{k:'location',l:'Location & time'}],()=>({day:'',month:'',title:'',location:'',color:'linear-gradient(135deg,#a855f7,#7c3aed)',tags:[],cta:'Register',ctaStyle:'primary'}))"><i class="ti ti-pencil"></i> Manage</button></div>
+          <div id="p-events" style="margin-top:14px"></div>
+        </div>
+      </div>
+
+      <!-- GALLERY -->
+      <div class="panel" id="panel-gallery">
+        <div class="card">
+          <div class="card-h"><div class="ic"><i class="ti ti-photo"></i></div><h3>Gallery</h3><button class="tab-edit" onclick="listEditor('gallery','Gallery',[{k:'caption',l:'Caption',ph:'e.g. Easter Conference 2024'}],()=>({caption:''}))"><i class="ti ti-pencil"></i> Manage</button></div>
+          <div class="gallery-grid" id="p-gallery"></div>
+        </div>
+      </div>
+
+      <!-- REVIEWS -->
+      <div class="panel" id="panel-reviews">
+        <div class="card">
+          <div class="card-h"><div class="ic"><i class="ti ti-star"></i></div><h3>Reviews & Testimonials</h3></div>
+          <div id="p-reviews" style="margin-top:14px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div>
+      <div class="contact-dark">
+        <h3>Contact Pastor James</h3>
+        <div class="s">Responds within 24 hours</div>
+        <button class="enq">Send enquiry</button>
+        <div class="chips" style="margin-top:14px"><span class="chip">Sunday services</span><span class="chip">Conferences</span><span class="chip">Retreats</span><span class="chip">International</span></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:13px">
+          <div class="qr-mini"><i class="ti ti-qrcode"></i></div>
+          <div style="flex:1"><div style="font-weight:800;font-size:14px">QR scan &amp; share</div><div style="font-size:12px;color:var(--gray)">Open this profile on any phone</div></div>
+          <button class="btn btn-primary" onclick="openQR()">Get QR</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><div class="ic"><i class="ti ti-building-church"></i></div><h3>Churches</h3><button class="edit" onclick="openDrawer('churches')"><i class="ti ti-pencil"></i> Edit</button></div>
+        <div id="p-churches" style="margin-top:14px"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><div class="ic"><i class="ti ti-plane"></i></div><h3>Travel & availability</h3><button class="edit" onclick="openDrawer('travel')"><i class="ti ti-pencil"></i> Edit</button></div>
+        <div id="p-travel" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><div class="ic"><i class="ti ti-world"></i></div><h3>Find me online</h3><button class="edit" onclick="openDrawer('social')"><i class="ti ti-pencil"></i> Edit</button></div>
+        <div class="chips" id="p-online"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><div class="ic"><i class="ti ti-certificate"></i></div><h3>Ministerial affiliation</h3><button class="edit" onclick="openDrawer('affiliations')"><i class="ti ti-pencil"></i> Edit</button></div>
+        <div id="p-affiliations" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><div class="ic"><i class="ti ti-award"></i></div><h3>Awards & recognition</h3><button class="edit" onclick="openDrawer('awards')"><i class="ti ti-pencil"></i> Edit</button></div>
+        <div id="p-awards" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+  <div style="height:50px"></div>
+</div>
+
+<!-- QR modal -->
+<div class="qr-modal" id="qr-modal" onclick="if(event.target===this)closeQR()">
+  <div class="qr-box">
+    <button class="qr-x" onclick="closeQR()"><i class="ti ti-x"></i></button>
+    <div class="qr-mini" style="margin:0 auto 12px"><i class="ti ti-qrcode"></i></div>
+    <h3 style="font-size:17px;font-weight:800">Scan to view this profile</h3>
+    <p style="font-size:12.5px;color:var(--gray);margin:4px 0 16px">Point any phone camera at the code</p>
+    <div id="qrcode-big"></div>
+    <div class="qr-url" id="qr-url"></div>
+    <div style="display:flex;gap:9px;margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="copyLink()"><i class="ti ti-copy"></i> Copy link</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="downloadPDF()"><i class="ti ti-file-download"></i> Save as PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- professional PDF one-pager (print only) -->
+<div class="pdf-sheet" id="pdf-sheet"></div>
+
+<!-- drawer -->
+<div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head"><h3 id="d-title">Edit</h3><button class="xbtn" onclick="closeDrawer()"><i class="ti ti-x"></i></button></div>
+  <div class="drawer-body" id="d-body"></div>
+  <div class="drawer-foot"><button class="btn btn-ghost" onclick="closeDrawer()">Cancel</button><button class="btn btn-primary" id="d-save"><i class="ti ti-check"></i> Save changes</button></div>
+</aside>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const SOC_COLORS={facebook:'#1877f2',instagram:'#e1306c',youtube:'#ff0000',twitter:'#0f0f0f',whatsapp:'#25d366'};
+const SOC_ICON={facebook:'ti-brand-facebook',instagram:'ti-brand-instagram',youtube:'ti-brand-youtube',twitter:'ti-brand-x',whatsapp:'ti-brand-whatsapp'};
+const kfmt=n=>n>=1000?(n/1000).toFixed(n%1000?1:0)+'K':String(n);
+
+// ── DEMO DATA ──
+let P={
+  name:'Pastor James Okafor', title:'Senior Pastor', initials:'JO', location:'Ilford, London',
+  cover:[
+    {img:'',grad:'linear-gradient(135deg,#7c3aed,#f43f5e)',caption:'Kingdom Power Conference 2024'},
+    {img:'',grad:'linear-gradient(135deg,#0f172a,#7c3aed)',caption:'Sunday celebration · Liberty House'},
+    {img:'',grad:'linear-gradient(135deg,#0891b2,#7c3aed)',caption:'International crusade · Lagos'},
+  ],
+  verified:true, rating:4.9, reviews:84, followers:1247, views:4820, live:447,
+  bio:'Pastor James Okafor is a dynamic, Spirit-filled minister with over 18 years of kingdom service. As the Senior Pastor of Liberty Christian Connections in Ilford, London, he leads a vibrant multicultural congregation of 1,200 members drawn from over 40 nations.\n\nKnown for his prophetic preaching, passionate worship and commitment to community transformation, Pastor James has ministered in over 50 nations and planted 3 churches across the UK and West Africa. He holds a Doctor of Ministry from Regent University and is the author of two widely-read books on faith and leadership.',
+  stats:[{v:'18+',l:'Years ministry'},{v:'3',l:'Churches planted'},{v:'50+',l:'Nations reached'},{v:'85K',l:'YouTube subs'},{v:'200+',l:'Events spoken'},{v:'1.2K',l:'Congregation'}],
+  social:{facebook:48200,instagram:31500,youtube:22700,twitter:9400},
+  specialisms:['Prophetic preaching','Evangelism','Kingdom authority','Church planting','Faith & healing'],
+  areas:['Youth ministry','Community outreach','Marriage & family','Men\'s network','Women\'s ministry','Prison ministry','Mentorship','Leadership training'],
+  availableFor:['Sunday services','Conferences','Revival meetings','Retreats','International engagements','Leaders\' summits','Weddings','Funerals'],
+  journey:[
+    {year:'2006',title:'Ordained & founded Liberty Christian Connections',desc:'Ordained as a minister within RCCG and planted Liberty Christian Connections in Ilford with 12 founding members.'},
+    {year:'2013',title:'International ministry begins',desc:'First international engagement — South Africa, Zimbabwe, USA. Now reached 50+ nations.'},
+    {year:'2018',title:'Community impact expansion',desc:'Launched Liberty Food Bank and Community Hub, now serving 500+ meals per month with Redbridge Council.'},
+    {year:'2020',title:'Digital ministry launched',desc:'Built an online ministry presence now nearing 85K YouTube subscribers and 12K viewers per service globally.'},
+    {year:'2024',title:'Second book published',desc:'"Kingdom Authority: Walking in Your Birthright" released in 6 languages with 40,000+ copies in circulation.'},
+  ],
+  churches:[
+    {name:'Liberty Christian Connections',role:'Senior Pastor & Founder',location:'Ilford, East London',denom:'Pentecostal',verified:true,phone:'07700 900123',email:'pastor@liberty.co.uk',slug:'liberty-christian-connections'},
+  ],
+  travel:{basedIn:'Ilford, London',range:'International',leadTime:'2 weeks min',availability:'Open 2025',languages:'English, Yoruba'},
+  online:[{platform:'facebook',label:'24K'},{platform:'instagram',label:'12K'},{platform:'youtube',label:'85K'},{platform:'whatsapp',label:'Group'},{platform:'twitter',label:'9K'}],
+  affiliations:[
+    {name:'RCCG',note:'Ordained member · Since 2006',grad:'var(--grad)'},
+    {name:'Pentecostal Fellowship UK',note:'Member · Since 2012',grad:'#7c3aed'},
+    {name:'ICGC',note:'International partner',grad:'#16a34a'},
+    {name:'Evangelical Alliance UK',note:'Affiliate member',grad:'#2563eb'},
+  ],
+  awards:[
+    {name:'Community Impact Award',note:'Mayor of Redbridge · 2023'},
+    {name:'Pastor of the Year Nominee',note:'Diocese Awards · 2024'},
+    {name:'Excellence in Ministry',note:'RCCG Area Award · 2022'},
+  ],
+  sermons:[
+    {title:'Walking in Kingdom Authority',scripture:'Luke 10:19',duration:'48 min',date:'2 weeks ago',views:'12K'},
+    {title:'The Power of Persistent Prayer',scripture:'Luke 18:1-8',duration:'52 min',date:'1 month ago',views:'8.4K'},
+    {title:'Raising Kingdom Leaders',scripture:'2 Timothy 2:2',duration:'45 min',date:'2 months ago',views:'15K'},
+    {title:'Faith That Moves Mountains',scripture:'Mark 11:22-24',duration:'41 min',date:'3 months ago',views:'9.7K'},
+  ],
+  vision:{
+    statement:'To raise a generation of Spirit-empowered believers who transform their communities, nations and the world.',
+    attribution:'Pastor James Okafor',
+    availableForMinistry:true,
+    values:[
+      {t:'Spirit-Led Worship',d:'Authentic encounter in every gathering',ic:'ti-flame',color:'linear-gradient(135deg,#a855f7,#7c3aed)'},
+      {t:'Kingdom Community',d:'Family across cultures & generations',ic:'ti-users',color:'linear-gradient(135deg,#34d399,#16a34a)'},
+      {t:'Global Missions',d:'Reaching nations with the Gospel',ic:'ti-world',color:'linear-gradient(135deg,#2dd4bf,#0891b2)'},
+      {t:'Social Transformation',d:'Care that changes communities',ic:'ti-heart-handshake',color:'linear-gradient(135deg,#fbbf24,#d97706)'},
+    ],
+  },
+  education:[
+    {title:'Doctor of Ministry (DMin)',org:'Regent University, Virginia Beach',years:'2014 – 2017',detail:'Church Planting in Urban Multicultural Contexts',ic:'ti-school',color:'linear-gradient(135deg,#a855f7,#7c3aed)'},
+    {title:'Master of Theology (MTh)',org:'Redcliffe College, Gloucester',years:'2009 – 2011',detail:'Missiology & Cross-Cultural Ministry',ic:'ti-book',color:'linear-gradient(135deg,#34d399,#16a34a)'},
+    {title:'Certified Life Coach',org:'International Coaching Federation',years:'2019',detail:'Ministry & Leadership Coaching',ic:'ti-messages',color:'linear-gradient(135deg,#fbbf24,#d97706)'},
+    {title:'Bachelor of Divinity (BD)',org:'University of Nigeria, Nsukka',years:'1999 – 2003',detail:'First Class Honours',ic:'ti-certificate',color:'linear-gradient(135deg,#2dd4bf,#0891b2)'},
+  ],
+  events:[
+    {day:'14',month:'JUN',color:'linear-gradient(135deg,#a855f7,#7c3aed)',title:'Kingdom Power Conference 2025',location:'Liberty House, Ilford · 10:00 AM – 8:00 PM',tags:[{l:'Conference',c:'purple'},{l:'Free entry',c:'green'}],cta:'Register',ctaStyle:'primary'},
+    {day:'28',month:'JUN',color:'linear-gradient(135deg,#2dd4bf,#0891b2)',title:'Ministers Leadership Summit — Lagos',location:'Eko Convention Centre, Lagos · 9:00 AM',tags:[{l:'International',c:'blue'},{l:'Keynote Speaker',c:'amber'}],cta:'Info',ctaStyle:'ghost'},
+    {day:'12',month:'JUL',color:'linear-gradient(135deg,#34d399,#16a34a)',title:'Youth Fire Camp 2025',location:'Kingswood Camp, Bristol · Fri–Sun · Ages 14–25',tags:[{l:'Youth',c:'green'},{l:'Weekend retreat',c:'purple'}],cta:'Register',ctaStyle:'primary'},
+  ],
+  gallery:[
+    {caption:'Easter Conference 2024'},{caption:'Community Food Bank'},{caption:'Baptism Sunday'},
+    {caption:'International Crusade'},{caption:'Youth Camp'},{caption:'Book Launch'},
+  ],
+  reviewStats:{avg:'4.9',total:84,dist:[{star:5,count:74},{star:4,count:8},{star:3,count:2},{star:2,count:0},{star:1,count:0}]},
+  reviewList:[
+    {name:'Adeola Mensah',role:'Pastor, Calvary Chapel Birmingham',rating:5,date:'2 weeks ago',avatar:'linear-gradient(135deg,#ec4899,#a855f7)',text:'Pastor James ministered at our church\'s 10th anniversary — his word was precise, his spirit was genuine and the entire congregation was transformed. Highly recommend for any conference or special service.'},
+    {name:'Rev. Ngozi Obi',role:'Senior Pastor, New Covenant Manchester',rating:5,date:'1 month ago',avatar:'linear-gradient(135deg,#34d399,#16a34a)',text:'We hosted Pastor James for our annual youth conference. The young people were deeply impacted — our youth group grew by 40 new members following the event.'},
+    {name:'Dr Faith Asante',role:'Women\'s Ministry Leader, London',rating:5,date:'2 months ago',avatar:'linear-gradient(135deg,#2dd4bf,#0891b2)',text:'I\'ve been under Pastor James\' ministry for 6 years. The combination of scriptural integrity, pastoral care and prophetic insight is rare. A true shepherd.'},
+  ],
+};
+
+const TABS=[
+  {l:'About',ic:'ti-user'},
+  {l:'Sermons',ic:'ti-player-play',color:'#ef4444'},
+  {l:'Vision',ic:'ti-eye'},
+  {l:'Education',ic:'ti-school'},
+  {l:'Events',ic:'ti-calendar-event'},
+  {l:'Gallery',ic:'ti-photo',color:'#7c3aed'},
+  {l:'Reviews',ic:'ti-star',color:'#f59e0b',cnt:P.reviewStats.total},
+];
+
+// ── RENDER ──
+function render(){
+  renderCover();
+  $('p-avatar').textContent=P.initials;
+  $('p-name').textContent=P.name;
+  $('views').textContent=P.views.toLocaleString();
+  $('live').textContent=P.live;
+
+  $('p-badges').innerHTML=
+    `<span class="badge b-role"><i class="ti ti-cross"></i> ${esc(P.title)}</span>`+
+    (P.churches[0]?`<span class="badge b-church"><i class="ti ti-building-church"></i> ${esc(P.churches[0].name)}</span>`:'')+
+    `<span class="badge b-loc"><i class="ti ti-map-pin"></i> ${esc(P.location)}</span>`+
+    `<span class="badge b-rev"><i class="ti ti-star-filled"></i> ${P.reviewStats.avg} · ${P.reviewStats.total} reviews</span>`+
+    (P.verified?`<span class="badge b-ver"><i class="ti ti-rosette-discount-check-filled"></i> Verified</span>`:'');
+
+  $('p-actions').innerHTML=
+    `<button class="btn btn-primary"><i class="ti ti-mail"></i> Send enquiry</button>`+
+    `<button class="btn btn-ghost"><i class="ti ti-player-play"></i> Watch sermon</button>`+
+    `<button class="btn btn-ghost"><i class="ti ti-user-plus"></i> Follow · ${P.followers.toLocaleString()}</button>`+
+    `<button class="btn btn-ghost"><i class="ti ti-share"></i> Share</button>`+
+    `<button class="btn btn-cover-edit owner-only" onclick="openDrawer('cover')" style="display:none"><i class="ti ti-pencil"></i> Edit cover</button>`;
+  $('p-socials').innerHTML=[['instagram',P.social.instagram],['facebook',P.social.facebook],['youtube',P.social.youtube],['twitter',P.social.twitter]]
+    .filter(([k,v])=>v!=null).map(([k,v])=>`<div class="soc-stat"><span class="soc-dot" style="background:${SOC_COLORS[k]}"><i class="ti ${SOC_ICON[k]}"></i></span>${kfmt(v)}</div>`).join('');
+  document.querySelectorAll('.owner-only').forEach(b=>b.style.display=document.body.classList.contains('owner')?'inline-flex':'none');
+
+  $('p-stats').innerHTML=P.stats.map(s=>`<div class="stat-cell"><div class="v">${esc(s.v)}</div><div class="l">${esc(s.l)}</div></div>`).join('');
+  $('tabs').innerHTML=TABS.map((t,i)=>`<button class="tab ${i===0?'on':''}" data-panel="${t.l.toLowerCase()}" onclick="selTab(this)"><i class="ti ${t.ic}"${t.color?` style="color:${t.color}"`:''}></i> ${t.l}${t.cnt!=null?`<span class="cnt">${t.cnt}</span>`:''}</button>`).join('');
+  $('p-bio').innerHTML=P.bio.split('\n').filter(Boolean).map(p=>`<p>${esc(p)}</p>`).join('');
+  $('p-spec').innerHTML=P.specialisms.map(s=>`<span class="chip coral">${esc(s)}</span>`).join('');
+  $('p-areas').innerHTML=P.areas.map(s=>`<span class="chip amber">${esc(s)}</span>`).join('');
+  $('p-available').innerHTML=P.availableFor.map(s=>`<span class="chip green">${esc(s)}</span>`).join('');
+  $('p-journey').innerHTML=P.journey.map(j=>`<div class="tl-item"><div class="tl-dot"></div><div><div class="tl-year">${esc(j.year)}</div><div class="tl-title">${esc(j.title)}</div><div class="tl-desc">${esc(j.desc)}</div></div></div>`).join('');
+
+  $('p-churches').innerHTML=P.churches.length?P.churches.map(ch=>`
+    <div class="church-link">
+      <div class="cmark">${ch.name.split(' ').slice(0,2).map(w=>w[0]).join('')}</div>
+      <div style="flex:1">
+        <div style="font-weight:800;font-size:14px;display:flex;align-items:center;gap:6px">${esc(ch.name)} ${ch.verified?'<i class="ti ti-rosette-discount-check-filled" style="color:#16a34a;font-size:15px"></i>':''}</div>
+        <div class="role">${esc(ch.role)}</div>
+        <div class="meta">${esc(ch.denom)} · ${esc(ch.location)}${ch.phone?`<br><i class="ti ti-phone" style="font-size:12px"></i> ${esc(ch.phone)}`:''}${ch.email?`<br><i class="ti ti-mail" style="font-size:12px"></i> ${esc(ch.email)}`:''}</div>
+        <iframe class="map-embed" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=0.04%2C51.54%2C0.11%2C51.58&layer=mapnik&marker=51.559%2C0.074"></iframe>
+        <a class="viewpage" href="#">View church page →</a>
+      </div>
+    </div>`).join(''):'<div style="color:var(--gray);font-size:13px">Independent — not currently linked to a church.</div>';
+
+  $('p-travel').innerHTML=[
+    ['Based in',P.travel.basedIn],['Travel range',P.travel.range],['Lead time',P.travel.leadTime],
+    ['Availability',`<span style="color:#15803d">${esc(P.travel.availability)}</span>`],['Languages',P.travel.languages],
+  ].map(([k,v])=>`<div class="spec-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+
+  $('p-online').innerHTML=P.online.map(o=>`<div class="soc-stat" style="flex-direction:column;gap:6px;width:60px;text-align:center"><span class="soc-dot" style="width:42px;height:42px;border-radius:13px;font-size:19px;background:${SOC_COLORS[o.platform]}"><i class="ti ${SOC_ICON[o.platform]}"></i></span><span style="font-size:11px">${esc(o.label)}</span></div>`).join('');
+  $('p-online').style.gap='14px';
+
+  $('p-affiliations').innerHTML=P.affiliations.map(a=>`<div class="list-item"><div class="li-mark" style="background:${a.grad||'var(--grad)'}">${a.name.slice(0,2).toUpperCase()}</div><div><div class="li-t">${esc(a.name)}</div><div class="li-n">${esc(a.note)}</div></div></div>`).join('');
+  $('p-awards').innerHTML=P.awards.map(a=>`<div class="list-item"><div class="li-mark" style="background:var(--grad)"><i class="ti ti-award"></i></div><div><div class="li-t">${esc(a.name)}</div><div class="li-n">${esc(a.note)}</div></div></div>`).join('');
+
+  // ── tab panels ──
+  $('p-sermons').innerHTML=P.sermons.map(s=>`
+    <div class="sermon"><div class="thumb"><i class="ti ti-player-play-filled"></i><span class="dur">${esc(s.duration)}</span></div>
+    <div style="flex:1"><div class="st">${esc(s.title)}</div><div class="sm"><i class="ti ti-book" style="font-size:12px"></i> ${esc(s.scripture)} · ${esc(s.date)} · ${esc(s.views)} views</div></div>
+    <button class="btn btn-ghost" style="padding:8px 12px;align-self:center"><i class="ti ti-player-play"></i> Watch</button></div>`).join('')||emptyMsg('No sermons yet.');
+
+  $('p-vision').innerHTML=`
+    <div class="vision-card">
+      <div class="vlabel">VISION STATEMENT</div>
+      <div class="vstmt">"${esc(P.vision.statement)}"</div>
+      <div class="vattr">— ${esc(P.vision.attribution)}</div>
+    </div>
+    ${P.vision.availableForMinistry?`<div class="avail-pill"><span class="d"></span> Available for ministry</div>`:''}
+    <div style="font-weight:800;font-size:15px;margin:18px 0 0">Core Values</div>
+    <div class="values">${P.vision.values.map(v=>`<div class="value-card"><div class="vi" style="background:${v.color}"><i class="ti ${v.ic}"></i></div><div><div class="vt">${esc(v.t)}</div><div class="vd">${esc(v.d)}</div></div></div>`).join('')}</div>`;
+
+  $('p-education').innerHTML=P.education.map(e=>`
+    <div class="edu"><div class="ei" style="background:${e.color}"><i class="ti ${e.ic}"></i></div>
+    <div><div class="et">${esc(e.title)}</div><div class="eo" style="color:${e.color.match(/#[0-9a-f]{6}/i)[0]}">${esc(e.org)}</div><div class="ed">${esc(e.years)} · ${esc(e.detail)}</div></div></div>`).join('')||emptyMsg('No qualifications listed.');
+
+  $('p-events').innerHTML=P.events.map(e=>`
+    <div class="event"><div class="date" style="background:${e.color}"><div class="d">${esc(e.day)}</div><div class="m">${esc(e.month)}</div></div>
+    <div style="flex:1"><div class="etitle">${esc(e.title)}</div><div class="eloc">${esc(e.location)}</div>
+    <div>${e.tags.map(t=>`<span class="etag ${t.c}">${esc(t.l)}</span>`).join('')}</div></div>
+    <button class="ecta ${e.ctaStyle}">${esc(e.cta)}</button></div>`).join('')||emptyMsg('No upcoming events.');
+
+  $('p-gallery').innerHTML=P.gallery.map((g,i)=>`<div class="gphoto" style="background:${['var(--grad)','#7c3aed','#2563eb','#0d9488','#d97706','#db2777'][i%6]}">${esc(g.caption||'')}</div>`).join('')||emptyMsg('No photos yet.');
+
+  const rs=P.reviewStats, maxd=Math.max(...rs.dist.map(x=>x.count),1);
+  $('p-reviews').innerHTML=`
+    <div class="rating-summary">
+      <div style="text-align:center"><div class="big">${rs.avg}</div><div class="stars">★★★★★</div><div style="font-size:12px;color:var(--gray);margin-top:4px">${rs.total} reviews</div></div>
+      <div class="dist">${rs.dist.map(d=>`<div class="dist-row"><span style="width:10px">${d.star}</span><div class="dist-bar"><i style="width:${Math.round(d.count/maxd*100)}%"></i></div><span style="width:24px;text-align:right">${d.count}</span></div>`).join('')}</div>
+    </div>
+    ${P.reviewList.map(r=>`<div class="review"><div class="rev-head"><div class="rev-av" style="background:${r.avatar||'var(--grad)'}">${r.name.replace(/^(Pastor|Rev\.?|Dr) /,'').split(' ').map(w=>w[0]).join('').slice(0,2)}</div><div style="flex:1"><div style="font-weight:800;font-size:14px">${esc(r.name)}</div><div style="font-size:12px;color:var(--gray)">${esc(r.date)} · ${esc(r.role)}</div></div><div class="stars">${'★'.repeat(r.rating)}</div></div><div style="font-size:13.5px;line-height:1.65;color:var(--ink);font-style:italic">"${esc(r.text)}"</div></div>`).join('')}`;
+}
+function emptyMsg(m){return `<div style="color:var(--gray);font-size:13px;padding:8px 0">${m}</div>`;}
+
+// per-section colored icon tiles (matches the sample's colour coding)
+const HEAD_COLORS={
+  'Biography':'var(--grad)',
+  'Preaching specialisms':'linear-gradient(135deg,#fb7185,#f43f5e)',
+  'Ministry areas':'linear-gradient(135deg,#fbbf24,#d97706)',
+  'Available for':'linear-gradient(135deg,#34d399,#16a34a)',
+  'Ministry journey':'linear-gradient(135deg,#fb923c,#ea580c)',
+  'Sermons & messages':'linear-gradient(135deg,#f87171,#ef4444)',
+  'Vision & Mission':'linear-gradient(135deg,#2dd4bf,#0d9488)',
+  'Education & Training':'linear-gradient(135deg,#a855f7,#7c3aed)',
+  'Upcoming Events':'linear-gradient(135deg,#f472b6,#ec4899)',
+  'Gallery':'var(--grad)',
+  'Reviews & Testimonials':'linear-gradient(135deg,#fbbf24,#f59e0b)',
+  'Churches':'var(--grad)',
+  'Share this profile':'linear-gradient(135deg,#6366f1,#7c3aed)',
+  'Travel & availability':'linear-gradient(135deg,#2dd4bf,#0d9488)',
+  'Find me online':'linear-gradient(135deg,#ec4899,#7c3aed)',
+  'Ministerial affiliation':'linear-gradient(135deg,#818cf8,#6366f1)',
+  'Awards & recognition':'linear-gradient(135deg,#fbbf24,#d97706)',
+};
+function colorHeadings(){
+  document.querySelectorAll('.card-h').forEach(h=>{
+    const t=h.querySelector('h3'), ic=h.querySelector('.ic');
+    if(t&&ic){const c=HEAD_COLORS[t.textContent.trim()]; if(c) ic.style.background=c;}
+  });
+}
+// ── cover slider ──
+let coverIdx=0, coverTimer=null;
+function renderCover(){
+  $('cover-track').innerHTML=P.cover.map(c=>`<div class="cover-slide" style="background:${c.img?`center/cover url(${c.img})`:c.grad}">${c.caption?`<div class="cap">${esc(c.caption)}</div>`:''}</div>`).join('');
+  $('cover-dots').innerHTML=P.cover.map((_,i)=>`<span class="dot ${i===0?'on':''}" onclick="coverTo(${i})"></span>`).join('');
+  coverIdx=0; updateCover();
+  if(coverTimer)clearInterval(coverTimer);
+  if(P.cover.length>1) coverTimer=setInterval(()=>coverGo(1),5000);
+}
+function updateCover(){
+  $('cover-track').style.transform=`translateX(-${coverIdx*100}%)`;
+  $('cov-count').textContent=`${coverIdx+1} / ${P.cover.length}`;
+  document.querySelectorAll('#cover-dots .dot').forEach((d,i)=>d.classList.toggle('on',i===coverIdx));
+}
+function coverGo(dir){coverIdx=(coverIdx+dir+P.cover.length)%P.cover.length;updateCover();}
+function coverTo(i){coverIdx=i;updateCover();}
+
+function selTab(el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  const target=$('panel-'+el.dataset.panel); if(target)target.classList.add('on');
+  window.scrollTo({top:document.querySelector('.tabs').offsetTop-70,behavior:'smooth'});
+}
+function toggleOwner(){
+  const on=document.body.classList.toggle('owner');
+  $('mode-switch').classList.toggle('on',on);
+  $('mode-label').textContent=on?'Owner view':'Visitor view';
+  document.querySelectorAll('.owner-only').forEach(b=>b.style.display=on?'inline-flex':'none');
+}
+
+// ── DRAWER ENGINE ──
+let onSave=null;
+function openShell(title){$('d-title').textContent=title;$('scrim').classList.add('open');$('drawer').classList.add('open');}
+function closeDrawer(){$('scrim').classList.remove('open');$('drawer').classList.remove('open');}
+$('d-save').onclick=()=>{if(onSave)onSave();render();closeDrawer();toast('Profile updated');};
+function toast(m){let t=document.querySelector('.toast');if(!t){t=document.createElement('div');t.className='toast';document.body.appendChild(t);}t.innerHTML='<i class="ti ti-circle-check" style="color:#4ade80"></i> '+m;requestAnimationFrame(()=>t.classList.add('show'));clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2400);}
+
+function openDrawer(kind){
+  if(kind==='header'){
+    openShell('Edit profile');
+    $('d-body').innerHTML=`
+      <div class="field"><label>Full name</label><input id="e-name" value="${esc(P.name)}"></div>
+      <div class="field"><label>Title</label><input id="e-title" value="${esc(P.title)}" placeholder="e.g. Senior Pastor"></div>
+      <div class="field"><label>Initials (avatar)</label><input id="e-init" value="${esc(P.initials)}" maxlength="3"></div>
+      <div class="field"><label>Location</label><input id="e-loc" value="${esc(P.location)}"></div>
+      <div class="field"><label>Languages</label><input id="e-langs" value="${esc(P.travel.languages)}"></div>`;
+    onSave=()=>{P.name=$('e-name').value;P.title=$('e-title').value;P.initials=$('e-init').value.toUpperCase();P.location=$('e-loc').value;P.travel.languages=$('e-langs').value;};
+  }
+  if(kind==='bio'){
+    openShell('Biography');
+    $('d-body').innerHTML=`<div class="field"><label>About you</label><textarea id="e-bio" rows="12">${esc(P.bio)}</textarea><div style="font-size:11px;color:var(--gray);margin-top:6px">Use a blank line to separate paragraphs.</div></div>`;
+    onSave=()=>{P.bio=$('e-bio').value;};
+  }
+  if(kind==='travel'){
+    openShell('Travel & availability');
+    const t=P.travel;
+    $('d-body').innerHTML=`
+      <div class="field"><label>Based in</label><input id="t-based" value="${esc(t.basedIn)}"></div>
+      <div class="field"><label>Travel range</label><select id="t-range"><option ${t.range==='UK only'?'selected':''}>UK only</option><option ${t.range==='International'?'selected':''}>International</option><option ${t.range==='Local'?'selected':''}>Local</option></select></div>
+      <div class="field"><label>Lead time</label><input id="t-lead" value="${esc(t.leadTime)}" placeholder="e.g. 2 weeks min"></div>
+      <div class="field"><label>Availability note</label><input id="t-avail" value="${esc(t.availability)}" placeholder="e.g. Open 2025"></div>`;
+    onSave=()=>{P.travel.basedIn=$('t-based').value;P.travel.range=$('t-range').value;P.travel.leadTime=$('t-lead').value;P.travel.availability=$('t-avail').value;};
+  }
+  if(kind==='journey') listEditor('journey','Ministry journey',
+    [{k:'year',l:'Year',ph:'2024'},{k:'title',l:'Title',ph:'What happened'},{k:'desc',l:'Description',ta:true}],
+    ()=>({year:'',title:'',desc:''}));
+  if(kind==='affiliations') listEditor('affiliations','Ministerial affiliation',
+    [{k:'name',l:'Organisation',ph:'e.g. RCCG'},{k:'note',l:'Note',ph:'e.g. Member · Since 2010'}],
+    ()=>({name:'',note:'',grad:'var(--grad)'}));
+  if(kind==='awards') listEditor('awards','Awards & recognition',
+    [{k:'name',l:'Award',ph:'e.g. Community Impact Award'},{k:'note',l:'Note',ph:'e.g. Mayor of Redbridge · 2023'}],
+    ()=>({name:'',note:''}));
+  if(kind==='social'){
+    openShell('Social & online');
+    $('d-body').innerHTML=['facebook','instagram','youtube','twitter'].map(k=>`<div class="field"><label style="text-transform:capitalize">${k} followers</label><input id="s-${k}" type="number" value="${P.social[k]||0}"></div>`).join('');
+    onSave=()=>{['facebook','instagram','youtube','twitter'].forEach(k=>P.social[k]=parseInt($('s-'+k).value)||0);};
+  }
+  if(kind==='vision'){
+    openShell('Vision & mission');
+    $('d-body').innerHTML=`
+      <div class="field"><label>Vision statement</label><textarea id="v-stmt" rows="4">${esc(P.vision.statement)}</textarea></div>
+      <div class="field"><label>Attribution</label><input id="v-attr" value="${esc(P.vision.attribution)}"></div>`;
+    onSave=()=>{P.vision.statement=$('v-stmt').value;P.vision.attribution=$('v-attr').value;};
+  }
+  if(kind==='cover'){
+    const cov=P.cover.map(c=>({...c}));
+    const gal=(P.gallery||[]).map(g=>({...g}));
+    let watch=P.watchUrl||'';
+    openShell('Edit cover');
+    const thumb=(src,grad)=>src?`center/cover url(${src})`:(grad||'var(--grad)');
+    const paint=()=>{
+      $('d-body').innerHTML=`
+        <div style="margin-bottom:20px">
+          <div style="font-weight:800;font-size:14px;margin-bottom:10px">Profile photo</div>
+          <div style="display:flex;align-items:center;gap:14px">
+            <div class="avatar" style="width:58px;height:58px;border-radius:16px;font-size:20px">${P.initials}</div>
+            <label class="btn btn-ghost" style="cursor:pointer">Upload photo<input type="file" accept="image/*" style="display:none" onchange="window._cvLogo(event)"></label>
+          </div>
+          <div style="font-size:11.5px;color:var(--gray);margin-top:8px">Square image works best (PNG/JPG).</div>
+        </div>
+
+        <div style="margin-bottom:20px">
+          <div style="font-weight:800;font-size:14px;margin-bottom:4px">Cover images <span style="color:var(--gray);font-weight:600">· hero slider</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:9px;margin:10px 0">
+            ${cov.map((c,i)=>`<div style="position:relative"><div style="width:90px;height:58px;border-radius:9px;background:${thumb(c.img,c.grad)}"></div><button class="thumb-x" onclick="window._cvRm('cov',${i})"><i class="ti ti-x"></i></button></div>`).join('')||'<span style="font-size:12px;color:var(--gray)">No cover images yet.</span>'}
+          </div>
+          <label class="addbtn" style="display:block;text-align:center;cursor:pointer;margin-bottom:8px"><i class="ti ti-plus"></i> Upload cover image<input type="file" accept="image/*" style="display:none" onchange="window._cvAdd('cov',event)"></label>
+          <div style="display:flex;gap:8px;align-items:center"><span style="font-size:11.5px;color:var(--gray)">or paste URL</span><input id="cv-cov-url" placeholder="https://…" style="flex:1;font-size:12.5px;padding:8px 11px;border:1.5px solid var(--border);border-radius:9px"><button class="btn btn-ghost" onclick="window._cvUrl('cov')">Add</button></div>
+        </div>
+
+        <div style="margin-bottom:20px">
+          <div style="font-weight:800;font-size:14px;margin-bottom:4px">Gallery images <span style="color:var(--gray);font-weight:600">· add, remove</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:9px;margin:10px 0">
+            ${gal.map((g,i)=>`<div style="position:relative"><div style="width:74px;height:62px;border-radius:9px;background:${thumb(g.img,['var(--grad)','#7c3aed','#2563eb','#0d9488','#d97706','#db2777'][i%6])};display:flex;align-items:flex-end;padding:5px;color:#fff;font-size:8px">${esc(g.caption||'')}</div><button class="thumb-x" onclick="window._cvRm('gal',${i})"><i class="ti ti-x"></i></button></div>`).join('')||'<span style="font-size:12px;color:var(--gray)">No gallery images yet.</span>'}
+          </div>
+          <label class="addbtn" style="display:block;text-align:center;cursor:pointer;margin-bottom:8px"><i class="ti ti-plus"></i> Upload gallery image<input type="file" accept="image/*" style="display:none" onchange="window._cvAdd('gal',event)"></label>
+          <div style="display:flex;gap:8px;align-items:center"><span style="font-size:11.5px;color:var(--gray)">or paste URL</span><input id="cv-gal-url" placeholder="https://…" style="flex:1;font-size:12.5px;padding:8px 11px;border:1.5px solid var(--border);border-radius:9px"><button class="btn btn-ghost" onclick="window._cvUrl('gal')">Add</button></div>
+        </div>
+
+        <div class="field"><label>Watch sermon · YouTube URL</label><input id="cv-watch" value="${esc(watch)}" placeholder="https://www.youtube.com/watch?v=…"><div style="font-size:11.5px;color:var(--gray);margin-top:6px">Paste a normal YouTube link — it's converted to an embed automatically.</div></div>`;
+    };
+    const readFile=(f,cb)=>{const r=new FileReader();r.onload=()=>cb(r.result);r.readAsDataURL(f);};
+    window._cvLogo=(e)=>{const f=e.target.files[0];if(f)readFile(f,()=>toast('Photo selected'));};
+    window._cvRm=(t,i)=>{(t==='cov'?cov:gal).splice(i,1);paint();};
+    window._cvAdd=(t,e)=>{const f=e.target.files[0];if(!f)return;readFile(f,(d)=>{(t==='cov'?cov:gal).push({img:d,grad:'',caption:''});paint();});};
+    window._cvUrl=(t)=>{const el=$(t==='cov'?'cv-cov-url':'cv-gal-url');const v=(el.value||'').trim();if(!v)return;(t==='cov'?cov:gal).push({img:v,grad:'',caption:''});paint();};
+    paint();
+    onSave=()=>{P.cover=cov.length?cov:[{img:'',grad:'var(--grad)',caption:''}];P.gallery=gal;P.watchUrl=$('cv-watch').value;};
+  }
+  if(kind==='churches') churchEditor();
+}
+
+// generic chip editor (specialisms / areas / availableFor)
+let chipKey=null,chipDraft=[];
+function openChips(key,title){
+  chipKey=key;chipDraft=[...P[key]];openShell(title);renderChipDrawer();
+  onSave=()=>{P[key]=chipDraft.filter(Boolean);};
+}
+function renderChipDrawer(){
+  $('d-body').innerHTML=
+    `<div style="margin-bottom:14px">${chipDraft.map((c,i)=>`<span class="chip-edit">${esc(c)} <button onclick="rmChip(${i})"><i class="ti ti-x"></i></button></span>`).join('')||'<span style="color:var(--gray);font-size:13px">None yet.</span>'}</div>
+     <div class="field"><label>Add</label><div style="display:flex;gap:8px"><input id="chip-in" placeholder="Type and press Add" onkeydown="if(event.key==='Enter'){addChip();event.preventDefault();}"><button class="btn btn-ghost" onclick="addChip()">Add</button></div></div>`;
+}
+function addChip(){const v=$('chip-in').value.trim();if(!v)return;chipDraft.push(v);renderChipDrawer();}
+function rmChip(i){chipDraft.splice(i,1);renderChipDrawer();}
+
+// generic list editor (journey / affiliations / awards)
+let listKey=null,listDraft=[],listMaker=null,listFields=[];
+function listEditor(key,title,fields,maker){
+  listKey=key;listFields=fields;listMaker=maker;listDraft=P[key].map(x=>({...x}));openShell(title);renderListDrawer();
+  onSave=()=>{P[key]=listDraft.filter(r=>r[fields[0].k]);};
+}
+function renderListDrawer(){
+  $('d-body').innerHTML=listDraft.map((row,i)=>`
+    <div class="rowc"><button class="rm" onclick="rmRow(${i})"><i class="ti ti-trash"></i></button>
+    ${listFields.map(f=>`<div class="field" style="margin-bottom:10px"><label>${f.l}</label>${f.ta?`<textarea rows="3" oninput="setRow(${i},'${f.k}',this.value)">${esc(row[f.k]||'')}</textarea>`:`<input value="${esc(row[f.k]||'')}" placeholder="${f.ph||''}" oninput="setRow(${i},'${f.k}',this.value)">`}</div>`).join('')}
+    </div>`).join('')+`<button class="addbtn" onclick="addRow()"><i class="ti ti-plus"></i> Add</button>`;
+}
+function setRow(i,k,v){listDraft[i][k]=v;}
+function rmRow(i){listDraft.splice(i,1);renderListDrawer();}
+function addRow(){listDraft.push(listMaker());renderListDrawer();}
+
+// churches editor (link none / one / many)
+let chDraft=[];
+function churchEditor(){
+  chDraft=P.churches.map(c=>({...c}));openShell('Churches');renderChurchDrawer();
+  onSave=()=>{P.churches=chDraft.filter(c=>c.name);};
+}
+function renderChurchDrawer(){
+  $('d-body').innerHTML=
+    `<div style="font-size:12.5px;color:var(--gray);margin-bottom:14px">Link to one or more churches, or leave empty if you minister independently.</div>`+
+    chDraft.map((c,i)=>`
+    <div class="rowc"><button class="rm" onclick="rmCh(${i})"><i class="ti ti-trash"></i></button>
+      <div class="field" style="margin-bottom:10px"><label>Church name</label><input value="${esc(c.name)}" oninput="setCh(${i},'name',this.value)" placeholder="e.g. Liberty Christian Connections"></div>
+      <div class="field" style="margin-bottom:10px"><label>Your role</label><input value="${esc(c.role||'')}" oninput="setCh(${i},'role',this.value)" placeholder="e.g. Senior Pastor"></div>
+      <div class="field" style="margin:0"><label>Location</label><input value="${esc(c.location||'')}" oninput="setCh(${i},'location',this.value)" placeholder="e.g. Ilford, East London"></div>
+    </div>`).join('')+
+    `<button class="addbtn" onclick="addCh()"><i class="ti ti-plus"></i> Link a church</button>`;
+}
+function setCh(i,k,v){chDraft[i][k]=v;}
+function rmCh(i){chDraft.splice(i,1);renderChurchDrawer();}
+function addCh(){chDraft.push({name:'',role:'',location:'',denom:'Pentecostal',verified:false});renderChurchDrawer();}
+
+render();
+colorHeadings();
+
+// ── Share: QR modal, copy link, PDF ──
+const profileUrl='https://ekklesia.app/pastor/james-okafor';
+try{ new QRCode($('qrcode-big'),{text:profileUrl,width:190,height:190,colorDark:'#0f0f1a',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M}); }catch(e){}
+function openQR(){ $('qr-modal').classList.add('open'); $('qr-url').textContent=profileUrl.replace(/^https:\/\//,''); }
+function closeQR(){ $('qr-modal').classList.remove('open'); }
+function copyLink(){navigator.clipboard&&navigator.clipboard.writeText(profileUrl);toast('Profile link copied');}
+
+function buildPdfSheet(){
+  const qrImg=(()=>{const c=$('qrcode-big').querySelector('canvas');return c?`<img src="${c.toDataURL()}" width="92" height="92">`:'';})();
+  $('pdf-sheet').innerHTML=`
+    <div class="pdf-head">
+      <div class="pdf-av">${P.initials}</div>
+      <div>
+        <div class="pdf-name">${P.name}</div>
+        <div class="pdf-title">${P.title}${P.churches[0]?' · '+P.churches[0].name:''}</div>
+        <div class="pdf-meta">${P.location} · ${P.travel.languages} · ⭐ ${P.reviewStats.avg} (${P.reviewStats.total} reviews)</div>
+      </div>
+      <div class="pdf-qr">${qrImg}<div style="font-size:9px;color:#6b7280;margin-top:3px">Scan to view</div></div>
+    </div>
+    <div class="pdf-stats" style="margin-bottom:16px">${P.stats.map(s=>`<div class="pdf-stat"><b>${s.v}</b><span>${s.l}</span></div>`).join('')}</div>
+    <div class="pdf-section"><h4>Biography</h4><p>${P.bio.split('\n').filter(Boolean).join(' ')}</p></div>
+    <div class="pdf-cols">
+      <div>
+        <div class="pdf-section"><h4>Preaching specialisms</h4><div class="pdf-tags">${P.specialisms.map(s=>`<span class="pdf-tag">${s}</span>`).join('')}</div></div>
+        <div class="pdf-section"><h4>Ministry areas</h4><div class="pdf-tags">${P.areas.map(s=>`<span class="pdf-tag">${s}</span>`).join('')}</div></div>
+        <div class="pdf-section"><h4>Available for</h4><div class="pdf-tags">${P.availableFor.map(s=>`<span class="pdf-tag">${s}</span>`).join('')}</div></div>
+      </div>
+      <div>
+        <div class="pdf-section"><h4>Education</h4>${P.education.map(e=>`<div class="pdf-edu-row"><b>${e.title}</b> — ${e.org} <span style="color:#6b7280">(${e.years})</span></div>`).join('')}</div>
+        <div class="pdf-section"><h4>Affiliations</h4>${P.affiliations.map(a=>`<div class="pdf-edu-row">${a.name} <span style="color:#6b7280">· ${a.note}</span></div>`).join('')}</div>
+        <div class="pdf-section"><h4>Contact</h4><p>${profileUrl.replace(/^https:\/\//,'')}${P.churches[0]&&P.churches[0].email?' · '+P.churches[0].email:''}</p></div>
+      </div>
+    </div>
+    <div class="pdf-section"><h4>Travel & availability</h4><p>Based in ${P.travel.basedIn} · Travel range: ${P.travel.range} · Lead time: ${P.travel.leadTime} · ${P.travel.availability}</p></div>
+    <div style="font-size:10px;color:#9ca3af;text-align:center;margin-top:16px;border-top:1px solid #e9e9ef;padding-top:8px">Profile via Ekklesia · ${profileUrl.replace(/^https:\/\//,'')}</div>`;
+}
+function downloadPDF(){buildPdfSheet();toast('Opening print — choose "Save as PDF"');setTimeout(()=>window.print(),350);}
+</script>
+</body>
+</html>
