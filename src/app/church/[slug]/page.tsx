@@ -226,6 +226,10 @@ export default async function ChurchProfilePage({ params, searchParams }: { para
         </div>
       </div>
 
+      <div className="wrap">
+        <VisitorBanner churchId={church.id} services={church.church_services || []} />
+      </div>
+
       <ChurchProfileClient
         initialChurch={church}
         isEditing={isOwner}
@@ -234,10 +238,6 @@ export default async function ChurchProfilePage({ params, searchParams }: { para
         telegramUrl={telegramUrl}
         initialBranchesCount={branchesCount}
       />
-
-      <div className="wrap" style={{ marginTop: '40px' }}>
-        <VisitorBanner churchId={church.id} services={church.church_services || []} />
-      </div>
 
     </main>
     </>
