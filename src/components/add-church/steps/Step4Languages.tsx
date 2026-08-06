@@ -16,7 +16,7 @@ export default function Step4Languages({ onNext, onBack }: Step4LanguagesProps) 
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const quickPicks = ["English", "Spanish", "French", "Portuguese", "Yoruba", "Twi", "Mandarin", "Polish"];
+  const quickPicks = ["English", "Spanish", "French", "Portuguese", "German", "Mandarin", "Arabic", "Hindi"];
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {

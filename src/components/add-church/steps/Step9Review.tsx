@@ -8,11 +8,18 @@ export default function Step9Review() {
   const { formData } = useFormContext();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentPublishStep, setCurrentPublishStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setError(null);
+    setCurrentPublishStep(0);
+
+    const stepInterval = setInterval(() => {
+      setCurrentPublishStep((prev) => (prev < 4 ? prev + 1 : prev));
+    }, 900);
+
     try {
       const res = await fetch('/api/churches', {
         method: 'POST',
@@ -25,12 +32,15 @@ export default function Step9Review() {
         throw new Error(data.error || 'Failed to submit listing');
       }
 
+      setCurrentPublishStep(4);
+      clearInterval(stepInterval);
+
       localStorage.removeItem('churchFormData');
       router.push(`/add-listing/success?slug=${data.church.slug}`);
     } catch (err: any) {
+      clearInterval(stepInterval);
       console.error(err);
       setError(err.message || 'An unexpected error occurred');
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -62,7 +72,7 @@ export default function Step9Review() {
     { label: 'Logo / cover', pts: 10, done: !!(formData.logo || formData.coverBanners?.length || formData.cover) },
     { label: 'Photo gallery', pts: 10, done: !!(formData.galleryImages?.length) },
     { label: 'About description', pts: 5, done: !!formData.description?.trim() },
-    { label: 'Year established', pts: 5, done: !!formData.establishedYear },
+    { label: 'About pastor', pts: 5, done: !!(formData.pastorName?.trim() || formData.pastor_name?.trim() || formData.pastorBio?.trim() || formData.pastor_bio?.trim()) },
   ];
 
   const totalPoints = strengthFields.reduce((sum, f) => sum + f.pts, 0);
@@ -273,6 +283,51 @@ export default function Step9Review() {
           {isSubmitting ? "Publishing..." : <><i className="ti ti-check" style={{ fontSize: "15px" }}></i> Publish listing</>}
         </button>
       </div>
+
+      {/* Publishing Modal Overlay */}
+      {isSubmitting && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(15,23,42,0.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ background: "white", borderRadius: "24px", padding: "36px 32px", maxWidth: "480px", width: "100%", textAlign: "center", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", animation: "slideUp 0.3s ease" }}>
+            
+            {/* Animated Header Icon */}
+            <div style={{ width: "64px", height: "64px", margin: "0 auto 20px", borderRadius: "50%", background: "linear-gradient(135deg, #7c3aed, #a855f7)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 25px -5px rgba(124,58,237,0.4)" }}>
+              <i className="ti ti-sparkles" style={{ fontSize: "28px", color: "#fff" }}></i>
+            </div>
+
+            <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a", marginBottom: "6px" }}>Publishing Your Church Listing...</h3>
+            <p style={{ fontSize: "13.5px", color: "#64748b", margin: "0 0 24px" }}>Please wait while we set up your public profile and navigation.</p>
+
+            {/* Dynamic Step Checklist */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", textAlign: "left", background: "#f8fafc", padding: "18px", borderRadius: "16px", border: "1px solid #e2e8f0" }}>
+              {[
+                { title: "Creating church profile & account", icon: "ti-building-church" },
+                { title: "Saving location & contact details", icon: "ti-map-pin" },
+                { title: "Noting service times & ministries", icon: "ti-clock" },
+                { title: "Processing media & pastor profile", icon: "ti-user-check" },
+                { title: "Finalizing public page...", icon: "ti-sparkles" },
+              ].map((step, idx) => {
+                const isDone = currentPublishStep > idx;
+                const isCurrent = currentPublishStep === idx;
+                return (
+                  <div key={idx} style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "13.5px", fontWeight: isCurrent || isDone ? 700 : 500, color: isDone ? "#15803d" : isCurrent ? "#7c3aed" : "#94a3b8", transition: "all 0.3s" }}>
+                    <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: isDone ? "#dcfce7" : isCurrent ? "#f3e8ff" : "#f1f5f9", border: `1.5px solid ${isDone ? "#86efac" : isCurrent ? "#c084fc" : "#cbd5e1"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {isDone ? (
+                        <i className="ti ti-check" style={{ fontSize: "13px", color: "#16a34a" }}></i>
+                      ) : isCurrent ? (
+                        <i className="ti ti-loader-2" style={{ fontSize: "13px", color: "#7c3aed" }}></i>
+                      ) : (
+                        <span style={{ fontSize: "11px", color: "#94a3b8" }}>{idx + 1}</span>
+                      )}
+                    </div>
+                    <span>{step.title}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

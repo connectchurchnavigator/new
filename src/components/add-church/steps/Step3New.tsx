@@ -106,7 +106,7 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
   };
 
   // Ministries
-  const [activeMinistries, setActiveMinistries] = useState<string[]>(formData.ministries?.length ? formData.ministries : ["Youth Ministry", "Children's Church"]);
+  const [activeMinistries, setActiveMinistries] = useState<string[]>(formData.ministries?.length ? formData.ministries : []);
   const [customMinistry, setCustomMinistry] = useState("");
   const [customMinistriesList, setCustomMinistriesList] = useState<string[]>([]);
   const [customMinMsg, setCustomMinMsg] = useState<{ text: string; type: "success" | "warning" | "" }>({ text: "", type: "" });
@@ -116,7 +116,7 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
   const [langSearchQuery, setLangSearchQuery] = useState("");
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const langContainerRef = useRef<HTMLDivElement>(null);
-  const quickPicks = ["English", "Spanish", "French", "Portuguese", "Yoruba", "Twi", "Mandarin", "Polish"];
+  const quickPicks = ["English", "Spanish", "French", "Portuguese", "German", "Mandarin", "Arabic", "Hindi"];
 
   // Facilities
   const [activeFacilities, setActiveFacilities] = useState<string[]>(formData.facilities || []);
@@ -551,9 +551,13 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
 
           {/* Brief Intro */}
           <div>
-            <label style={{ fontSize: "13.5px", fontWeight: 700, color: "var(--cn-ink)", marginBottom: "6px", display: "block" }}>
-              Brief Intro
-            </label>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+              <label style={{ fontSize: "13.5px", fontWeight: 700, color: "var(--cn-ink)", margin: 0 }}>
+                Brief Intro
+              </label>
+              <span style={{ fontSize: "11.5px", color: "var(--cn-purple-dark)", fontWeight: 600 }}>Click sample to quick-fill</span>
+            </div>
+
             <textarea 
               value={pastorBio}
               onChange={(e) => {
@@ -564,6 +568,45 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
               style={{ minHeight: "100px", resize: "vertical", width: "100%", padding: "12px 14px", borderRadius: "12px", border: "1.5px solid var(--cn-border)", fontSize: "13.5px", lineHeight: "1.5", outline: "none", fontFamily: "inherit" }}
               placeholder="A brief intro about your pastor's background, calling, and heart for ministry..."
             ></textarea>
+
+            {/* 5 Sample Bio Options */}
+            <div style={{ marginTop: "8px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {(() => {
+                const nameToUse = pastorName.trim()
+                  ? (/^pastor/i.test(pastorName.trim()) ? pastorName.trim() : `Pastor ${pastorName.trim()}`)
+                  : "our pastor";
+
+                return [
+                  { label: "Sample 1", text: `${nameToUse} serves with a passion for clear biblical teaching, authentic worship, and community outreach. Dedicated to mentoring leaders and nurturing spiritual growth, leadership guides our church family with a heart focused on faith, love, and empowering believers of all ages.` },
+                  { label: "Sample 2", text: `With over 15 years in gospel ministry, ${nameToUse} is devoted to sharing the transformative love of Christ, building strong families, and fostering a warm, welcoming church home where everyone can experience God's grace.` },
+                  { label: "Sample 3", text: `Guided by a commitment to compassionate pastoral care and discipleship, ${nameToUse} serves our congregation with humility, wisdom, and prayer, passionately walking alongside individuals in their faith journey.` },
+                  { label: "Sample 4", text: `${nameToUse} has a deep heart for evangelism, local service, and raising up the next generation. Dedicated to equipping the church to live out the Great Commission, leadership inspires believers to serve with faith and purpose.` },
+                  { label: "Sample 5", text: `Focusing on biblical truth and servant leadership, ${nameToUse} strives to create a Christ-centered community where believers grow together in grace, support one another in love, and impact our surrounding city for the Kingdom.` },
+                ].map((s, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setPastorBio(s.text);
+                      updateFormData({ pastorBio: s.text, pastor_bio: s.text });
+                    }}
+                    style={{
+                      fontSize: "11.5px",
+                      fontWeight: 600,
+                      color: "var(--cn-purple-dark)",
+                      background: "#f5f3ff",
+                      border: "1px solid #ede9fe",
+                      padding: "5px 10px",
+                      borderRadius: "8px",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <i className="ti ti-sparkles" style={{ fontSize: "12px", marginRight: "4px" }}></i>
+                    {s.label}
+                  </button>
+                ));
+              })()}
+            </div>
           </div>
         </div>
       </div>
@@ -577,16 +620,6 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
           <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>About Your Church</div>
         </div>
 
-        <div style={{ marginBottom: "18px" }}>
-          <label>Established Year</label>
-          <input 
-            type="number"
-            placeholder="e.g. 1998" 
-            value={establishedYear}
-            onChange={(e) => setEstablishedYear(e.target.value)}
-          />
-        </div>
-
         <label>Church Description</label>
         <textarea 
           value={description}
@@ -595,12 +628,61 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
           placeholder="Tell people about your church — vision, community, what to expect when they visit..."
         ></textarea>
         
-        <button 
-          onClick={handleWriteWithAI} 
-          style={{ background: "#f5f3ff", border: "1.5px solid #ede9fe", color: "var(--cn-purple-dark)", borderRadius: "10px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
-        >
-          <i className="ti ti-sparkles" style={{ fontSize: "14px" }}></i> Generate Description
-        </button>
+        {/* 5 Sample Church Description Options */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "4px" }}>
+          {(() => {
+            const cName = formData.churchName || formData.name || "our church";
+            const denom = formData.denomination ? `${formData.denomination} ` : "";
+
+            return [
+              {
+                label: "Sample 1",
+                text: `Grounding our hearts in scripture and Christian fellowship, ${cName} stands as a dedicated ${denom}ministry serving our community with compassion and faith. We exist to magnify God through joyful worship and to demonstrate His love through practical service.\n\nWe provide rich opportunities for spiritual growth through comprehensive Bible teaching, inspiring music ministry, and interactive groups for every stage of life. We warmly welcome you to come experience our fellowship this week!`
+              },
+              {
+                label: "Sample 2",
+                text: `Welcome to ${cName}! We are a vibrant ${denom}congregation united by our commitment to follow Jesus Christ and share His hope with our city. Our mission is to build strong families, deepen discipleship, and make a lasting positive impact in our surrounding neighborhood.\n\nWhether you are exploring faith for the first time or looking for a church home, you will find a warm community ready to welcome you with open arms.`
+              },
+              {
+                label: "Sample 3",
+                text: `${cName} is a loving ${denom}church dedicated to loving God, loving people, and serving the world. Through dynamic Sunday worship, engaging youth and children's programs, and active local outreach, we strive to equip every believer to live out their God-given calling.\n\nJoin us this Sunday to grow in faith, connect with friendly people, and encounter God's presence.`
+              },
+              {
+                label: "Sample 4",
+                text: `At ${cName}, our passion is to know Christ and to make Him known. We are a Bible-believing ${denom}family committed to authentic worship, earnest prayer, and practical ministry that meets real needs in our community.\n\nFrom our vibrant weekend services to mid-week prayer and small groups, there is a place for you and your family to belong, grow, and serve.`
+              },
+              {
+                label: "Sample 5",
+                text: `Established to be a beacon of hope, ${cName} is a gospel-centered ${denom}church where people from all walks of life come together to experience God's grace and truth. We focus on clear biblical instruction, meaningful relationships, and heartfelt service to our neighbors.\n\nWe invite you to join our church family as we worship together, grow in faith, and impact lives for Christ.`
+              }
+            ].map((s, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setDescription(s.text);
+                  updateFormData({ description: s.text });
+                }}
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "var(--cn-purple-dark)",
+                  background: "#f5f3ff",
+                  border: "1.5px solid #ede9fe",
+                  padding: "7px 13px",
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px"
+                }}
+              >
+                <i className="ti ti-sparkles" style={{ fontSize: "13px" }}></i>
+                {s.label}
+              </button>
+            ));
+          })()}
+        </div>
       </div>
 
       {/* SOCIAL MEDIA */}
@@ -755,15 +837,6 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
           </div>
           <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>Ministries & outreach</div>
         </div>
-
-        {formData.denomination && (
-          <div className="ai-bubble" style={{ marginBottom: "16px" }}>
-            <div className="ai-icon"><i className="ti ti-sparkles" style={{ fontSize: "15px", color: "#fff" }}></i></div>
-            <div style={{ fontSize: "13px", color: "var(--cn-ink)", paddingTop: "3px" }}>
-              Based on <strong>{formData.denomination}</strong> denomination — we've pre-selected the most common ministries for you
-            </div>
-          </div>
-        )}
 
         <div id="ministry-chips" style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "14px" }}>
           {[
