@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import TopNav from '@/components/layout/TopNav';
 import { TagInput } from '@/components/TagInput';
 import { ImageUpload } from '@/components/ImageUpload';
 import SharedAddressField from '@/components/add-church/steps/SharedAddressField';
@@ -270,6 +271,7 @@ export default function PastorOnboardingPage() {
 
   return (
     <div className="min-h-screen bg-surface">
+      <TopNav />
       <div className="max-w-[900px] mx-auto px-6 py-8">
         {/* Form Wizard Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "28px" }}>
