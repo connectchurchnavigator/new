@@ -11,38 +11,11 @@ export default function WelcomeScreen({ onSelectForm }: WelcomeScreenProps) {
       minHeight: "100vh",
       position: "relative",
       overflow: "hidden",
-      background: "linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #fce7f3 100%)"
+      background: "#ffffff"
     }}>
-
-      {/* Heavenly Light Beams & Ambient Glows */}
-      <div style={{
-        position: "absolute",
-        inset: 0,
-        background: "linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 60%)",
-        pointerEvents: "none"
-      }} />
-      <div style={{
-        position: "absolute",
-        top: "-150px",
-        right: "10%",
-        width: "320px",
-        height: "800px",
-        background: "linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 100%)",
-        transform: "rotate(-35deg)",
-        filter: "blur(20px)",
-        pointerEvents: "none"
-      }} />
-      <div style={{
-        position: "absolute",
-        width: "500px",
-        height: "500px",
-        borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(124,58,237,0.18), transparent 70%)",
-        top: "-100px",
-        left: "-100px",
-        filter: "blur(60px)",
-        pointerEvents: "none"
-      }} />
+      {/* Subtle Ambient Radial Accents */}
+      <div style={{ position: "absolute", width: "600px", height: "600px", borderRadius: "50%", background: "radial-gradient(circle, rgba(244,63,94,0.04), transparent 70%)", top: "-200px", right: "-150px", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", width: "400px", height: "400px", borderRadius: "50%", background: "radial-gradient(circle, rgba(124,58,237,0.04), transparent 70%)", bottom: "-100px", left: "-100px", pointerEvents: "none" }} />
 
       {/* CONTENT CONTAINER */}
       <div style={{ maxWidth: "860px", margin: "0 auto", padding: "54px 24px 70px", position: "relative", zIndex: 1 }}>
