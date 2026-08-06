@@ -135,30 +135,88 @@ export default function WelcomeScreen({ onSelectForm }: WelcomeScreenProps) {
   );
 }
 
-function TypeCard({ icon, title, subtitle, onClick }: any) {
+const TYPE_THEMES: Record<string, {
+  normalBg: string;
+  normalBorder: string;
+  iconBg: string;
+  iconColor: string;
+  hoverBorder: string;
+  hoverBg: string;
+  hoverIconBg: string;
+  hoverShadow: string;
+}> = {
+  church: {
+    normalBg: "#ffffff",
+    normalBorder: "#e2e8f0",
+    iconBg: "linear-gradient(135deg, #f5f3ff, #ede9fe)",
+    iconColor: "#7c3aed",
+    hoverBorder: "#7c3aed",
+    hoverBg: "#faf5ff",
+    hoverIconBg: "linear-gradient(135deg, #7c3aed, #6d28d9)",
+    hoverShadow: "0 20px 40px -10px rgba(124, 58, 237, 0.22)"
+  },
+  pastor: {
+    normalBg: "#ffffff",
+    normalBorder: "#e2e8f0",
+    iconBg: "linear-gradient(135deg, #fdf2f8, #fce7f3)",
+    iconColor: "#e11d48",
+    hoverBorder: "#e11d48",
+    hoverBg: "#fff1f2",
+    hoverIconBg: "linear-gradient(135deg, #e11d48, #be123c)",
+    hoverShadow: "0 20px 40px -10px rgba(225, 29, 72, 0.22)"
+  },
+  events: {
+    normalBg: "#ffffff",
+    normalBorder: "#e2e8f0",
+    iconBg: "linear-gradient(135deg, #fffbeb, #fef3c7)",
+    iconColor: "#d97706",
+    hoverBorder: "#d97706",
+    hoverBg: "#fffbeb",
+    hoverIconBg: "linear-gradient(135deg, #f59e0b, #d97706)",
+    hoverShadow: "0 20px 40px -10px rgba(217, 119, 6, 0.22)"
+  }
+};
+
+function TypeCard({ type, icon, title, subtitle, onClick }: any) {
+  const [isHovered, setIsHovered] = useState(false);
+  const theme = TYPE_THEMES[type] || TYPE_THEMES.church;
+
   return (
     <div
-      className="type-card"
       onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
-        padding: "34px 20px",
-        background: "#ffffff",
-        border: "1.5px solid var(--cn-border)",
+        padding: "36px 22px",
+        background: isHovered ? theme.hoverBg : "#ffffff",
+        border: `2px solid ${isHovered ? theme.hoverBorder : theme.normalBorder}`,
         borderRadius: "20px",
-        boxShadow: "0 10px 30px rgba(15,23,42,0.04)",
-        transition: "all 0.25s ease"
+        boxShadow: isHovered ? theme.hoverShadow : "0 10px 30px rgba(15,23,42,0.04)",
+        transform: isHovered ? "translateY(-6px)" : "translateY(0)",
+        transition: "all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)",
+        cursor: "pointer",
+        textAlign: "center"
       }}
     >
-      <div className="t-icon" style={{
-        width: "58px",
-        height: "58px",
-        borderRadius: "16px",
-        margin: "0 auto 14px",
-        background: "var(--cn-surface)"
+      <div style={{
+        width: "60px",
+        height: "60px",
+        borderRadius: "18px",
+        margin: "0 auto 16px",
+        background: isHovered ? theme.hoverIconBg : theme.iconBg,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: isHovered ? "0 8px 20px rgba(0,0,0,0.15)" : "none",
+        transition: "all 0.25s ease"
       }}>
-        <i className={`ti ${icon}`} style={{ fontSize: "28px", color: "var(--cn-gray-light)" }}></i>
+        <i className={`ti ${icon}`} style={{
+          fontSize: "30px",
+          color: isHovered ? "#ffffff" : theme.iconColor,
+          transition: "all 0.25s ease"
+        }}></i>
       </div>
-      <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>{title}</div>
+      <div style={{ fontSize: "19px", fontWeight: 800, color: "var(--cn-ink)" }}>{title}</div>
       <div style={{ fontSize: "13.5px", fontWeight: 500, color: "#64748b", marginTop: "5px" }}>{subtitle}</div>
     </div>
   );
