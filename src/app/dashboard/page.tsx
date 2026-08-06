@@ -10,22 +10,31 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  // Check if they are a pastor
-  const { data: pastor } = await supabase
-    .from('pastors')
-    .select('id, slug, full_name, title, initials, avatar_url, city, is_published, is_verified, view_count, follower_count, bio, vision_statement')
-    .eq('owner_id', user.id)
-    .maybeSingle();
+  // Fetch pastor check and user organization in parallel
+  const [pastorRes, orgRes] = await Promise.all([
+    supabase
+      .from('pastors')
+      .select('id, slug, full_name, title, initials, avatar_url, city, is_published, is_verified, view_count, follower_count, bio, vision_statement')
+      .eq('owner_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('organizations')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+  ]);
+
+  const pastor = pastorRes.data;
 
   if (pastor) {
-    const { data: enquiries } = await supabase
-      .from('pastor_enquiries')
-      .select('id, name:sender_name, email:sender_email, event_type, message, created_at, status')
-      .eq('pastor_id', pastor.id)
-      .order('created_at', { ascending: false })
-      .limit(25);
-
-    const [{ count: sermonCount }, { count: reviewCount }] = await Promise.all([
+    const [enquiriesRes, sermonRes, reviewRes] = await Promise.all([
+      supabase
+        .from('pastor_enquiries')
+        .select('id, name:sender_name, email:sender_email, event_type, message, created_at, status')
+        .eq('pastor_id', pastor.id)
+        .order('created_at', { ascending: false })
+        .limit(25),
       supabase.from('pastor_sermons').select('id', { count: 'exact', head: true }).eq('pastor_id', pastor.id),
       supabase.from('pastor_reviews').select('id', { count: 'exact', head: true }).eq('pastor_id', pastor.id),
     ]);
@@ -33,13 +42,13 @@ export default async function DashboardPage() {
     return (
       <PastorDashboardClient
         pastor={pastor}
-        enquiries={enquiries ?? []}
-        counts={{ sermons: sermonCount ?? 0, reviews: reviewCount ?? 0 }}
+        enquiries={enquiriesRes.data ?? []}
+        counts={{ sermons: sermonRes.count ?? 0, reviews: reviewRes.count ?? 0 }}
       />
     );
   }
 
-  const org = await getMyOrg(supabase);
+  const org = orgRes.data;
   if (!org) redirect('/onboarding');
 
   const branches = await getBranches(supabase, org.id);
