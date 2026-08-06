@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import Gallery from "./Gallery";
 import EditTextModal from "./EditTextModal";
 import EditTagsModal from "./EditTagsModal";
-import EditGalleryModal from "./EditGalleryModal"; // We will create this
+import EditGalleryModal from "./EditGalleryModal";
+import EditLeadershipModal from "./EditLeadershipModal";
 
 interface ProfileContentProps {
   initialChurch: any;
@@ -50,6 +51,69 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
             ) : (
               <div style={{ color: "var(--muted)", fontStyle: "italic" }}>No description provided.</div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Leadership Section */}
+      {((church.leaders && church.leaders.length > 0) || church.pastor_name || church.pastorName || isEditing) && (
+        <div className="sec" style={{ marginBottom: "40px" }}>
+          <div className="sec-head" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+            <span className="ic c-indigo" style={{ background: "linear-gradient(135deg, #6366f1, #818cf8)", color: "white", padding: "6px", borderRadius: "8px", display: "flex" }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="#fff" strokeWidth="1.8"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>
+            </span>
+            <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Leadership</h2>
+            {renderEditButton("leadership")}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {(() => {
+              const leadersList = (church.leaders && church.leaders.length > 0) 
+                ? church.leaders 
+                : [
+                    (church.pastor_name || church.pastorName) ? {
+                      name: church.pastor_name || church.pastorName,
+                      role: church.pastor_role || "Senior Pastor",
+                      bio: church.pastor_bio || church.pastorBio || church.pastor_intro,
+                      photo_url: church.pastor_photo || church.pastorPhoto || church.pastor_photo_url
+                    } : null
+                  ].filter(Boolean);
+
+              if (leadersList.length === 0) {
+                return (
+                  <div className="panel" style={{ background: "white", padding: "24px", borderRadius: "20px", border: "1px dashed #cbd5e1", color: "var(--muted)", fontSize: "15px", textAlign: "center" }}>
+                    No leadership details provided yet. Click the edit icon to add pastor details.
+                  </div>
+                );
+              }
+
+              return leadersList.map((leader: any, i: number) => (
+                <div key={i} className="panel" style={{ background: "white", padding: "24px", borderRadius: "20px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", display: "flex", gap: "20px", alignItems: "flex-start" }}>
+                  {leader.photo_url ? (
+                    <img src={leader.photo_url} alt={leader.name} style={{ width: "80px", height: "80px", borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid #7c3aed" }} />
+                  ) : (
+                    <div style={{ width: "80px", height: "80px", borderRadius: "50%", background: "linear-gradient(135deg, #7c3aed, #a855f7)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px", fontWeight: 800, flexShrink: 0 }}>
+                      {leader.name ? leader.name.charAt(0).toUpperCase() : "P"}
+                    </div>
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>{leader.name}</h3>
+                      {leader.role && (
+                        <span style={{ background: "#f3e8ff", color: "#7e22ce", fontSize: "12px", fontWeight: 700, padding: "3px 10px", borderRadius: "12px" }}>
+                          {leader.role}
+                        </span>
+                      )}
+                    </div>
+                    {leader.bio ? (
+                      <p style={{ fontSize: "15px", lineHeight: "1.6", color: "#334155", margin: "8px 0 0" }}>{leader.bio}</p>
+                    ) : (
+                      <p style={{ fontSize: "14px", color: "var(--muted)", fontStyle: "italic", margin: "8px 0 0" }}>No intro provided.</p>
+                    )}
+                  </div>
+                </div>
+              ));
+            })()}
           </div>
         </div>
       )}
@@ -170,6 +234,36 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
           initialGallery={church.gallery || []}
           onClose={() => setEditingField(null)}
           onSave={(gallery) => { setChurch({ ...church, gallery }); onChurchChange?.({ ...church, gallery }); setEditingField(null); }}
+        />
+      )}
+
+      {editingField === "leadership" && (
+        <EditLeadershipModal
+          initialLeader={
+            (church.leaders && church.leaders[0]) 
+              ? church.leaders[0] 
+              : {
+                  name: church.pastor_name || church.pastorName || "",
+                  role: church.pastor_role || "Senior Pastor",
+                  bio: church.pastor_bio || church.pastorBio || church.pastor_intro || "",
+                  photo_url: church.pastor_photo || church.pastorPhoto || church.pastor_photo_url || ""
+                }
+          }
+          onClose={() => setEditingField(null)}
+          onSave={(leader) => {
+            const updatedLeaders = [{ ...leader, is_lead: true, display_order: 0 }];
+            const updatedChurch = {
+              ...church,
+              leaders: updatedLeaders,
+              pastor_name: leader.name,
+              pastor_role: leader.role,
+              pastor_bio: leader.bio,
+              pastor_photo: leader.photo_url
+            };
+            setChurch(updatedChurch);
+            onChurchChange?.(updatedChurch);
+            setEditingField(null);
+          }}
         />
       )}
     </div>

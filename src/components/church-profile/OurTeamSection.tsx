@@ -138,6 +138,7 @@ export default function OurTeamSection({ isEditing, initialTeams = [], onChurchC
 
       {isEditing && (
           <button 
+            id="tour-add-team-btn"
             onClick={() => { setEditingTeamIndex(null); setShowModal(true); }}
             style={{ 
               width: "100%", 

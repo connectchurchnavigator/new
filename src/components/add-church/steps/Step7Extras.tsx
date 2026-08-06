@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, ChangeEvent } from "react";
 import { useFormContext } from "@/context/FormContext";
 
 interface Step7ExtrasProps {
@@ -9,26 +9,42 @@ interface Step7ExtrasProps {
 export default function Step7Extras({ onBack, onNext }: Step7ExtrasProps) {
   const { formData, updateFormData } = useFormContext();
   const [establishedYear, setEstablishedYear] = useState(formData.establishedYear || "");
-  const [liveStreamUrl, setLiveStreamUrl] = useState(formData.liveStreamUrl || "");
   const [socialInstagram, setSocialInstagram] = useState(formData.socialInstagram || "");
   const [socialFacebook, setSocialFacebook] = useState(formData.socialFacebook || "");
   const [socialX, setSocialX] = useState(formData.socialX || "");
-  const [galleryInput, setGalleryInput] = useState(formData.galleryImages?.join("\n") || "");
+  const [galleryImages, setGalleryImages] = useState<string[]>(formData.galleryImages || []);
+
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newImages: string[] = [];
+      Array.from(files).forEach((file) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === 'string') {
+            newImages.push(reader.result);
+            // Once all files are processed, update the state
+            if (newImages.length === files.length) {
+              setGalleryImages((prev) => [...prev, ...newImages]);
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setGalleryImages((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleNext = () => {
-    // Basic array split for gallery images (splitting by new line)
-    const imagesArray = galleryInput
-      .split("\n")
-      .map((url: string) => url.trim())
-      .filter((url: string) => url.length > 0);
-
     updateFormData({
       establishedYear,
-      liveStreamUrl,
       socialInstagram,
       socialFacebook,
       socialX,
-      galleryImages: imagesArray,
+      galleryImages,
     });
     
     onNext();
@@ -54,27 +70,38 @@ export default function Step7Extras({ onBack, onNext }: Step7ExtrasProps) {
               onChange={(e) => setEstablishedYear(e.target.value)}
             />
           </div>
-          <div>
-            <label>Live Stream URL</label>
-            <input 
-              type="url"
-              placeholder="https://youtube.com/..." 
-              value={liveStreamUrl}
-              onChange={(e) => setLiveStreamUrl(e.target.value)}
-            />
+          {/* Live Stream URL removed as requested */}
+        </div>
+
+        <label>Gallery Images</label>
+        <div style={{ marginBottom: "16px" }}>
+          <input 
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImageUpload}
+            style={{ marginBottom: "12px", width: "100%", padding: "12px", border: "1.5px dashed var(--cn-border)", borderRadius: "12px", background: "var(--cn-bg)" }}
+          />
+          <div style={{ fontSize: "12px", color: "var(--cn-gray-light)" }}>
+            Select multiple images to show in your church's gallery.
           </div>
         </div>
 
-        <label>Gallery Images (One URL per line)</label>
-        <textarea 
-          value={galleryInput}
-          onChange={(e) => setGalleryInput(e.target.value)}
-          style={{ height: "90px", resize: "vertical", width: "100%", padding: "12px", borderRadius: "12px", border: "1.5px solid var(--cn-border)", fontSize: "14px", outline: "none", fontFamily: "inherit" }} 
-          placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
-        ></textarea>
-        <div style={{ fontSize: "12px", color: "var(--cn-gray-light)", marginTop: "6px" }}>
-          Paste URLs of images to show in your church's gallery.
-        </div>
+        {galleryImages.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: "10px", marginTop: "12px" }}>
+            {galleryImages.map((img, idx) => (
+              <div key={idx} style={{ position: "relative", width: "100%", paddingTop: "100%", borderRadius: "8px", overflow: "hidden", border: "1px solid var(--cn-border)" }}>
+                <img src={img} alt={`Gallery ${idx}`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                <button 
+                  onClick={() => removeImage(idx)}
+                  style={{ position: "absolute", top: "4px", right: "4px", background: "rgba(0,0,0,0.5)", color: "#fff", border: "none", borderRadius: "50%", width: "20px", height: "20px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "12px" }}
+                >
+                  <i className="ti ti-x"></i>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
@@ -88,3 +115,4 @@ export default function Step7Extras({ onBack, onNext }: Step7ExtrasProps) {
     </div>
   );
 }
+

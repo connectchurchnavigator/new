@@ -7,6 +7,8 @@ type ClientTabsProps = {
   teamContent?: React.ReactNode;
   branchesContent?: React.ReactNode;
   eventsContent?: React.ReactNode;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
   counts: {
     team: number;
     branches: number;
@@ -19,37 +21,44 @@ export default function ClientTabs({
   teamContent, 
   branchesContent, 
   eventsContent, 
+  activeTab: controlledTab,
+  onTabChange,
   counts 
 }: ClientTabsProps) {
-  const [activeTab, setActiveTab] = useState('profile');
+  const [internalTab, setInternalTab] = useState('profile');
+  const activeTab = controlledTab !== undefined ? controlledTab : internalTab;
+  const changeTab = (tab: string) => {
+    setInternalTab(tab);
+    onTabChange?.(tab);
+  };
 
   return (
     <div>
       <div className="tabs">
         <button 
           className={`tab ${activeTab === 'profile' ? 'on' : ''}`} 
-          onClick={() => setActiveTab('profile')}
+          onClick={() => changeTab('profile')}
         >
           Profile
         </button>
         
         <button 
           className={`tab ${activeTab === 'team' ? 'on' : ''}`} 
-          onClick={() => setActiveTab('team')}
+          onClick={() => changeTab('team')}
         >
           Our Team {counts.team > 0 && <span className="ct">{counts.team}</span>}
         </button>
 
         <button 
           className={`tab ${activeTab === 'branches' ? 'on' : ''}`} 
-          onClick={() => setActiveTab('branches')}
+          onClick={() => changeTab('branches')}
         >
           Branches {counts.branches > 0 && <span className="ct">{counts.branches}</span>}
         </button>
 
         <button 
           className={`tab ${activeTab === 'events' ? 'on' : ''}`} 
-          onClick={() => setActiveTab('events')}
+          onClick={() => changeTab('events')}
         >
           Events {counts.events > 0 && <span className="ct">{counts.events}</span>}
         </button>

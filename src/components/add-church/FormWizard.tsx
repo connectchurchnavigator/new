@@ -42,16 +42,7 @@ export default function FormWizard({ onCancel }: FormWizardProps) {
           </div>
         </div>
 
-        <button onClick={onCancel} className="btn-secondary" style={{ marginBottom: "28px" }}>
-          <i className="ti ti-arrow-left" style={{ fontSize: "14px" }}></i> Choose another way
-        </button>
 
-        <div style={{ textAlign: "center", marginBottom: "36px" }}>
-          <div style={{ fontSize: "30px", fontWeight: 800, color: "var(--cn-ink)", marginBottom: "8px" }}>Add your church</div>
-          <div style={{ fontSize: "14px", color: "var(--cn-gray)" }}>
-            Fill in your details below — it only takes a couple of minutes.<br/>Required fields are marked.
-          </div>
-        </div>
 
         <div className="ai-bubble">
           <div className="ai-icon"><i className="ti ti-sparkles" style={{ fontSize: "17px", color: "#fff" }}></i></div>

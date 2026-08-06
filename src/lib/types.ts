@@ -44,6 +44,20 @@ export interface Church {
   instagram: string | null;
   youtube: string | null;
 
+  worship_style?: string | string[] | null;
+  worship_styles?: string | string[] | null;
+  social_instagram?: string | null;
+  social_facebook?: string | null;
+  social_youtube?: string | null;
+  social_twitter?: string | null;
+  twitter?: string | null;
+  social_tiktok?: string | null;
+  tiktok?: string | null;
+  social_telegram?: string | null;
+  telegram?: string | null;
+  live_stream_url?: string | null;
+  livestream?: string | null;
+
   cover_url: string | null;
   logo_url: string | null;
   gallery: string[];

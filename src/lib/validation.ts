@@ -11,7 +11,8 @@ import { z } from 'zod';
  *   6. Media              -> avatar, cover photos
  */
 
-const optionalUrl = z
+// Shared validation primitives (ditto across Church & Pastor)
+export const optionalUrl = z
   .string()
   .trim()
   .max(500)
@@ -19,13 +20,29 @@ const optionalUrl = z
   .or(z.literal(''))
   .transform((v) => (v === '' ? undefined : v));
 
-const optionalString = z
+export const optionalString = z
   .string()
   .trim()
   .max(2000)
   .optional()
   .or(z.literal(''))
   .transform((v) => (v === '' ? undefined : v));
+
+/**
+ * Shared Safe JSON Array Deserializer (ditto for Church & Pastor stringified JSON fields)
+ */
+export function safeParseJsonArray<T = string>(input: unknown, fallback: T[] = []): T[] {
+  if (Array.isArray(input)) return input as T[];
+  if (typeof input === 'string') {
+    try {
+      const parsed = JSON.parse(input);
+      return Array.isArray(parsed) ? (parsed as T[]) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
 
 export const pastorOnboardingSchema = z.object({
   // Step 1 — Basics

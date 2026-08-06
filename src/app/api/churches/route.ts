@@ -2,6 +2,35 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { toSlug } from '@/lib/api';
 
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const city = searchParams.get('city');
+    const limit = parseInt(searchParams.get('limit') || '6', 10);
+    const sb = createAdminClient();
+
+    let query = sb.from('churches').select('*').eq('status', 'published').limit(limit);
+    if (city) {
+      query = query.ilike('city', `%${city}%`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    let results = data || [];
+    if (results.length < 3) {
+      const { data: fallbacks } = await sb.from('churches').select('*').eq('status', 'published').limit(6);
+      const existingIds = new Set(results.map((r: any) => r.id));
+      const extra = (fallbacks || []).filter((f: any) => !existingIds.has(f.id));
+      results = [...results, ...extra].slice(0, 6);
+    }
+
+    return NextResponse.json(results);
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const data = await req.json();
@@ -20,23 +49,42 @@ export async function POST(req: Request) {
       ownerId = newUser.user.id;
     }
 
-    // 2. Create or Update organization (Upsert based on slug)
+    // 2. Generate unique slug for new church submission
     const orgName = data.name || data.churchName || 'New Church';
-    const orgSlug = toSlug(orgName);
+    const baseSlug = toSlug(orgName);
+    
+    // Ensure slug is completely unique across database (even if user goes back & re-submits)
+    let candidateSlug = data.customSlug ? toSlug(data.customSlug) : baseSlug;
+
+    // Check if candidate slug is already taken
+    const { data: existingOrg } = await sb
+      .from('organizations')
+      .select('id')
+      .eq('slug', candidateSlug)
+      .maybeSingle();
+
+    if (existingOrg) {
+      // Auto-append random suffix if candidate is already taken (e.g. from previous submission)
+      const randNum = Math.floor(1000 + Math.random() * 9000);
+      candidateSlug = `${candidateSlug}-${randNum}`;
+    }
+
+    const uniqueSlug = candidateSlug;
+
+    // Create organization
     const { data: org, error: orgErr } = await sb
       .from('organizations')
-      .upsert({ name: orgName, slug: orgSlug, owner_id: ownerId }, { onConflict: 'slug' })
+      .insert({ name: orgName, slug: uniqueSlug, owner_id: ownerId })
       .select().single();
     if (orgErr) throw orgErr;
 
-    // 3. Create or Update Church (Upsert based on slug)
-    const churchSlug = orgSlug;
+    // 3. Create Church with unique slug
     const { data: church, error: chErr } = await sb
       .from('churches')
-      .upsert({
+      .insert({
         org_id: org.id,
         name: orgName,
-        slug: churchSlug,
+        slug: uniqueSlug,
         denomination: (data.denomination || '') + (data.establishedYear ? `|||est:${data.establishedYear}` : ''),
         about: data.description || null,
         address_line: data.address || null,
@@ -56,15 +104,18 @@ export async function POST(req: Request) {
         facilities: data.facilities || [],
         ministries: data.ministries || [],
         status: 'published'
-      }, { onConflict: 'slug' })
+      })
       .select().single();
     if (chErr) throw chErr;
 
-    // 4. Upload images (logo and cover are data URLs)
+    // 4. Upload images (logo and cover are data URLs or HTTP links)
     const uploadBase64 = async (dataUrl: string, type: string) => {
       if (!dataUrl) return null;
+      if (dataUrl.startsWith('http://') || dataUrl.startsWith('https://')) {
+        return dataUrl;
+      }
       const match = dataUrl.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
-      if (!match) return null;
+      if (!match) return dataUrl;
       const mime = match[1];
       const base64Data = match[2];
       const buffer = Buffer.from(base64Data, 'base64');
@@ -120,6 +171,27 @@ export async function POST(req: Request) {
         }));
         await sb.from('church_services').insert(srvRows);
       }
+    }
+
+    // 6. Insert Pastor / Leadership if provided
+    const pastorName = data.pastorName || data.pastor_name;
+    const pastorPhoto = data.pastorPhoto || data.pastor_photo;
+    const pastorBio = data.pastorBio || data.pastor_bio;
+
+    if (pastorName) {
+      let pPhotoUrl = null;
+      if (pastorPhoto) {
+        pPhotoUrl = await uploadBase64(pastorPhoto, 'pastor');
+      }
+      await sb.from('leaders').insert({
+        church_id: church.id,
+        name: pastorName,
+        role: 'Senior Pastor',
+        bio: pastorBio || null,
+        photo_url: pPhotoUrl,
+        is_lead: true,
+        display_order: 0
+      });
     }
 
     return NextResponse.json({ success: true, church });

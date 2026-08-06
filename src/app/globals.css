@@ -12,6 +12,16 @@
   --cn-surface: #f8f8fb;
   --cn-glow: rgba(124,58,237,0.18);
   --cn-glow2: rgba(124,58,237,0.08);
+
+  /* Mockup aliases */
+  --purple: var(--cn-purple);
+  --purple-dark: var(--cn-purple-dark);
+  --coral: var(--cn-coral);
+  --ink: var(--cn-ink);
+  --gray: var(--cn-gray);
+  --gray-light: var(--cn-gray-light);
+  --border: var(--cn-border);
+  --surface: var(--cn-surface);
 }
 
 body {
@@ -107,7 +117,7 @@ label { font-size: 13px; font-weight: 700; color: var(--cn-ink); display: block;
 .step-icon-outer.pending { background: var(--cn-surface); }
 .step-icon-outer.active { background: var(--cn-grad); box-shadow: 0 4px 14px var(--cn-glow); }
 .step-icon-outer.done { background: #16a34a; }
-.step-connector { height: 2px; flex: 1; border-radius: 2px; background: var(--cn-border); transition: background 0.4s; margin-bottom: 24px; }
+.step-connector { height: 2px; flex: 1; border-radius: 2px; background: var(--cn-border); transition: background 0.4s; margin: 0; }
 .step-connector.done { background: #16a34a; }
 
 /* Chips */

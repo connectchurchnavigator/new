@@ -116,6 +116,7 @@ export default function BranchesSection({ isEditing, initialBranches = [], onChu
 
       {isEditing && (
           <button 
+            id="tour-add-branch-btn"
             onClick={() => { setEditingBranchIndex(null); setShowModal(true); }}
             style={{ 
               width: "100%", 

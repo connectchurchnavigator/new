@@ -27,9 +27,26 @@ export default function SidebarContent({ initialChurch, isEditing, onChurchChang
     );
   };
 
-  const coverUrls = church.gallery || [];
-  const realYoutube = church.social_youtube || church.youtube;
-  const liveStreamUrl = church.live_stream_url || church.livestream;
+  const coverUrlString = church.cover_url || "";
+  const coverUrls = coverUrlString ? (coverUrlString.includes("|||") ? coverUrlString.split("|||") : [coverUrlString]) : [];
+  
+  let rawYoutube = church.social_youtube || church.youtube || "";
+  let realYoutube = rawYoutube;
+  let liveStreamUrl = church.live_stream_url || church.livestream || "";
+  let tiktokUrl = "";
+  let twitterUrl = "";
+  let telegramUrl = "";
+  
+  if (rawYoutube.includes('|||')) {
+    const parts = rawYoutube.split('|||');
+    realYoutube = parts[0];
+    for (let i = 1; i < parts.length; i++) {
+      if (parts[i].startsWith('live:')) liveStreamUrl = parts[i].replace('live:', '');
+      else if (parts[i].startsWith('tiktok:')) tiktokUrl = parts[i].replace('tiktok:', '');
+      else if (parts[i].startsWith('twitter:')) twitterUrl = parts[i].replace('twitter:', '');
+      else if (parts[i].startsWith('telegram:')) telegramUrl = parts[i].replace('telegram:', '');
+    }
+  }
 
   return (
     <aside className="side">
@@ -62,16 +79,16 @@ export default function SidebarContent({ initialChurch, isEditing, onChurchChang
 
       {/* Watch Live */}
       {(liveStreamUrl || realYoutube) && (
-        <div className="scard" style={{ background: "white", borderRadius: "20px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", marginBottom: "24px" }}>
-          <div className="scard-h" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "24px 24px 16px 24px", margin: 0 }}>
-            <span className="ic" style={{ background: "#fb7185", color: "white", padding: "6px", borderRadius: "8px", display: "flex" }}>
+        <div className="panel" style={{ background: "white", borderRadius: "20px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", marginBottom: "24px", padding: "24px" }}>
+          <div className="sec-head" style={{ marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
+            <span className="ic" style={{ width: "30px", height: "30px", background: "#fb7185", color: "white", borderRadius: "9px", display: "grid", placeItems: "center" }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 3l14 9-14 9V3z" fill="currentColor"/></svg>
             </span>
             <h4 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: 0 }}>Watch Live</h4>
           </div>
-          <div style={{ padding: "0 24px 24px 24px" }}>
+          <div>
             <a href={liveStreamUrl || realYoutube || "#"} target="_blank" rel="noreferrer" style={{ display: "block", position: "relative", borderRadius: "16px", overflow: "hidden", height: "200px", textDecoration: "none" }}>
-              <img src={coverUrls[0] || "https://images.unsplash.com/photo-1470229722913-7c090be5bc3a?auto=format&fit=crop&q=80&w=800"} alt="Live Stream" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <img src={coverUrls[0] || "https://media.istockphoto.com/id/1754468293/photo/trinity-church-wall-street-new-york-city.jpg?s=612x612&w=0&k=20&c=H-i60dq3cOm_rz5J4IlOfYpYc_QrA1zfF_PvBzu6NGc="} alt="Live Stream" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               <div style={{ position: "absolute", top: 0, left: 0, background: "#e11d48", color: "white", padding: "6px 14px", borderBottomRightRadius: "16px", fontSize: "12px", fontWeight: 800, display: "flex", alignItems: "center", gap: "6px", letterSpacing: "0.02em" }}>
                 <span style={{ width: "6px", height: "6px", background: "white", borderRadius: "50%" }}></span> LIVE
               </div>
@@ -150,22 +167,45 @@ export default function SidebarContent({ initialChurch, isEditing, onChurchChang
         <EditContactModal
           initialContact={{
             address: church.address_line || "",
+            country: church.country || "GB",
+            city: church.city || "",
+            latitude: church.latitude,
+            longitude: church.longitude,
             phone: church.phone || "",
             email: church.email || "",
             facebook: church.social_facebook || church.facebook || "",
             instagram: church.social_instagram || church.instagram || "",
-            youtube: church.social_youtube || church.youtube || "",
-            twitter: church.social_twitter || church.twitter || "",
-            tiktok: church.social_tiktok || church.tiktok || "",
-            telegram: church.social_telegram || church.telegram || ""
+            youtube: (church.social_youtube || church.youtube || "").split('|||')[0] || "",
+            twitter: church.social_twitter || church.twitter || (() => {
+              const yt = church.social_youtube || church.youtube || "";
+              const match = yt.match(/\|\|\|twitter:(.*?)(?:\|\|\||$)/);
+              return match ? match[1] : "";
+            })(),
+            tiktok: church.social_tiktok || church.tiktok || (() => {
+              const yt = church.social_youtube || church.youtube || "";
+              const match = yt.match(/\|\|\|tiktok:(.*?)(?:\|\|\||$)/);
+              return match ? match[1] : "";
+            })(),
+            telegram: church.social_telegram || church.telegram || (() => {
+              const yt = church.social_youtube || church.youtube || "";
+              const match = yt.match(/\|\|\|telegram:(.*?)(?:\|\|\||$)/);
+              return match ? match[1] : "";
+            })()
           }}
           onClose={() => setEditingField(null)}
           onSave={(data) => {
             const updated = {
               ...church,
               address_line: data.address,
+              city: data.city || church.city,
+              country: data.country || church.country,
+              latitude: data.latitude ?? church.latitude,
+              longitude: data.longitude ?? church.longitude,
               phone: data.phone,
               email: data.email,
+              facebook: data.facebook,
+              instagram: data.instagram,
+              youtube: data.youtube,
               social_facebook: data.facebook,
               social_instagram: data.instagram,
               social_youtube: data.youtube,

@@ -12,7 +12,8 @@ const SOCIAL_RULES: { [key: string]: { rx: RegExp, others: RegExp, name: string,
   youtube: { rx: /^(https?:\/\/)?(www\.)?(youtube\.com\/[A-Za-z0-9@._\-\/?=&%]+|youtu\.be\/[A-Za-z0-9\-]+)$/i, others: /(facebook\.com|instagram\.com|linkedin\.com|twitter\.com|x\.com|tiktok\.com|t\.me)/i, name: 'YouTube', ex: 'youtube.com/@yourchurch' },
   twitter: { rx: /(^@[A-Za-z0-9_]{1,15}$)|^(https?:\/\/)?(www\.)?(twitter\.com|x\.com)\/[A-Za-z0-9_]{1,15}\/?$/i, others: /(facebook\.com|instagram\.com|linkedin\.com|youtube\.com|youtu\.be|tiktok\.com|t\.me)/i, name: 'X / Twitter', ex: 'twitter.com/yourchurch or @handle' },
   tiktok: { rx: /(^@[A-Za-z0-9_.-]{2,24}$)|^(https?:\/\/)?(www\.)?tiktok\.com\/@[A-Za-z0-9_.-]+\/?$/i, others: /(facebook\.com|instagram\.com|linkedin\.com|youtube\.com|youtu\.be|twitter\.com|x\.com|t\.me)/i, name: 'TikTok', ex: 'tiktok.com/@yourchurch or @handle' },
-  telegram: { rx: /^(https?:\/\/)?(www\.)?t\.me\/[A-Za-z0-9_]{5,32}\/?$/i, others: /(facebook\.com|instagram\.com|linkedin\.com|youtube\.com|youtu\.be|twitter\.com|x\.com|tiktok\.com)/i, name: 'Telegram', ex: 't.me/yourchurch' }
+  telegram: { rx: /^(https?:\/\/)?(www\.)?t\.me\/[A-Za-z0-9_]{5,32}\/?$/i, others: /(facebook\.com|instagram\.com|linkedin\.com|youtube\.com|youtu\.be|twitter\.com|x\.com|tiktok\.com)/i, name: 'Telegram', ex: 't.me/yourchurch' },
+  linkedin: { rx: /^(https?:\/\/)?(www\.)?linkedin\.com\/[A-Za-z0-9._\-\/?=&%]+$/i, others: /(facebook\.com|instagram\.com|youtube\.com|youtu\.be|twitter\.com|x\.com|tiktok\.com|t\.me)/i, name: 'LinkedIn', ex: 'linkedin.com/company/yourchurch' }
 };
 
 const prettyPlatform = (domain: string) => {
@@ -22,7 +23,7 @@ const prettyPlatform = (domain: string) => {
 
 const validateSocialUrl = (field: string, value: string): string => {
   let v = value.trim();
-  if (/^https?:\/\/(www\.)?(facebook|instagram|youtube|twitter|x|tiktok)\.com\/?$/i.test(v) || v === "https://t.me/") {
+  if (/^https?:\/\/(www\.)?(facebook|instagram|youtube|twitter|x|tiktok|linkedin)\.com\/?$/i.test(v) || v === "https://t.me/") {
     return "";
   }
   if (!v) return "";
@@ -45,18 +46,9 @@ const validateSocialUrl = (field: string, value: string): string => {
 
 export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
   const { formData, updateFormData } = useFormContext();
-  const [selectedCountry, setSelectedCountry] = useState("GB");
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [verified, setVerified] = useState<{ [key: string]: boolean }>({});
 
-  const countries = [
-    { code: "GB", label: "UK", emoji: "🇬🇧" },
-    { code: "US", label: "US", emoji: "🇺🇸" },
-    { code: "NG", label: "Nigeria", emoji: "🇳🇬" },
-    { code: "GH", label: "Ghana", emoji: "🇬🇭" },
-    { code: "ZA", label: "South Africa", emoji: "🇿🇦" },
-    { code: "CA", label: "Canada", emoji: "🇨🇦" },
-  ];
 
   const validateField = (field: string, value: string) => {
     let errorMsg = "";
@@ -79,10 +71,10 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
       } else if (value) {
         isVerified = true;
       }
-    } else if (["facebook", "instagram", "youtube", "twitter", "tiktok", "telegram"].includes(field)) {
+    } else if (["facebook", "instagram", "youtube", "twitter", "tiktok", "telegram", "linkedin"].includes(field)) {
       errorMsg = validateSocialUrl(field, value);
       let v = value.trim();
-      const isEmptyOrBare = !v || /^https?:\/\/(www\.)?(facebook|instagram|youtube|twitter|x|tiktok)\.com\/?$/i.test(v) || v === "https://t.me/";
+      const isEmptyOrBare = !v || /^https?:\/\/(www\.)?(facebook|instagram|youtube|twitter|x|tiktok|linkedin)\.com\/?$/i.test(v) || v === "https://t.me/";
       if (!errorMsg && !isEmptyOrBare) {
         isVerified = true;
       }
@@ -108,7 +100,7 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
       newErrors.phone = "Phone number must be at least 9 digits";
     }
 
-    const socialFields = ["facebook", "instagram", "youtube", "twitter", "tiktok", "telegram"];
+    const socialFields = ["facebook", "instagram", "youtube", "twitter", "tiktok", "telegram", "linkedin"];
     socialFields.forEach(field => {
       const val = formData[field] || "";
       const err = validateSocialUrl(field, val);
@@ -193,19 +185,6 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
           )}
         </div>
 
-        <div style={{ marginBottom: "14px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-          <div style={{ fontSize: "12px", color: "var(--cn-gray)", fontWeight: 600 }}>Tailor social fields to:</div>
-          {countries.map((c) => (
-            <button 
-              key={c.code}
-              className={`country-btn ${selectedCountry === c.code ? "on" : ""}`} 
-              onClick={() => setSelectedCountry(c.code)}
-            >
-              {c.emoji} {c.label}
-            </button>
-          ))}
-        </div>
-
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px", marginBottom: "18px" }}>
           <div>
             <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
@@ -282,12 +261,6 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
               </div>
             )}
           </div>
-        </div>
-
-        <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "10px" }}>
-          More for <span>{countries.find(c => c.code === selectedCountry)?.label || selectedCountry}</span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
           <div>
             <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
               <span style={{ width: "18px", height: "18px", borderRadius: "5px", background: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
@@ -313,60 +286,81 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
               </div>
             )}
           </div>
-          
-          {(selectedCountry === 'NG' || selectedCountry === 'GH') ? (
-            <div>
-              <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                <span style={{ width: "18px", height: "18px", borderRadius: "5px", background: "#26a5e4", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                  <i className="ti ti-brand-telegram" style={{ fontSize: "11px", color: "#fff" }}></i>
-                </span> Telegram
-              </label>
-              <input 
-                id="f-telegram"
-                placeholder="t.me/yourchurch" 
-                value={formData.telegram || ""}
-                onFocus={() => { if (!formData.telegram) updateFormData({ telegram: "https://t.me/" }); }}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  updateFormData({ telegram: val });
-                  validateField("telegram", val);
-                }}
-                style={getInputStyle("telegram")}
-              />
-              {errors.telegram && (
-                <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
-                  <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
-                  <span>{errors.telegram}</span>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div>
-              <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                <span style={{ width: "18px", height: "18px", borderRadius: "5px", background: "#e91e8c", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                  <i className="ti ti-brand-tiktok" style={{ fontSize: "11px", color: "#fff" }}></i>
-                </span> TikTok
-              </label>
-              <input 
-                id="f-tiktok"
-                placeholder="@yourchurch" 
-                value={formData.tiktok || ""}
-                onFocus={() => { if (!formData.tiktok) updateFormData({ tiktok: "https://tiktok.com/@" }); }}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  updateFormData({ tiktok: val });
-                  validateField("tiktok", val);
-                }}
-                style={getInputStyle("tiktok")}
-              />
-              {errors.tiktok && (
-                <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
-                  <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
-                  <span>{errors.tiktok}</span>
-                </div>
-              )}
-            </div>
-          )}
+          <div>
+            <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <span style={{ width: "18px", height: "18px", borderRadius: "5px", background: "#e91e8c", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                <i className="ti ti-brand-tiktok" style={{ fontSize: "11px", color: "#fff" }}></i>
+              </span> TikTok
+            </label>
+            <input 
+              id="f-tiktok"
+              placeholder="@yourchurch" 
+              value={formData.tiktok || ""}
+              onFocus={() => { if (!formData.tiktok) updateFormData({ tiktok: "https://tiktok.com/@" }); }}
+              onChange={(e) => {
+                const val = e.target.value;
+                updateFormData({ tiktok: val });
+                validateField("tiktok", val);
+              }}
+              style={getInputStyle("tiktok")}
+            />
+            {errors.tiktok && (
+              <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
+                <span>{errors.tiktok}</span>
+              </div>
+            )}
+          </div>
+          <div>
+            <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <span style={{ width: "18px", height: "18px", borderRadius: "5px", background: "#26a5e4", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                <i className="ti ti-brand-telegram" style={{ fontSize: "11px", color: "#fff" }}></i>
+              </span> Telegram
+            </label>
+            <input 
+              id="f-telegram"
+              placeholder="t.me/yourchurch" 
+              value={formData.telegram || ""}
+              onFocus={() => { if (!formData.telegram) updateFormData({ telegram: "https://t.me/" }); }}
+              onChange={(e) => {
+                const val = e.target.value;
+                updateFormData({ telegram: val });
+                validateField("telegram", val);
+              }}
+              style={getInputStyle("telegram")}
+            />
+            {errors.telegram && (
+              <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
+                <span>{errors.telegram}</span>
+              </div>
+            )}
+          </div>
+          <div>
+            <label style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <span style={{ width: "18px", height: "18px", borderRadius: "5px", background: "#0a66c2", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                <i className="ti ti-brand-linkedin" style={{ fontSize: "11px", color: "#fff" }}></i>
+              </span> LinkedIn
+            </label>
+            <input 
+              id="f-linkedin"
+              placeholder="linkedin.com/company/yourchurch" 
+              value={formData.linkedin || ""}
+              onFocus={() => { if (!formData.linkedin) updateFormData({ linkedin: "https://linkedin.com/" }); }}
+              onChange={(e) => {
+                const val = e.target.value;
+                updateFormData({ linkedin: val });
+                validateField("linkedin", val);
+              }}
+              style={getInputStyle("linkedin")}
+            />
+            {errors.linkedin && (
+              <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
+                <span>{errors.linkedin}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

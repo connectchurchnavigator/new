@@ -68,7 +68,7 @@ export async function getFilterFacets(sb: SupabaseClient) {
 
 /** The current user's organization (first one they belong to). */
 export async function getMyOrg(sb: SupabaseClient) {
-  const { data, error } = await sb.from('organizations').select('*').limit(1).maybeSingle();
+  const { data, error } = await sb.from('organizations').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle();
   if (error) throw error;
   return data as Organization | null;
 }
@@ -240,7 +240,7 @@ export async function uploadImage(
 
 export async function getVisitors(sb: SupabaseClient, churchId: string) {
   const { data, error } = await sb.from('visitors').select('*')
-    .eq('church_id', churchId).order('visits_count', { ascending: false });
+    .eq('church_id', churchId).order('created_at', { ascending: false });
   if (error) throw error;
   return data;
 }
@@ -252,15 +252,53 @@ export async function getVisitorStats(sb: SupabaseClient, churchId: string) {
 }
 
 export async function getVisitorFunnel(sb: SupabaseClient, churchId: string) {
-  const { data, error } = await sb.rpc('visitor_funnel', { p_church: churchId });
-  if (error) throw error;
-  return data as { stage: string; count: number }[];
+  const { data: funnelData, error: funnelError } = await sb.rpc('visitor_funnel', { p_church: churchId });
+  if (funnelError) throw funnelError;
+  
+  const funnel = funnelData as { stage: string; count: number }[];
+  
+  // Fetch anonymous listing views for the 'discovery' stage (Viewed profile)
+  const { count: viewCount, error: viewError } = await sb
+    .from('listing_views')
+    .select('*', { count: 'exact', head: true })
+    .eq('church_id', churchId);
+    
+  if (viewError) throw viewError;
+  
+  const discoveryIndex = funnel.findIndex(f => f.stage === 'discovery');
+  if (discoveryIndex >= 0) {
+    funnel[discoveryIndex].count += (viewCount || 0);
+  } else {
+    funnel.push({ stage: 'discovery', count: (viewCount || 0) });
+  }
+  
+  return funnel;
 }
 
 export async function getVisitorSources(sb: SupabaseClient, churchId: string) {
-  const { data, error } = await sb.rpc('visitor_sources', { p_church: churchId });
-  if (error) throw error;
-  return data as { source: string; count: number }[];
+  const { data: visitorSources, error: visitorError } = await sb.rpc('visitor_sources', { p_church: churchId });
+  if (visitorError) throw visitorError;
+  
+  // Fetch anonymous listing views sources
+  const { data: viewSources, error: viewError } = await sb
+    .from('listing_views')
+    .select('source')
+    .eq('church_id', churchId);
+    
+  if (viewError) throw viewError;
+  
+  // Combine sources manually
+  const sourceMap = new Map<string, number>();
+  (visitorSources || []).forEach((vs: any) => sourceMap.set(vs.source, vs.count));
+  
+  (viewSources || []).forEach(v => {
+    const s = v.source || 'Unknown';
+    sourceMap.set(s, (sourceMap.get(s) || 0) + 1);
+  });
+  
+  const combined = Array.from(sourceMap.entries()).map(([source, count]) => ({ source, count }));
+  combined.sort((a, b) => b.count - a.count);
+  return combined;
 }
 
 export async function upsertVisitor(sb: SupabaseClient, churchId: string, v: Record<string, any>) {
@@ -279,7 +317,8 @@ export async function recordCheckIn(sb: SupabaseClient, churchId: string, visito
 
 /** Anonymous view tracking — safe to call from a public listing page. */
 export async function recordView(sb: SupabaseClient, churchId: string, meta: { source?: string; device?: string; city?: string } = {}) {
-  await sb.from('listing_views').insert({ church_id: churchId, ...meta });
+  const { error } = await sb.from('listing_views').insert({ church_id: churchId, ...meta });
+  if (error) console.error('recordView error:', error);
 }
 
 // ═══ ADDRESS (Google Places via your server proxy — key stays hidden) ════

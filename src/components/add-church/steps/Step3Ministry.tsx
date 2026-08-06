@@ -6,7 +6,18 @@ function parseTimeString(v: string) {
   if (!v) return null;
   if (/^noon$/i.test(v)) return { h: 12, m: "00", ampm: "PM", ambiguous: false };
   if (/^midnight$/i.test(v)) return { h: 12, m: "00", ampm: "AM", ambiguous: false };
-  const match = v.match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?$/i);
+  
+  // Handle 3 or 4 digit numbers with optional am/pm (e.g. 1123, 945, 1123am)
+  let rawStr = v;
+  const noColonMatch = v.match(/^(\d{3,4})\s*(am|pm|a\.m\.|p\.m\.)?$/i);
+  if (noColonMatch) {
+    const digits = noColonMatch[1];
+    let hStr = digits.length === 3 ? digits.substring(0, 1) : digits.substring(0, 2);
+    let mStr = digits.length === 3 ? digits.substring(1) : digits.substring(2);
+    rawStr = `${hStr}:${mStr}${noColonMatch[2] || ''}`;
+  }
+
+  const match = rawStr.match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?$/i);
   if (!match) return null;
   let h = parseInt(match[1]);
   let m = match[2] || "00";

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { sendEmailAction } from '@/app/actions/sendEmail';
 
 type ContactSectionProps = {
   churchName: string;
@@ -20,15 +21,31 @@ type ContactSectionProps = {
 export default function ContactSection({ churchName, email, phone, address, socials }: ContactSectionProps) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSending(true);
-    setTimeout(() => {
+    setError(null);
+    
+    const formData = new FormData(e.currentTarget);
+    formData.append("targetEmail", email || "");
+    formData.append("churchName", churchName || "");
+
+    try {
+      const result = await sendEmailAction(formData);
+      if (result.success) {
+        setSent(true);
+        setTimeout(() => setSent(false), 4000);
+        e.currentTarget.reset();
+      } else {
+        setError(result.error || "Failed to send email");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred");
+    } finally {
       setSending(false);
-      setSent(true);
-      setTimeout(() => setSent(false), 3000);
-    }, 1500);
+    }
   };
 
   return (
@@ -43,23 +60,29 @@ export default function ContactSection({ churchName, email, phone, address, soci
             <div className="form-row">
               <div className="field">
                 <label>Name</label>
-                <input type="text" placeholder="Your name" required />
+                <input type="text" name="name" placeholder="Your name" required />
               </div>
               <div className="field">
                 <label>Email</label>
-                <input type="email" placeholder="you@email.com" required />
+                <input type="email" name="email" placeholder="you@email.com" required />
               </div>
             </div>
             
             <div className="field">
               <label>Subject</label>
-              <input type="text" placeholder="What's this about?" required />
+              <input type="text" name="subject" placeholder="What's this about?" required />
             </div>
             
             <div className="field">
               <label>Message</label>
-              <textarea placeholder="Write your message..." required></textarea>
+              <textarea name="message" placeholder="Write your message..." required></textarea>
             </div>
+            
+            {error && (
+              <div style={{ color: "#e11d48", fontSize: "14px", marginBottom: "16px", fontWeight: 500 }}>
+                {error}
+              </div>
+            )}
             
             <button type="submit" className={`send ${sent ? 'sent' : ''}`} disabled={sending}>
               {sending ? (
@@ -88,7 +111,6 @@ export default function ContactSection({ churchName, email, phone, address, soci
         {/* Right column - Info */}
         <div>
           <h2>Get in touch</h2>
-          <p className="sub">Reach the church office directly.</p>
 
           <div className="touch-card">
             {address && (
@@ -97,7 +119,7 @@ export default function ContactSection({ churchName, email, phone, address, soci
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-5.5 7-12a7 7 0 1 0-14 0c0 6.5 7 12 7 12z" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="9" r="2.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
                 <div>
-                  <div className="lbl">Address</div>
+                  <div className="lbl">Location</div>
                   <div className="val">{address}</div>
                 </div>
               </div>
@@ -126,16 +148,6 @@ export default function ContactSection({ churchName, email, phone, address, soci
                 </div>
               </div>
             )}
-
-            <div className="cl">
-              <div className="ic" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 6v6l4 2" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </div>
-              <div>
-                <div className="lbl">Office Hours</div>
-                <div className="val">Mon–Fri, 9:00 AM – 5:00 PM</div>
-              </div>
-            </div>
           </div>
 
           <div className="socials">

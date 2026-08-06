@@ -5,8 +5,12 @@ import React, { useState, useEffect } from 'react';
 export default function HeroCarousel({ coverUrls }: { coverUrls: string[] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const images = coverUrls && coverUrls.length > 0 
-    ? coverUrls 
+  const cleanUrls = (coverUrls || [])
+    .filter(Boolean)
+    .map(url => (url.includes('photo-1438032005730') || url.includes('1754468293') ? 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?q=80&w=2973&auto=format&fit=crop' : url));
+
+  const images = cleanUrls.length > 0 
+    ? cleanUrls 
     : ['https://images.unsplash.com/photo-1438232992991-995b7058bbb3?q=80&w=2973&auto=format&fit=crop'];
 
   useEffect(() => {

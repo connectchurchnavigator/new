@@ -78,14 +78,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
       updatedGalleryImages = processedGallery.filter(Boolean);
     }
 
-    const updatedLiveStreamUrl = data.live_stream_url !== undefined ? data.live_stream_url : church.live_stream_url;
-
     // 4. Update the database
     const { error: updateErr } = await sb.from('churches').update({
       logo_url: updatedLogoUrl,
-      cover_urls: updatedCoverUrls,
+      cover_url: updatedCoverUrls.length > 0 ? updatedCoverUrls.join('|||') : null,
       gallery_images: updatedGalleryImages,
-      // live_stream_url: updatedLiveStreamUrl,
     }).eq('id', church.id);
 
     if (updateErr) {

@@ -26,7 +26,7 @@ export default function Step9Review() {
       }
 
       localStorage.removeItem('churchFormData');
-      router.push(`/add-church/success?slug=${data.church.slug}`);
+      router.push(`/add-listing/success?slug=${data.church.slug}`);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An unexpected error occurred');
@@ -48,19 +48,21 @@ export default function Step9Review() {
     <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--cn-purple-dark)", background: "#f5f3ff", border: "1px solid #ede9fe", padding: "5px 11px", borderRadius: "20px" }}>{text}</span>
   );
 
-  // Profile strength logic
+  // Profile strength logic (sums to 100%)
   const strengthFields = [
-    { label: 'Church name', pts: 15, done: !!formData.name?.trim() },
+    { label: 'Church name', pts: 10, done: !!formData.name?.trim() },
     { label: 'Denomination', pts: 5, done: !!formData.denomination },
-    { label: 'Address', pts: 15, done: !!formData.address?.trim() },
+    { label: 'Address', pts: 10, done: !!formData.address?.trim() },
     { label: 'City & country', pts: 5, done: !!(formData.city || formData.country) },
     { label: 'Email', pts: 10, done: !!formData.email?.trim() },
     { label: 'Service times', pts: 10, done: !!(formData.services?.length) },
     { label: 'Ministries', pts: 10, done: !!(formData.ministries?.length) },
     { label: 'Languages', pts: 5, done: !!(formData.languages?.length) },
     { label: 'Facilities', pts: 5, done: !!(formData.facilities?.length) },
-    { label: 'Logo / cover', pts: 10, done: !!(formData.logo || formData.cover) },
-    { label: 'About description', pts: 10, done: !!formData.description?.trim() },
+    { label: 'Logo / cover', pts: 10, done: !!(formData.logo || formData.coverBanners?.length || formData.cover) },
+    { label: 'Photo gallery', pts: 10, done: !!(formData.galleryImages?.length) },
+    { label: 'About description', pts: 5, done: !!formData.description?.trim() },
+    { label: 'Year established', pts: 5, done: !!formData.establishedYear },
   ];
 
   const totalPoints = strengthFields.reduce((sum, f) => sum + f.pts, 0);
@@ -78,7 +80,7 @@ export default function Step9Review() {
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <Image src={logoImg} alt="ChurchNavigator Logo" width={160} height={42} style={{ objectFit: "contain" }} />
         </div>
-        <button onClick={() => router.push("/add-church/8")} className="btn-secondary">
+        <button onClick={() => router.push("/add-church/3")} className="btn-secondary">
           <i className="ti ti-arrow-left" style={{ fontSize: "14px" }}></i> Back to edit
         </button>
       </div>
@@ -93,7 +95,7 @@ export default function Step9Review() {
         <div className="scard" style={{ padding: 0, overflow: "hidden" }}>
           <div style={{ height: "150px", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "var(--cn-grad)" }}>
             {formData.coverBanners && formData.coverBanners.length > 0 ? (
-              <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", overflowX: "auto", snapType: "x mandatory" }}>
+              <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", overflowX: "auto", scrollSnapType: "x mandatory" }}>
                 {formData.coverBanners.map((img: string, i: number) => (
                   <div key={i} style={{ minWidth: "100%", height: "100%", background: `url(${img}) center/cover no-repeat`, scrollSnapAlign: "start" }} />
                 ))}
@@ -214,6 +216,18 @@ export default function Step9Review() {
                   </div>
                 </SectionWrap>
               )}
+
+              {/* GALLERY */}
+              {formData.galleryImages && formData.galleryImages.length > 0 && (
+                <SectionWrap>
+                  <SectionHeader icon="ti-photo" title="Gallery" />
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: "8px" }}>
+                    {formData.galleryImages.map((img: string, i: number) => (
+                      <div key={i} style={{ width: "100%", paddingTop: "70%", position: "relative", borderRadius: "8px", overflow: "hidden", background: `url(${img}) center/cover no-repeat` }} />
+                    ))}
+                  </div>
+                </SectionWrap>
+              )}
             </div>
 
           </div>
@@ -252,7 +266,7 @@ export default function Step9Review() {
       )}
 
       <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "28px" }}>
-        <button onClick={() => router.push("/add-church/8")} className="btn-secondary">
+        <button onClick={() => router.push("/add-church/3")} className="btn-secondary">
           <i className="ti ti-pencil" style={{ fontSize: "14px" }}></i> Keep editing
         </button>
         <button onClick={handleSubmit} className="btn-primary" disabled={isSubmitting} style={{ opacity: isSubmitting ? 0.7 : 1 }}>

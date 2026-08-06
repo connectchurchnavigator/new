@@ -7,9 +7,129 @@ interface SharedAddressFieldProps {
   longitude?: number;
   onUpdateCountry: (val: string) => void;
   onUpdateAddress: (val: string) => void;
+  onUpdateCity?: (val: string) => void;
   onUpdateCoordinates: (lat: number | undefined, lng: number | undefined) => void;
   errors?: { country?: string, address?: string };
   idPrefix: string;
+}
+
+function InteractiveMap({ lat, lng, onDragEnd }: { lat: number; lng: number; onDragEnd: (lat: number, lng: number) => void }) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+
+  const isManualDragRef = useRef(false);
+
+  useEffect(() => {
+    // Load Leaflet CSS dynamically
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link");
+      link.id = "leaflet-css";
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+    // Load Leaflet JS dynamically
+    const initMap = () => {
+      const L = (window as any).L;
+      if (!L || !mapContainerRef.current) return;
+
+      if (!mapInstanceRef.current) {
+        const map = L.map(mapContainerRef.current).setView([lat, lng], 16);
+        mapInstanceRef.current = map;
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        const customIcon = L.divIcon({
+          className: 'custom-pin',
+          html: `<div style="width: 32px; height: 32px; background: #7e22ce; border: 3px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; alignItems: center; justifyContent: center;"><div style="width: 10px; height: 10px; background: #fff; border-radius: 50%; transform: rotate(45deg);"></div></div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 32]
+        });
+
+        const marker = L.marker([lat, lng], { draggable: true, icon: customIcon }).addTo(map);
+        markerRef.current = marker;
+
+        marker.on("dragend", () => {
+          isManualDragRef.current = true;
+          const position = marker.getLatLng();
+          onDragEnd(position.lat, position.lng);
+        });
+
+        // Add custom "Detect my location" button directly below zoom controls (+ / -)
+        const LocateControl = L.Control.extend({
+          options: { position: 'topleft' },
+          onAdd: function() {
+            const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            const btn = L.DomUtil.create('a', '', container);
+            btn.href = '#';
+            btn.title = 'Auto-detect my location';
+            btn.innerHTML = `<i class="ti ti-target" style="font-size: 16px; color: #7e22ce; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;"></i>`;
+            btn.style.width = '30px';
+            btn.style.height = '30px';
+            btn.style.display = 'flex';
+            btn.style.alignItems = 'center';
+            btn.style.justifyContent = 'center';
+            btn.style.background = '#fff';
+
+            L.DomEvent.on(btn, 'click', function(e: any) {
+              L.DomEvent.stopPropagation(e);
+              L.DomEvent.preventDefault(e);
+              if (navigator.geolocation) {
+                btn.innerHTML = `<i class="ti ti-loader-2 spin" style="font-size: 15px; color: #7e22ce; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;"></i>`;
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => {
+                    const uLat = pos.coords.latitude;
+                    const uLng = pos.coords.longitude;
+                    isManualDragRef.current = true;
+                    map.setView([uLat, uLng], 17);
+                    marker.setLatLng([uLat, uLng]);
+                    onDragEnd(uLat, uLng);
+                    btn.innerHTML = `<i class="ti ti-target" style="font-size: 16px; color: #7e22ce; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;"></i>`;
+                  },
+                  (err) => {
+                    alert("Location access denied or unavailable.");
+                    btn.innerHTML = `<i class="ti ti-target" style="font-size: 16px; color: #334155; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;"></i>`;
+                  },
+                  { enableHighAccuracy: true }
+                );
+              }
+            });
+
+            return container;
+          }
+        });
+        map.addControl(new LocateControl());
+      } else {
+        if (!isManualDragRef.current) {
+          mapInstanceRef.current.setView([lat, lng], 16);
+          if (markerRef.current) {
+            markerRef.current.setLatLng([lat, lng]);
+          }
+        }
+        isManualDragRef.current = false;
+      }
+    };
+
+    if (!(window as any).L) {
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.onload = initMap;
+      document.body.appendChild(script);
+    } else {
+      initMap();
+    }
+  }, [lat, lng]);
+
+  return (
+    <div 
+      ref={mapContainerRef} 
+      style={{ width: "100%", height: "220px", borderRadius: "12px", border: "1.5px solid var(--cn-border)", overflow: "hidden" }} 
+    />
+  );
 }
 
 const COUNTRIES = [
@@ -40,7 +160,7 @@ function flagEmoji(code: string) {
   return [...code.toUpperCase()].map(c => String.fromCodePoint(127397 + c.charCodeAt(0))).join('');
 }
 
-export default function SharedAddressField({ country, address, latitude, longitude, onUpdateCountry, onUpdateAddress, onUpdateCoordinates, errors, idPrefix }: SharedAddressFieldProps) {
+export default function SharedAddressField({ country, address, latitude, longitude, onUpdateCountry, onUpdateAddress, onUpdateCity, onUpdateCoordinates, errors, idPrefix }: SharedAddressFieldProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [trigger, setTrigger] = useState(0);
 
@@ -63,14 +183,18 @@ export default function SharedAddressField({ country, address, latitude, longitu
   }, []);
 
   const handleUseTypedAddress = () => {
+    const extractedCity = getLocality(address);
+    if (extractedCity && onUpdateCity) {
+      onUpdateCity(extractedCity);
+    }
     onUpdateCoordinates(0.0001, 0.0001);
     (window as any)[`predictions_${idPrefix}`] = [];
     (window as any)[`hasNoPredictions_${idPrefix}`] = false;
     setTrigger(Math.random());
   };
 
-  const predictions = (window as any)[`predictions_${idPrefix}`] || [];
-  const hasNoPredictions = (window as any)[`hasNoPredictions_${idPrefix}`] || false;
+  const predictions = typeof window !== 'undefined' ? (window as any)[`predictions_${idPrefix}`] || [] : [];
+  const hasNoPredictions = typeof window !== 'undefined' ? (window as any)[`hasNoPredictions_${idPrefix}`] || false : false;
 
   const filteredCountries = COUNTRIES.filter(c => c[1].toLowerCase().includes((country || '').toLowerCase())).slice(0, 50);
 
@@ -197,6 +321,11 @@ export default function SharedAddressField({ country, address, latitude, longitu
                   key={i} 
                   style={{ padding: "11px 14px", display: "flex", alignItems: "center", cursor: "pointer", borderBottom: "1px solid #f1f0f5" }}
                   onClick={() => {
+                    const a = p.address || {};
+                    const detectedCity = a.city || a.town || a.village || a.municipality || a.county || getLocality(address || '');
+                    if (detectedCity && onUpdateCity) {
+                      onUpdateCity(detectedCity);
+                    }
                     onUpdateAddress([line1, line2].filter(Boolean).join(', '));
                     onUpdateCoordinates(parseFloat(p.lat), parseFloat(p.lon));
                     (window as any)[`predictions_${idPrefix}`] = [];
@@ -267,18 +396,22 @@ export default function SharedAddressField({ country, address, latitude, longitu
               </div>
               
               <div>
-                <label style={{ marginBottom: "9px", display: "block", fontSize: "12px", fontWeight: 700, color: "var(--cn-ink)" }}>Confirm the pin is on your building</label>
-                <div style={{ width: "100%", height: "200px", borderRadius: "12px", overflow: "hidden", border: "1.5px solid var(--cn-border)" }}>
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
-                    frameBorder="0" 
-                    scrolling="no" 
-                    marginHeight={0} 
-                    marginWidth={0} 
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${longitude! - 0.005},${latitude! - 0.005},${longitude! + 0.005},${latitude! + 0.005}&layer=mapnik&marker=${latitude},${longitude}`}
-                  ></iframe>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "9px" }}>
+                  <label style={{ margin: 0, fontSize: "12px", fontWeight: 700, color: "var(--cn-ink)" }}>
+                    Confirm or drag the pin to your exact building
+                  </label>
+                  <span style={{ fontSize: "11px", color: "var(--cn-purple)", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                    <i className="ti ti-hand-grab" style={{ fontSize: "13px" }}></i> Drag pin to refine location
+                  </span>
                 </div>
+
+                <InteractiveMap 
+                  lat={latitude!} 
+                  lng={longitude!} 
+                  onDragEnd={(newLat, newLng) => {
+                    onUpdateCoordinates(newLat, newLng);
+                  }}
+                />
               </div>
             </>
           )}

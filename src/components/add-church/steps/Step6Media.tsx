@@ -65,12 +65,18 @@ export default function Step6Media({ onBack }: Step6MediaProps) {
 
   const handleCoverPhotosUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateFormData({ coverBanners: [...(formData.coverBanners || []), reader.result as string] });
-      };
-      reader.readAsDataURL(file);
+      const files = Array.from(e.target.files);
+      const readPromises = files.map(file => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+      });
+      
+      Promise.all(readPromises).then(results => {
+        updateFormData({ coverBanners: [...(formData.coverBanners || []), ...results] });
+      });
     }
   };
 
@@ -179,7 +185,7 @@ export default function Step6Media({ onBack }: Step6MediaProps) {
                 <label style={{ width: "90px", height: "60px", borderRadius: "8px", border: "2px dashed var(--cn-border)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--cn-gray)", background: "var(--cn-surface)", flexShrink: 0 }}>
                   <i className="ti ti-plus" style={{ fontSize: "16px", marginBottom: "2px" }}></i>
                   <span style={{ fontSize: "11px", fontWeight: 600 }}>Add photo</span>
-                  <input type="file" accept="image/*" onChange={handleCoverPhotosUpload} style={{ display: "none" }} />
+                  <input type="file" accept="image/*" multiple onChange={handleCoverPhotosUpload} style={{ display: "none" }} />
                 </label>
               </div>
             </div>
@@ -226,7 +232,7 @@ export default function Step6Media({ onBack }: Step6MediaProps) {
           <i className="ti ti-arrow-left" style={{ fontSize: "14px" }}></i>
         </button>
         <button onClick={handleNext} className="btn-primary">
-          Review listing <i className="ti ti-arrow-right" style={{ fontSize: "16px" }}></i>
+          Next — Extras <i className="ti ti-arrow-right" style={{ fontSize: "16px" }}></i>
         </button>
       </div>
     </div>

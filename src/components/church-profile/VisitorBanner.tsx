@@ -9,7 +9,7 @@ export default function VisitorBanner({ churchId, services }: { churchId: string
 
   return (
     <>
-      <div className="visitor">
+      <div className="visitor" id="tour-visitor-banner">
         <div className="v-icon">
           <i className="ti ti-qrcode" style={{ fontSize: '18px' }}></i>
         </div>

@@ -15,6 +15,7 @@ export default function StepBar({ currentStep }: StepBarProps) {
     { id: 4, icon: "ti-language", title: "Languages" },
     { id: 5, icon: "ti-accessible", title: "Facilities" },
     { id: 6, icon: "ti-photo", title: "Media" },
+    { id: 7, icon: "ti-plug-connected", title: "Extras" },
   ];
 
   return (

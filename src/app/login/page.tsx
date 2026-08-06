@@ -3,11 +3,63 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase-browser";
 import logoImg from "@/Assets/logo (1).png"; // Assuming this is the correct logo
 
 export default function LoginPage() {
+  const router = useRouter();
+  const supabase = createClient();
+
   const [activeTab, setActiveTab] = useState<"signin" | "register">("signin");
   const [showPassword, setShowPassword] = useState(false);
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [infoMsg, setInfoMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function handleAuth(e: React.FormEvent) {
+    e.preventDefault();
+    setErrorMsg("");
+    setInfoMsg("");
+    setBusy(true);
+
+    try {
+      if (activeTab === "register") {
+        const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+            },
+          },
+        });
+        if (error) throw error;
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          router.push("/add-church"); // Redirect to unified onboarding welcome selection
+        } else {
+          setInfoMsg("Registration successful! Check your email to confirm your account, then sign in.");
+          setActiveTab("signin");
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        router.push("/dashboard");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "An error occurred during authentication.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyItems: "center", paddingTop: "12vh", background: "#ffffff" }}>
@@ -21,7 +73,12 @@ export default function LoginPage() {
         {/* Toggle Switch */}
         <div style={{ display: "flex", background: "#f8f9fa", borderRadius: "24px", padding: "5px", marginBottom: "32px", border: "1px solid #f0f0f0" }}>
           <button
-            onClick={() => setActiveTab("signin")}
+            type="button"
+            onClick={() => {
+              setActiveTab("signin");
+              setErrorMsg("");
+              setInfoMsg("");
+            }}
             style={{
               flex: 1,
               padding: "10px 0",
@@ -39,7 +96,12 @@ export default function LoginPage() {
             Sign In
           </button>
           <button
-            onClick={() => setActiveTab("register")}
+            type="button"
+            onClick={() => {
+              setActiveTab("register");
+              setErrorMsg("");
+              setInfoMsg("");
+            }}
             style={{
               flex: 1,
               padding: "10px 0",
@@ -58,8 +120,20 @@ export default function LoginPage() {
           </button>
         </div>
 
+        {errorMsg && (
+          <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c", fontSize: "14px", padding: "12px", borderRadius: "12px", marginBottom: "20px" }}>
+            {errorMsg}
+          </div>
+        )}
+
+        {infoMsg && (
+          <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a", fontSize: "14px", padding: "12px", borderRadius: "12px", marginBottom: "20px" }}>
+            {infoMsg}
+          </div>
+        )}
+
         {/* Form */}
-        <form onSubmit={(e) => e.preventDefault()} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <form onSubmit={handleAuth} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           
           {activeTab === "register" && (
             <div style={{ display: "flex", gap: "16px" }}>
@@ -67,6 +141,9 @@ export default function LoginPage() {
                 <label style={{ display: "block", fontSize: "14px", fontWeight: 700, color: "var(--cn-ink)", marginBottom: "8px" }}>First Name</label>
                 <input
                   type="text"
+                  required
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
                   placeholder="John"
                   style={{
                     width: "100%",
@@ -82,6 +159,9 @@ export default function LoginPage() {
                 <label style={{ display: "block", fontSize: "14px", fontWeight: 700, color: "var(--cn-ink)", marginBottom: "8px" }}>Last Name</label>
                 <input
                   type="text"
+                  required
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
                   placeholder="Doe"
                   style={{
                     width: "100%",
@@ -100,6 +180,9 @@ export default function LoginPage() {
             <label style={{ display: "block", fontSize: "14px", fontWeight: 700, color: "var(--cn-ink)", marginBottom: "8px" }}>Email</label>
             <input
               type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
               style={{
                 width: "100%",
@@ -117,6 +200,10 @@ export default function LoginPage() {
             <div style={{ position: "relative" }}>
               <input
                 type={showPassword ? "text" : "password"}
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 style={{
                   width: "100%",
@@ -151,6 +238,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
+            disabled={busy}
             style={{
               width: "100%",
               padding: "14px",
@@ -162,9 +250,10 @@ export default function LoginPage() {
               fontWeight: 700,
               cursor: "pointer",
               marginTop: "12px",
+              opacity: busy ? 0.7 : 1,
             }}
           >
-            {activeTab === "signin" ? "Sign In" : "Register"}
+            {busy ? "Please wait..." : (activeTab === "signin" ? "Sign In" : "Register")}
           </button>
         </form>
 
