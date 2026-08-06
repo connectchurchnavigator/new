@@ -65,7 +65,7 @@ const AI_HINTS: Record<number, string> = {
   6: 'A great photo makes a big first impression. Upload a profile photo and a few cover images for your hero banner.',
 };
 
-const COMMON_LANGUAGES = ['English', 'Yoruba', 'Spanish', 'French', 'Portuguese', 'Twi', 'Igbo', 'Swahili'];
+const COMMON_LANGUAGES = ['English', 'Spanish', 'French', 'Portuguese', 'German', 'Mandarin', 'Arabic', 'Hindi'];
 const PREACHING_SUGGESTIONS = ['Prophetic preaching', 'Evangelism', 'Expository teaching', 'Faith & healing', 'Leadership'];
 const MINISTRY_SUGGESTIONS = ['Youth ministry', 'Community outreach', "Women's ministry", "Men's network", 'Marriage & family', 'Prison ministry'];
 const AVAILABLE_FOR_SUGGESTIONS = ['Sunday services', 'Conferences', 'Revival meetings', 'Retreats', 'Weddings', 'Funerals'];
@@ -92,7 +92,7 @@ const initialState: FormState = {
   preaching_tags: [],
   ministry_area_tags: [],
   available_for_tags: [],
-  languages: [],
+  languages: ['English'],
   travel_range: 'UK only',
   lead_time: '2 weeks min',
   availability_status: 'available',
