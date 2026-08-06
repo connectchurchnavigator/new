@@ -276,10 +276,11 @@ export default function PastorOnboardingPage() {
         {/* Form Wizard Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "28px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <Image src={logoImg} alt="ChurchNavigator Logo" width={180} height={48} style={{ objectFit: "contain" }} />
+            <div className="brand-mark"><i className="ti ti-user" style={{ fontSize: "18px", color: "#fff" }}></i></div>
+            <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--cn-ink)" }}>Add Pastor Profile</div>
           </div>
-          <button className="btn-secondary" onClick={() => router.push("/dashboard")}>
-            <i className="ti ti-device-floppy" style={{ fontSize: "14px" }}></i> Save & exit
+          <button className="btn-secondary" onClick={() => router.push('/add-listing')}>
+            <i className="ti ti-x" style={{ fontSize: "14px" }}></i> Exit
           </button>
         </div>
 
