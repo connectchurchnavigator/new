@@ -186,7 +186,7 @@ export async function POST(req: Request) {
       await sb.from('leaders').insert({
         church_id: church.id,
         name: pastorName,
-        role: 'Senior Pastor',
+        role: data.pastorRole || data.pastor_role || null,
         bio: pastorBio || null,
         photo_url: pPhotoUrl,
         is_lead: true,

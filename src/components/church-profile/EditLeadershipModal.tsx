@@ -15,7 +15,7 @@ interface EditLeadershipModalProps {
 
 export default function EditLeadershipModal({ initialLeader, onClose, onSave }: EditLeadershipModalProps) {
   const [name, setName] = useState(initialLeader?.name || "");
-  const [role, setRole] = useState(initialLeader?.role || "Senior Pastor");
+  const [role, setRole] = useState(initialLeader?.role || "");
   const [bio, setBio] = useState(initialLeader?.bio || "");
   const [photoUrl, setPhotoUrl] = useState<string | undefined>(initialLeader?.photo_url);
 

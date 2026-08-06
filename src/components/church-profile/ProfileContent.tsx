@@ -73,7 +73,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
                 : [
                     (church.pastor_name || church.pastorName) ? {
                       name: church.pastor_name || church.pastorName,
-                      role: church.pastor_role || "Senior Pastor",
+                      role: church.pastor_role || "",
                       bio: church.pastor_bio || church.pastorBio || church.pastor_intro,
                       photo_url: church.pastor_photo || church.pastorPhoto || church.pastor_photo_url
                     } : null
@@ -99,7 +99,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                       <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>{leader.name}</h3>
-                      {leader.role && (
+                      {leader.role && leader.role !== "Senior Pastor" && (
                         <span style={{ background: "#f3e8ff", color: "#7e22ce", fontSize: "12px", fontWeight: 700, padding: "3px 10px", borderRadius: "12px" }}>
                           {leader.role}
                         </span>
@@ -244,7 +244,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
               ? church.leaders[0] 
               : {
                   name: church.pastor_name || church.pastorName || "",
-                  role: church.pastor_role || "Senior Pastor",
+                  role: church.pastor_role || "",
                   bio: church.pastor_bio || church.pastorBio || church.pastor_intro || "",
                   photo_url: church.pastor_photo || church.pastorPhoto || church.pastor_photo_url || ""
                 }
