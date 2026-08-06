@@ -29,6 +29,7 @@ export default function AddChurchPage() {
 
   return (
     <>
+      <TopNav />
       {screen === "welcome" && (
         <WelcomeScreen 
           onSelectForm={handleSelectForm} 

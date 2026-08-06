@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
+import TopNav from "@/components/layout/TopNav";
 import StepBar3 from "@/components/add-church/StepBar3";
 import Step1New from "@/components/add-church/steps/Step1New";
 import Step2New from "@/components/add-church/steps/Step2New";
@@ -24,6 +25,8 @@ export default function StepPage() {
 
   return (
     <div style={{ background: "#fff", minHeight: "100vh", position: "relative" }}>
+      <TopNav />
+
       {/* Top Header */}
       <div style={{ maxWidth: "900px", margin: "0 auto", padding: "32px 24px 60px", position: "relative", zIndex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
