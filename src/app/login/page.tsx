@@ -22,11 +22,17 @@ export default function LoginPage() {
   const [infoMsg, setInfoMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const [authStep, setAuthStep] = useState(0);
+
   async function handleAuth(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg("");
     setInfoMsg("");
     setBusy(true);
+    setAuthStep(0);
+
+    const stepTimer1 = setTimeout(() => setAuthStep(1), 800);
+    const stepTimer2 = setTimeout(() => setAuthStep(2), 1800);
 
     try {
       if (activeTab === "register") {
@@ -48,15 +54,18 @@ export default function LoginPage() {
         } else {
           setInfoMsg("Registration successful! Check your email to confirm your account, then sign in.");
           setActiveTab("signin");
+          setBusy(false);
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        setAuthStep(2);
         router.push("/dashboard");
       }
     } catch (err: any) {
+      clearTimeout(stepTimer1);
+      clearTimeout(stepTimer2);
       setErrorMsg(err.message || "An error occurred during authentication.");
-    } finally {
       setBusy(false);
     }
   }
@@ -266,6 +275,98 @@ export default function LoginPage() {
         )}
 
       </div>
+
+      {/* Full-Screen Sign In Loading Overlay */}
+      {busy && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 9999,
+          background: "rgba(15, 23, 42, 0.75)",
+          backdropFilter: "blur(6px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "24px",
+            padding: "40px 32px",
+            maxWidth: "420px",
+            width: "100%",
+            textAlign: "center",
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            border: "1px solid #f1f5f9"
+          }}>
+            {/* Animated Brand Icon */}
+            <div style={{
+              width: "64px",
+              height: "64px",
+              margin: "0 auto 20px",
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 10px 25px -5px rgba(124, 58, 237, 0.4)"
+            }}>
+              <i className="ti ti-sparkles" style={{ fontSize: "28px", color: "#ffffff" }}></i>
+            </div>
+
+            <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a", marginBottom: "6px" }}>
+              {activeTab === "signin" ? "Signing You In..." : "Creating Account..."}
+            </h3>
+            <p style={{ fontSize: "13.5px", color: "#64748b", margin: "0 0 24px" }}>
+              Please wait while we verify your credentials and launch your portal.
+            </p>
+
+            {/* Dynamic Step Checklist */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", textAlign: "left", background: "#f8fafc", padding: "16px", borderRadius: "16px", border: "1px solid #e2e8f0" }}>
+              {[
+                { title: "Verifying email & password", icon: "ti-key" },
+                { title: "Retrieving user account & permissions", icon: "ti-user-check" },
+                { title: "Redirecting to portal...", icon: "ti-arrow-right" }
+              ].map((step, idx) => {
+                const isDone = authStep > idx;
+                const isCurrent = authStep === idx;
+                return (
+                  <div key={idx} style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    fontSize: "13px",
+                    fontWeight: isCurrent || isDone ? 700 : 500,
+                    color: isDone ? "#15803d" : isCurrent ? "#7c3aed" : "#94a3b8",
+                    transition: "all 0.3s"
+                  }}>
+                    <div style={{
+                      width: "22px",
+                      height: "22px",
+                      borderRadius: "50%",
+                      background: isDone ? "#dcfce7" : isCurrent ? "#f3e8ff" : "#f1f5f9",
+                      border: `1.5px solid ${isDone ? "#86efac" : isCurrent ? "#c084fc" : "#cbd5e1"}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0
+                    }}>
+                      {isDone ? (
+                        <i className="ti ti-check" style={{ fontSize: "12px", color: "#16a34a" }}></i>
+                      ) : isCurrent ? (
+                        <i className="ti ti-loader-2" style={{ fontSize: "12px", color: "#7c3aed" }}></i>
+                      ) : (
+                        <span style={{ fontSize: "10px", color: "#94a3b8" }}>{idx + 1}</span>
+                      )}
+                    </div>
+                    <span>{step.title}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
