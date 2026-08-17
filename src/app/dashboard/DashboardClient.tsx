@@ -27,86 +27,105 @@ export default function DashboardClient({
 
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "32px 24px" }}>
         
-        {/* Header Banner */}
+        {/* Premium Hero Banner */}
         <div style={{
-          background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)",
-          borderRadius: "24px",
-          padding: "36px",
+          background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311b92 100%)",
+          borderRadius: "28px",
+          padding: "40px 44px",
           color: "#ffffff",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           flexWrap: "wrap",
-          gap: "20px",
-          marginBottom: "32px",
-          boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.2)",
+          gap: "24px",
+          marginBottom: "36px",
+          boxShadow: "0 20px 40px -15px rgba(15, 23, 42, 0.35)",
+          position: "relative",
+          overflow: "hidden",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
         }}>
-          <div>
-            <div style={{ fontSize: "13px", fontWeight: 800, color: "#a855f7", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: "6px" }}>
-              Listing Manager Portal
+          {/* Subtle Ambient Glow Effect */}
+          <div style={{
+            position: "absolute",
+            right: "-60px",
+            top: "-60px",
+            width: "300px",
+            height: "300px",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(168, 85, 247, 0.25) 0%, rgba(0, 0, 0, 0) 70%)",
+            pointerEvents: "none",
+          }} />
+
+          <div style={{ position: "relative", zIndex: 2, maxWidth: "680px" }}>
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              fontSize: "12px",
+              fontWeight: 800,
+              color: "#c084fc",
+              background: "rgba(192, 132, 252, 0.12)",
+              border: "1px solid rgba(192, 132, 252, 0.25)",
+              padding: "4px 14px",
+              borderRadius: "20px",
+              textTransform: "uppercase",
+              letterSpacing: ".08em",
+              marginBottom: "14px",
+              backdropFilter: "blur(4px)",
+            }}>
+              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#c084fc", display: "inline-block" }}></span>
+              Ministry Control Hub
             </div>
-            <h1 style={{ fontSize: "28px", fontWeight: 900, margin: 0, letterSpacing: "-0.02em" }}>
-              Welcome back, {user.user_metadata?.full_name || user.email?.split("@")[0] || "Minister"} 👋
+
+            <h1 style={{ fontSize: "32px", fontWeight: 900, margin: 0, letterSpacing: "-0.03em", lineHeight: 1.2 }}>
+              Welcome back, <span style={{ background: "linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{user.user_metadata?.full_name || user.email?.split("@")[0] || "Minister"}</span> 👋
             </h1>
-            <p style={{ fontSize: "14.5px", color: "#94a3b8", margin: "6px 0 0" }}>
-              Manage your registered churches, speaker profiles, and hosted events from one central hub.
+
+            <p style={{ fontSize: "15px", color: "#cbd5e1", margin: "10px 0 0", lineHeight: 1.6, fontWeight: 500 }}>
+              Here is an overview of your active ministry listings, branch campuses, and community gatherings on ChurchNavigator.
             </p>
           </div>
 
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <Link
-              href="/add-listing"
-              style={{
-                background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-                color: "#ffffff",
-                padding: "10px 18px",
-                borderRadius: "12px",
-                fontWeight: 800,
-                fontSize: "13.5px",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                boxShadow: "0 4px 14px rgba(124, 58, 237, 0.35)",
-              }}
-            >
-              <i className="ti ti-plus"></i> Add Church
-            </Link>
-            <Link
-              href="/onboarding/pastor"
-              style={{
-                background: "rgba(255,255,255,0.1)",
-                color: "#ffffff",
-                border: "1px solid rgba(255,255,255,0.2)",
-                padding: "10px 18px",
-                borderRadius: "12px",
-                fontWeight: 700,
-                fontSize: "13.5px",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <i className="ti ti-user-plus"></i> Add Pastor Profile
-            </Link>
+          {/* Right Action & Quick Status Pill */}
+          <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{
+              background: "rgba(255, 255, 255, 0.08)",
+              border: "1px solid rgba(255, 255, 255, 0.15)",
+              backdropFilter: "blur(10px)",
+              padding: "12px 20px",
+              borderRadius: "16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+            }}>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".05em" }}>Active Listings</div>
+                <div style={{ fontSize: "20px", fontWeight: 900, color: "#ffffff" }}>{totalListings} Total</div>
+              </div>
+              <div style={{ width: "38px", height: "38px", borderRadius: "12px", background: "linear-gradient(135deg, #10b981, #059669)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900 }}>
+                ✓
+              </div>
+            </div>
+
             <Link
               href="/onboarding/events"
               style={{
-                background: "rgba(255,255,255,0.1)",
+                background: "linear-gradient(135deg, #7c3aed, #6366f1)",
                 color: "#ffffff",
-                border: "1px solid rgba(255,255,255,0.2)",
-                padding: "10px 18px",
-                borderRadius: "12px",
-                fontWeight: 700,
-                fontSize: "13.5px",
+                padding: "12px 22px",
+                borderRadius: "14px",
+                fontWeight: 800,
+                fontSize: "14px",
                 textDecoration: "none",
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "6px",
+                gap: "8px",
+                boxShadow: "0 8px 20px -4px rgba(124, 58, 237, 0.45)",
+                transition: "all 0.2s",
               }}
             >
-              <i className="ti ti-calendar-plus"></i> Host Event
+              <i className="ti ti-calendar-plus" style={{ fontSize: "18px" }}></i>
+              Host Event
             </Link>
           </div>
         </div>
