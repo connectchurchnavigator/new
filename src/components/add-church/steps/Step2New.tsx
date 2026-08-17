@@ -55,6 +55,7 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState(false);
   const [parsedTime, setParsedTime] = useState<any>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState<number>(0);
 
   useEffect(() => {
     setInputValue(value || "");
@@ -69,6 +70,7 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
 
   const handleInputChange = (val: string) => {
     setInputValue(val);
+    setHighlightedIndex(0);
     if (!val.trim()) {
       setIsOpen(false);
       setError(false);
@@ -100,15 +102,37 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
     setError(false);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isOpen || !parsedTime || !parsedTime.ambiguous) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedIndex(prev => (prev === 0 ? 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedIndex(prev => (prev === 1 ? 0 : 1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const chosenAmPm = highlightedIndex === 0 ? "AM" : "PM";
+      selectOption(formatTime({ ...parsedTime, ampm: chosenAmPm }));
+    } else if (e.key === "Escape") {
+      setIsOpen(false);
+    }
+  };
+
   return (
     <div style={{ position: "relative" }}>
       <input
         value={inputValue}
         onChange={(e) => handleInputChange(e.target.value)}
+        onKeyDown={handleKeyDown}
         onFocus={() => {
           if (inputValue) {
             const parsed = parseTimeString(inputValue);
-            if (parsed && parsed.ambiguous) setIsOpen(true);
+            if (parsed && parsed.ambiguous) {
+              setIsOpen(true);
+              setHighlightedIndex(0);
+            }
           }
         }}
         onBlur={() => {
@@ -123,7 +147,7 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
         }}
       />
       {isOpen && (
-        <div className="autocomplete-dropdown" style={{ display: "block" }}>
+        <div className="autocomplete-dropdown" style={{ display: "block", minWidth: "190px" }}>
           {error ? (
             <div style={{ padding: "10px 14px", fontSize: "12px", color: "var(--cn-gray)" }}>
               Invalid time format <br />
@@ -134,8 +158,9 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
               <div>
                 <div
                   onMouseDown={() => selectOption(formatTime({ ...parsedTime, ampm: "AM" }))}
+                  onMouseEnter={() => setHighlightedIndex(0)}
                   className="autocomplete-item"
-                  style={{ alignItems: "center" }}
+                  style={{ alignItems: "center", background: highlightedIndex === 0 ? "#f5f3ff" : "#fff", whiteSpace: "nowrap" }}
                 >
                   <i className="ti ti-clock" style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i>
                   <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)" }}>
@@ -145,8 +170,9 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
                 </div>
                 <div
                   onMouseDown={() => selectOption(formatTime({ ...parsedTime, ampm: "PM" }))}
+                  onMouseEnter={() => setHighlightedIndex(1)}
                   className="autocomplete-item"
-                  style={{ alignItems: "center" }}
+                  style={{ alignItems: "center", background: highlightedIndex === 1 ? "#f5f3ff" : "#fff", whiteSpace: "nowrap" }}
                 >
                   <i className="ti ti-clock" style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i>
                   <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)" }}>

@@ -78,7 +78,28 @@ export async function POST(req: Request) {
       .select().single();
     if (orgErr) throw orgErr;
 
-    // 3. Create Church with unique slug
+    // Extract coordinates or fallback geocode from city/country
+    let lat = typeof data.latitude === 'number' ? data.latitude : null;
+    let lng = typeof data.longitude === 'number' ? data.longitude : null;
+
+    if ((!lat || !lng || (lat === 0.0001 && lng === 0.0001)) && (data.city || data.address)) {
+      try {
+        const query = [data.address, data.city, data.country].filter(Boolean).join(', ');
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
+          { headers: { 'User-Agent': 'ChurchNavigator/1.0' } }
+        );
+        const geoData = await geoRes.json();
+        if (geoData && geoData[0]) {
+          lat = parseFloat(geoData[0].lat);
+          lng = parseFloat(geoData[0].lon);
+        }
+      } catch (geoErr) {
+        console.warn('Geocoding fallback failed:', geoErr);
+      }
+    }
+
+    // 3. Create Church with unique slug and coordinates
     const { data: church, error: chErr } = await sb
       .from('churches')
       .insert({
@@ -90,6 +111,8 @@ export async function POST(req: Request) {
         address_line: data.address || null,
         city: data.city || null,
         country: data.country || null,
+        latitude: lat,
+        longitude: lng,
         phone: data.phone || null,
         email: data.email || null,
         youtube: (data.youtube || '') + 

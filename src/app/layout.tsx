@@ -19,6 +19,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" precedence="default" />
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" precedence="default" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" async={false}></script>
         {children}
       </body>
     </html>

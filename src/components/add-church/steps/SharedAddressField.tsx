@@ -182,12 +182,27 @@ export default function SharedAddressField({ country, address, latitude, longitu
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleUseTypedAddress = () => {
+  const handleUseTypedAddress = async () => {
     const extractedCity = getLocality(address);
     if (extractedCity && onUpdateCity) {
       onUpdateCity(extractedCity);
     }
-    onUpdateCoordinates(0.0001, 0.0001);
+    
+    // Attempt instant geocode for typed postcode or address (UK postcodes like E12 5LH, E125LH, etc.)
+    try {
+      const cc = COUNTRIES.find(c => c[1] === country)?.[0] || "";
+      const q = address.trim();
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=${cc}&limit=1`);
+      const data = await res.json();
+      if (data && data[0] && data[0].lat && data[0].lon) {
+        onUpdateCoordinates(parseFloat(data[0].lat), parseFloat(data[0].lon));
+      } else {
+        onUpdateCoordinates(0.0001, 0.0001);
+      }
+    } catch (e) {
+      onUpdateCoordinates(0.0001, 0.0001);
+    }
+
     (window as any)[`predictions_${idPrefix}`] = [];
     (window as any)[`hasNoPredictions_${idPrefix}`] = false;
     setTrigger(Math.random());

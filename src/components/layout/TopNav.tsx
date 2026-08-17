@@ -87,7 +87,7 @@ export default function TopNav() {
             />
           </div>
 
-          <Link href="/" style={{ fontSize: "14px", fontWeight: 600, color: "var(--cn-ink, #14142b)", textDecoration: "none" }}>
+          <Link href="/explore" style={{ fontSize: "14px", fontWeight: 600, color: "var(--cn-ink, #14142b)", textDecoration: "none" }}>
             Explore
           </Link>
 
@@ -204,6 +204,25 @@ export default function TopNav() {
                     >
                       <i className="ti ti-layout-dashboard" style={{ fontSize: "16px", color: "#7c3aed" }}></i>
                       Dashboard
+                    </Link>
+                    <Link
+                      href="/admin"
+                      onClick={() => setIsDropdownOpen(false)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        padding: "9px 12px",
+                        borderRadius: "10px",
+                        fontSize: "13.5px",
+                        fontWeight: 600,
+                        color: "#7c3aed",
+                        textDecoration: "none",
+                        background: "#faf5ff",
+                      }}
+                    >
+                      <i className="ti ti-shield-lock" style={{ fontSize: "16px", color: "#7c3aed" }}></i>
+                      Super Admin
                     </Link>
                     <button
                       onClick={handleSignOut}

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 :root {
   --cn-purple: #7c3aed;
@@ -61,7 +62,7 @@ label { font-size: 13px; font-weight: 700; color: var(--cn-ink); display: block;
 
 /* Buttons */
 .btn-primary {
-  background: var(--cn-purple);
+  background: linear-gradient(135deg, #e11d48 0%, #7c3aed 100%);
   color: #fff;
   border: none;
   border-radius: 12px;
@@ -75,8 +76,13 @@ label { font-size: 13px; font-weight: 700; color: var(--cn-ink); display: block;
   gap: 7px;
   justify-content: center;
   transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.25);
 }
-.btn-primary:hover { background: var(--cn-purple-dark); }
+.btn-primary:hover {
+  background: linear-gradient(135deg, #be123c 0%, #6d28d9 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(225, 29, 72, 0.35);
+}
 .btn-secondary {
   background: #fff;
   color: var(--cn-ink);
