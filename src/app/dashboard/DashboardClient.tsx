@@ -222,7 +222,7 @@ export default function DashboardClient({
                       </div>
 
                       <div style={{ display: "flex", gap: "10px", marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #f1f5f9" }}>
-                        <Link href={`/church/${c.slug}`} target="_blank" style={{ flex: 1, textCenter: "center", textAlign: "center", background: "#f1f5f9", color: "#334155", padding: "8px", borderRadius: "10px", fontSize: "12.5px", fontWeight: 700, textDecoration: "none" }}>
+                        <Link href={`/church/${c.slug}`} target="_blank" style={{ flex: 1, textAlign: "center", background: "#f1f5f9", color: "#334155", padding: "8px", borderRadius: "10px", fontSize: "12.5px", fontWeight: 700, textDecoration: "none" }}>
                           View Live Page
                         </Link>
                         <Link href={`/church/${c.slug}?owner=true`} target="_blank" style={{ flex: 1, textAlign: "center", background: "#f5f3ff", color: "#7c3aed", padding: "8px", borderRadius: "10px", fontSize: "12.5px", fontWeight: 800, textDecoration: "none" }}>
