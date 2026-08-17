@@ -1130,7 +1130,7 @@ export default function AdminClient({
                 />
               </div>
               <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#64748b" }}>
-                {users.filter((u) => {
+                {usersList.filter((u) => {
                   const q = userSearch.toLowerCase();
                   return !q || u.email?.toLowerCase().includes(q) || u.user_metadata?.full_name?.toLowerCase().includes(q);
                 }).length} users registered
@@ -1251,7 +1251,7 @@ export default function AdminClient({
                 </tbody>
               </table>
 
-              {users.length === 0 && (
+              {usersList.length === 0 && (
                 <div style={{ textAlign: "center", padding: "48px", color: "#94a3b8", fontSize: "14px" }}>
                   No users found.
                 </div>
