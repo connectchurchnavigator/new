@@ -1,16 +1,58 @@
 import React from "react";
 import { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 import AdminClient from "./AdminClient";
 
 export const metadata: Metadata = {
   title: "Super Admin Command Center | ChurchNavigator",
-  description: "Manage churches, verified badges, pastors, events, and taxonomies.",
+  description: "Manage churches, verified badges, pastors, events, taxonomies, and user roles.",
 };
 
 export const revalidate = 0; // Dynamic SSR
 
 export default async function AdminPage() {
+  // 1. Verify User Authentication & Super Admin Role Guard
+  const serverSupabase = await createServerSupabaseClient();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+
+  // Allow override via environment variable if defined, or check user metadata/role
+  const adminEmails = (process.env.SUPER_ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  const userEmail = user?.email?.toLowerCase() || "";
+  const isSuperAdminByEmail = adminEmails.length > 0 ? adminEmails.includes(userEmail) : false;
+  const isSuperAdminByRole = user?.user_metadata?.role === "super_admin" || user?.app_metadata?.role === "super_admin";
+
+  // If user is logged in but NOT a super admin (and admin emails list is defined or role is missing), grant access if dev or admin
+  // For production security: If user is not logged in, redirect to login.
+  if (!user) {
+    redirect("/login?next=/admin");
+  }
+
+  // If role check fails and explicit admin email list exists, deny access
+  if (adminEmails.length > 0 && !isSuperAdminByEmail && !isSuperAdminByRole) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", fontFamily: "sans-serif" }}>
+        <div style={{ background: "#ffffff", padding: "40px", borderRadius: "20px", border: "1.5px solid #fecdd3", maxWidth: "450px", textAlign: "center", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05)" }}>
+          <div style={{ width: "56px", height: "56px", borderRadius: "16px", background: "#fff1f2", color: "#e11d48", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: "28px" }}>
+            🔒
+          </div>
+          <h2 style={{ fontSize: "22px", fontWeight: 900, color: "#0f172a", margin: "0 0 8px" }}>Access Restricted</h2>
+          <p style={{ fontSize: "14px", color: "#64748b", margin: "0 0 24px", lineHeight: 1.5 }}>
+            You are logged in as <strong>{user.email}</strong>, but your account does not have Super Admin privileges to access this command center.
+          </p>
+          <a href="/" style={{ background: "#7c3aed", color: "#ffffff", textDecoration: "none", padding: "10px 20px", borderRadius: "12px", fontSize: "13.5px", fontWeight: 800, display: "inline-block" }}>
+            Return to Homepage
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   const supabase = createAdminClient();
 
   // Fetch all churches, pastors, events, and auth users in parallel

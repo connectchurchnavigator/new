@@ -38,7 +38,35 @@ export default function AdminClient({
   const [churches, setChurches] = useState<any[]>(initialChurches);
   const [pastors, setPastors] = useState<any[]>(initialPastors);
   const [events, setEvents] = useState<any[]>(initialEvents);
-  const [users] = useState<any[]>(initialUsers);
+  const [usersList, setUsersList] = useState<any[]>(initialUsers);
+
+  // User Role update handler
+  const handleUserRoleChange = async (userId: string, newRole: "super_admin" | "listing_manager" | "visitor") => {
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, role: newRole }),
+      });
+      if (res.ok) {
+        setUsersList((prev) =>
+          prev.map((u) =>
+            u.id === userId
+              ? {
+                  ...u,
+                  user_metadata: { ...u.user_metadata, role: newRole },
+                  app_metadata: { ...u.app_metadata, role: newRole },
+                }
+              : u
+          )
+        );
+      } else {
+        alert("Failed to update user role.");
+      }
+    } catch (err) {
+      alert("Error updating user role.");
+    }
+  };
 
   // Search queries
   const [churchSearch, setChurchSearch] = useState("");
@@ -1117,13 +1145,14 @@ export default function AdminClient({
                     <th style={{ padding: "12px 14px" }}>User</th>
                     <th style={{ padding: "12px 14px" }}>Email</th>
                     <th style={{ padding: "12px 14px" }}>Sign-in Method</th>
+                    <th style={{ padding: "12px 14px" }}>User Role</th>
                     <th style={{ padding: "12px 14px" }}>Email Verified</th>
                     <th style={{ padding: "12px 14px" }}>Joined</th>
                     <th style={{ padding: "12px 14px" }}>Last Sign-in</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users
+                  {usersList
                     .filter((u) => {
                       const q = userSearch.toLowerCase();
                       return !q || u.email?.toLowerCase().includes(q) || u.user_metadata?.full_name?.toLowerCase().includes(q);
@@ -1134,6 +1163,7 @@ export default function AdminClient({
                       const providers: string[] = u.app_metadata?.providers || (u.app_metadata?.provider ? [u.app_metadata.provider] : ["email"]);
                       const isGoogle = providers.includes("google");
                       const isEmailPass = providers.includes("email") || providers.includes("password");
+                      const userRole = u.user_metadata?.role || u.app_metadata?.role || "listing_manager";
 
                       return (
                         <tr key={u.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
@@ -1174,6 +1204,29 @@ export default function AdminClient({
                                 </span>
                               ))}
                             </div>
+                          </td>
+
+                          {/* Role Selector */}
+                          <td style={{ padding: "14px" }}>
+                            <select
+                              value={userRole}
+                              onChange={(e) => handleUserRoleChange(u.id, e.target.value as any)}
+                              style={{
+                                padding: "4px 8px",
+                                borderRadius: "8px",
+                                border: "1.5px solid #e2e8f0",
+                                fontSize: "12px",
+                                fontWeight: 800,
+                                background: userRole === "super_admin" ? "#fdf2f8" : userRole === "listing_manager" ? "#f5f3ff" : "#f8fafc",
+                                color: userRole === "super_admin" ? "#be185d" : userRole === "listing_manager" ? "#7c3aed" : "#64748b",
+                                cursor: "pointer",
+                                outline: "none",
+                              }}
+                            >
+                              <option value="listing_manager">Listing Manager (Can add listings)</option>
+                              <option value="super_admin">Super Admin</option>
+                              <option value="visitor">Visitor (Read only)</option>
+                            </select>
                           </td>
 
                           {/* Email Verified */}
