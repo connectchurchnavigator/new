@@ -1223,9 +1223,9 @@ export default function AdminClient({
                                 outline: "none",
                               }}
                             >
-                              <option value="listing_manager">Listing Manager (Can add listings)</option>
+                              <option value="listing_manager">Listing Manager</option>
                               <option value="super_admin">Super Admin</option>
-                              <option value="visitor">Visitor (Read only)</option>
+                              <option value="visitor">Visitor</option>
                             </select>
                           </td>
 
