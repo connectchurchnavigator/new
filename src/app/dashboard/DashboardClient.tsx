@@ -86,7 +86,7 @@ export default function DashboardClient({
             </p>
           </div>
 
-          {/* Right Action & Quick Status Pill */}
+          {/* Right Status Pill */}
           <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: "12px" }}>
             <div style={{
               background: "rgba(255, 255, 255, 0.08)",
@@ -106,27 +106,6 @@ export default function DashboardClient({
                 ✓
               </div>
             </div>
-
-            <Link
-              href="/onboarding/events"
-              style={{
-                background: "linear-gradient(135deg, #7c3aed, #6366f1)",
-                color: "#ffffff",
-                padding: "12px 22px",
-                borderRadius: "14px",
-                fontWeight: 800,
-                fontSize: "14px",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                boxShadow: "0 8px 20px -4px rgba(124, 58, 237, 0.45)",
-                transition: "all 0.2s",
-              }}
-            >
-              <i className="ti ti-calendar-plus" style={{ fontSize: "18px" }}></i>
-              Host Event
-            </Link>
           </div>
         </div>
 
@@ -215,9 +194,9 @@ export default function DashboardClient({
         {activeTab === "overview" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
             
-            {/* My Churches Section */}
+            {/* My Churches Section (Line by Line Table) */}
             <div style={{ background: "#ffffff", borderRadius: "20px", border: "1.5px solid #e2e8f0", padding: "24px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
                 <h3 style={{ fontSize: "18px", fontWeight: 900, color: "#0f172a", margin: 0 }}>My Registered Churches</h3>
                 <Link href="/add-listing" style={{ color: "#7c3aed", fontWeight: 800, fontSize: "13px", textDecoration: "none" }}>+ Add New Church</Link>
               </div>
@@ -228,28 +207,44 @@ export default function DashboardClient({
                   <Link href="/add-listing" style={{ background: "#7c3aed", color: "#fff", padding: "8px 16px", borderRadius: "10px", textDecoration: "none", fontSize: "13px", fontWeight: 800 }}>Register Your Church</Link>
                 </div>
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px" }}>
-                  {churches.map((c) => (
-                    <div key={c.id} style={{ border: "1.5px solid #f1f5f9", borderRadius: "16px", padding: "18px", background: "#ffffff", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                      <div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
-                          <h4 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: 0 }}>{c.name}</h4>
-                          {c.is_verified && <span style={{ fontSize: "11px", fontWeight: 800, color: "#16a34a", background: "#f0fdf4", padding: "2px 8px", borderRadius: "6px" }}>✓ Verified</span>}
-                        </div>
-                        <div style={{ fontSize: "13px", color: "#64748b", marginBottom: "4px" }}>📍 {c.city || c.address_line || "UK"}</div>
-                        <div style={{ fontSize: "12.5px", color: "#7c3aed", fontWeight: 700 }}>{c.denomination?.split("|||")[0] || "Non-Denominational"}</div>
-                      </div>
-
-                      <div style={{ display: "flex", gap: "10px", marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #f1f5f9" }}>
-                        <Link href={`/church/${c.slug}`} target="_blank" style={{ flex: 1, textAlign: "center", background: "#f1f5f9", color: "#334155", padding: "8px", borderRadius: "10px", fontSize: "12.5px", fontWeight: 700, textDecoration: "none" }}>
-                          View Live Page
-                        </Link>
-                        <Link href={`/church/${c.slug}?owner=true`} target="_blank" style={{ flex: 1, textAlign: "center", background: "#f5f3ff", color: "#7c3aed", padding: "8px", borderRadius: "10px", fontSize: "12.5px", fontWeight: 800, textDecoration: "none" }}>
-                          Edit Listing
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13.5px" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1.5px solid #e2e8f0", textAlign: "left", color: "#64748b", fontWeight: 800 }}>
+                        <th style={{ padding: "12px 14px" }}>Church Name</th>
+                        <th style={{ padding: "12px 14px" }}>Location</th>
+                        <th style={{ padding: "12px 14px" }}>Denomination</th>
+                        <th style={{ padding: "12px 14px" }}>Verification</th>
+                        <th style={{ padding: "12px 14px", textAlign: "right" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {churches.map((c) => (
+                        <tr key={c.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: "14px", fontWeight: 800, color: "#0f172a" }}>
+                            <Link href={`/church/${c.slug}`} target="_blank" style={{ color: "inherit", textDecoration: "none" }}>
+                              {c.name}
+                            </Link>
+                          </td>
+                          <td style={{ padding: "14px", color: "#64748b" }}>📍 {c.city || c.address_line || "—"}</td>
+                          <td style={{ padding: "14px", color: "#7c3aed", fontWeight: 700 }}>{c.denomination?.split("|||")[0] || "Non-Denominational"}</td>
+                          <td style={{ padding: "14px" }}>
+                            <span style={{ fontSize: "11.5px", fontWeight: 800, padding: "4px 10px", borderRadius: "8px", background: c.is_verified ? "#f0fdf4" : "#f1f5f9", color: c.is_verified ? "#16a34a" : "#64748b", border: `1px solid ${c.is_verified ? "#bbf7d0" : "#e2e8f0"}` }}>
+                              {c.is_verified ? "✓ Verified" : "Pending Verification"}
+                            </span>
+                          </td>
+                          <td style={{ padding: "14px", textAlign: "right" }}>
+                            <Link href={`/church/${c.slug}`} target="_blank" style={{ fontSize: "13px", color: "#334155", fontWeight: 700, textDecoration: "none", marginRight: "12px" }}>
+                              View
+                            </Link>
+                            <Link href={`/church/${c.slug}?owner=true`} target="_blank" style={{ fontSize: "13px", color: "#7c3aed", fontWeight: 800, textDecoration: "none" }}>
+                              Edit Listing &rarr;
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
