@@ -29,7 +29,7 @@ export default async function Home() {
   // 3. Fetch featured pastors
   const { data: pastors } = await supabase
     .from("pastors")
-    .select("id, slug, full_name, title, avatar_url, city, country, is_verified, years_in_ministry, church_name_cache, church:churches(name, slug)")
+    .select("id, slug, full_name, title, avatar_url, cover_photo_urls, city, country, is_verified, years_in_ministry, church_name_cache, church:churches(name, slug)")
     .eq("is_published", true)
     .order("is_verified", { ascending: false })
     .limit(4);
@@ -408,48 +408,115 @@ export default async function Home() {
           </Link>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "20px" }}>
-          {(pastors || []).map((pastor) => (
-            <Link
-              key={pastor.id}
-              href={`/pastor/${pastor.slug}`}
-              style={{
-                background: "#ffffff",
-                borderRadius: "18px",
-                padding: "20px",
-                border: "1.5px solid #e2e8f0",
-                textDecoration: "none",
-                color: "inherit",
-                display: "flex",
-                alignItems: "center",
-                gap: "14px",
-                boxShadow: "0 2px 5px rgba(0,0,0,0.03)",
-                transition: "all 0.2s",
-              }}
-            >
-              {pastor.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={pastor.avatar_url} alt={pastor.full_name} style={{ width: "56px", height: "56px", borderRadius: "16px", objectFit: "cover", flexShrink: 0 }} />
-              ) : (
-                <div style={{ width: "56px", height: "56px", borderRadius: "16px", background: "linear-gradient(135deg, #7c3aed, #a855f7)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "18px", flexShrink: 0 }}>
-                  {pastor.full_name.slice(0, 2).toUpperCase()}
-                </div>
-              )}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))", gap: "24px" }}>
+          {(pastors || []).map((pastor) => {
+            const coverImage = Array.isArray(pastor.cover_photo_urls) && pastor.cover_photo_urls.length > 0
+              ? pastor.cover_photo_urls[0]
+              : null;
+            const pastorChurch = Array.isArray(pastor.church)
+              ? pastor.church[0]
+              : pastor.church;
+            return (
+              <Link
+                key={pastor.id}
+                href={`/pastor/${pastor.slug}`}
+                style={{
+                  background: "#ffffff",
+                  borderRadius: "20px",
+                  overflow: "hidden",
+                  border: "1.5px solid #e2e8f0",
+                  textDecoration: "none",
+                  color: "inherit",
+                  display: "flex",
+                  flexDirection: "column",
+                  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.03)",
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                }}
+              >
+                {/* 1. Cover Photo Area */}
+                <div style={{
+                  height: "120px",
+                  background: coverImage ? `url('${coverImage}') center/cover` : "linear-gradient(135deg, #a855f7, #6366f1)",
+                  position: "relative",
+                }} />
 
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                  <h4 style={{ fontSize: "15px", fontWeight: 800, color: "#0f172a", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {pastor.full_name}
-                  </h4>
-                  {pastor.is_verified && <i className="ti ti-rosette-discount-check-filled" style={{ color: "#22c55e", fontSize: "14px" }}></i>}
+                {/* 2. Content Info with DP */}
+                <div style={{ padding: "0 18px 18px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                  
+                  {/* Pastor DP / Avatar (Overlapping Cover) */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "-26px", marginBottom: "12px", position: "relative", zIndex: 2 }}>
+                    {pastor.avatar_url ? (
+                      <div style={{
+                        width: "52px",
+                        height: "52px",
+                        borderRadius: "14px",
+                        background: `url('${pastor.avatar_url}') center/cover`,
+                        border: "3px solid #ffffff",
+                        boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+                        overflow: "hidden",
+                      }} />
+                    ) : (
+                      <div style={{
+                        width: "52px",
+                        height: "52px",
+                        borderRadius: "14px",
+                        background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+                        border: "3px solid #ffffff",
+                        boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#ffffff",
+                        fontWeight: 900,
+                        fontSize: "18px",
+                      }}>
+                        {pastor.full_name.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+
+                    {pastor.is_verified && (
+                      <span style={{ fontSize: "11px", fontWeight: 800, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "2px 8px", borderRadius: "8px" }}>
+                        ✓ Verified
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Pastor Details */}
+                  <div style={{ marginBottom: "14px" }}>
+                    {pastor.title && (
+                      <span style={{ fontSize: "10.5px", fontWeight: 800, color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: "4px" }}>
+                        {pastor.title}
+                      </span>
+                    )}
+                    
+                    <h3 style={{ fontSize: "17.5px", fontWeight: 900, color: "#0f172a", margin: "0 0 8px 0", lineHeight: 1.3 }}>
+                      {pastor.full_name}
+                    </h3>
+                    
+                    {/* Church Affiliation */}
+                    {(pastorChurch?.name || pastor.church_name_cache) && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#475569", marginBottom: "6px" }}>
+                        <i className="ti ti-building-church" style={{ color: "#7c3aed", fontSize: "14px" }}></i>
+                        <span style={{ fontWeight: 600 }}>{pastorChurch?.name || pastor.church_name_cache}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer Row */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "12px", borderTop: "1px solid #f1f5f9" }}>
+                    <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#475569", background: "#f1f5f9", padding: "3px 9px", borderRadius: "8px" }}>
+                      {pastor.years_in_ministry ? `${pastor.years_in_ministry} Yrs Ministry` : "Minister"}
+                    </span>
+                    
+                    <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#7c3aed" }}>
+                      Profile &rarr;
+                    </span>
+                  </div>
+
                 </div>
-                {pastor.title && <div style={{ fontSize: "12px", color: "#7c3aed", fontWeight: 700 }}>{pastor.title}</div>}
-                <div style={{ fontSize: "11.5px", color: "#64748b", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  📍 {pastor.city || pastor.country || "Location"}
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       </section>
 

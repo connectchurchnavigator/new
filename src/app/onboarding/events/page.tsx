@@ -1312,6 +1312,7 @@ function EventsOnboardingContent() {
                   update("longitude", lng);
                 }}
                 idPrefix="event_addr"
+                hideAddress={form.mode === "Online"}
               />
 
               {/* VENUE FACILITIES & ACCESSIBILITY (Offline & Hybrid only) */}

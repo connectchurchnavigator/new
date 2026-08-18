@@ -164,10 +164,53 @@ export default function PastorOnboardingPage() {
   };
 
   function validateStep(s: number): boolean {
-    // TESTING MODE: REQUIRED tags remain visible on UI for reference,
-    // but mandatory step validation blocking is bypassed for testing purposes.
-    setErrors({});
-    return true;
+    const newErrors: Record<string, string> = {};
+
+    if (s === 1) {
+      if (!form.full_name || form.full_name.trim().length < 3) {
+        newErrors.full_name = 'Full name must be at least 3 characters';
+      }
+      if (!form.country || !form.country.trim()) {
+        newErrors.country = 'Country is required';
+      }
+      if (!form.address && !form.city) {
+        newErrors.address = 'Address is required';
+      }
+    }
+
+    if (s === 2) {
+      if (!form.email || !form.email.trim()) {
+        newErrors.email = 'Email is required';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+        newErrors.email = 'Enter a valid email address';
+      }
+
+      if (form.phone && form.phone.replace(/[^0-9]/g, '').length < 9) {
+        newErrors.phone = 'Phone number must be at least 9 digits';
+      }
+
+      Object.keys(SOCIAL_RULES).forEach(field => {
+        const val = (form as any)[field] || "";
+        if (val.trim()) {
+          const R = SOCIAL_RULES[field];
+          const wrong = R.others.exec(val.trim());
+          if (wrong) {
+            newErrors[field] = `That looks like a different platform link — please put your ${R.name} link here.`;
+          } else if (!R.rx.test(val.trim())) {
+            newErrors[field] = `Enter a valid ${R.name} link (e.g. ${R.ex}).`;
+          }
+        }
+      });
+    }
+
+    if (s === 4) {
+      if (!form.languages || form.languages.length === 0) {
+        newErrors.languages = 'Add at least one language';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   }
 
   function goToStep(n: number) {
@@ -196,10 +239,6 @@ export default function PastorOnboardingPage() {
 
     const payload = {
       ...form,
-      full_name: form.full_name?.trim() || "Pastor Profile",
-      country: form.country?.trim() || "United Kingdom",
-      email: form.email?.trim() || "pastor@example.com",
-      languages: form.languages && form.languages.length > 0 ? form.languages : ["English"],
       years_in_ministry: form.years_in_ministry ? Number(form.years_in_ministry) : undefined,
       churches_planted: form.churches_planted ? Number(form.churches_planted) : undefined,
       nations_reached: form.nations_reached ? Number(form.nations_reached) : undefined,

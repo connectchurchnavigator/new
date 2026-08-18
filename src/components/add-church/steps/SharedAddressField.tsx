@@ -11,6 +11,7 @@ interface SharedAddressFieldProps {
   onUpdateCoordinates: (lat: number | undefined, lng: number | undefined) => void;
   errors?: { country?: string, address?: string };
   idPrefix: string;
+  hideAddress?: boolean;
 }
 
 function InteractiveMap({ lat, lng, onDragEnd }: { lat: number; lng: number; onDragEnd: (lat: number, lng: number) => void }) {
@@ -160,7 +161,7 @@ function flagEmoji(code: string) {
   return [...code.toUpperCase()].map(c => String.fromCodePoint(127397 + c.charCodeAt(0))).join('');
 }
 
-export default function SharedAddressField({ country, address, latitude, longitude, onUpdateCountry, onUpdateAddress, onUpdateCity, onUpdateCoordinates, errors, idPrefix }: SharedAddressFieldProps) {
+export default function SharedAddressField({ country, address, latitude, longitude, onUpdateCountry, onUpdateAddress, onUpdateCity, onUpdateCoordinates, errors, idPrefix, hideAddress }: SharedAddressFieldProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [trigger, setTrigger] = useState(0);
 
@@ -285,162 +286,166 @@ export default function SharedAddressField({ country, address, latitude, longitu
         {errors?.country && <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{errors.country}</div>}
       </div>
 
-      <label>Find your address <span className="req-badge">REQUIRED</span></label>
-      {!latitude ? (
-        <div id={`f-address-${idPrefix}`} style={{ position: "relative", marginBottom: "6px" }} ref={addressRef}>
-          <i className="ti ti-search" style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "var(--cn-gray-light)", zIndex: 2 }}></i>
-          <input 
-            placeholder="Type your street and number…" 
-            style={{ paddingLeft: "42px", border: errors?.address ? "1.5px solid red" : "" }} 
-            value={address || ""}
-            onChange={(e) => {
-              const val = e.target.value;
-              onUpdateAddress(val);
-              
-              const to = (window as any)[`addrTimeout_${idPrefix}`];
-              if (to) clearTimeout(to);
-              
-              if (val.length > 3 && country) {
-                (window as any)[`addrTimeout_${idPrefix}`] = setTimeout(async () => {
-                  try {
-                    const cc = COUNTRIES.find(c => c[1] === country)?.[0] || "";
-                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&countrycodes=${cc}&addressdetails=1&limit=5`);
-                    const data = await res.json();
-                    if (Array.isArray(data)) {
-                      (window as any)[`predictions_${idPrefix}`] = data;
-                      (window as any)[`hasNoPredictions_${idPrefix}`] = data.length === 0;
-                    } else {
-                      (window as any)[`predictions_${idPrefix}`] = [];
-                      (window as any)[`hasNoPredictions_${idPrefix}`] = true;
-                    }
-                    setTrigger(Math.random());
-                  } catch (err) {
-                    (window as any)[`hasNoPredictions_${idPrefix}`] = true;
-                    setTrigger(Math.random());
-                  }
-                }, 500);
-              } else {
-                (window as any)[`predictions_${idPrefix}`] = [];
-                (window as any)[`hasNoPredictions_${idPrefix}`] = false;
-                setTrigger(Math.random());
-              }
-            }}
-          />
-          
-          {(Array.isArray(predictions) && predictions.length > 0 && address) ? (
-            <div className="autocomplete-dropdown" style={{ display: "block", position: "absolute", width: "100%", top: "100%", zIndex: 9999, background: "#fff", border: "1.5px solid var(--cn-border)", borderRadius: "12px", marginTop: "4px", boxShadow: "0 10px 25px rgba(15,15,26,0.08)", maxHeight: "200px", overflowY: "auto" }}>
-              {predictions.map((p: any, i: number) => {
-                const { line1, line2 } = formatAddress(p, address || '');
-                return (
-                <div 
-                  key={i} 
-                  style={{ padding: "11px 14px", display: "flex", alignItems: "center", cursor: "pointer", borderBottom: "1px solid #f1f0f5" }}
-                  onClick={() => {
-                    const a = p.address || {};
-                    const detectedCity = a.city || a.town || a.village || a.municipality || a.county || getLocality(address || '');
-                    if (detectedCity && onUpdateCity) {
-                      onUpdateCity(detectedCity);
-                    }
-                    onUpdateAddress([line1, line2].filter(Boolean).join(', '));
-                    onUpdateCoordinates(parseFloat(p.lat), parseFloat(p.lon));
+      {!hideAddress && (
+        <>
+          <label>Find your address <span className="req-badge">REQUIRED</span></label>
+          {!latitude ? (
+            <div id={`f-address-${idPrefix}`} style={{ position: "relative", marginBottom: "6px" }} ref={addressRef}>
+              <i className="ti ti-search" style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "var(--cn-gray-light)", zIndex: 2 }}></i>
+              <input 
+                placeholder="Type your street and number…" 
+                style={{ paddingLeft: "42px", border: errors?.address ? "1.5px solid red" : "" }} 
+                value={address || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  onUpdateAddress(val);
+                  
+                  const to = (window as any)[`addrTimeout_${idPrefix}`];
+                  if (to) clearTimeout(to);
+                  
+                  if (val.length > 3 && country) {
+                    (window as any)[`addrTimeout_${idPrefix}`] = setTimeout(async () => {
+                      try {
+                        const cc = COUNTRIES.find(c => c[1] === country)?.[0] || "";
+                        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&countrycodes=${cc}&addressdetails=1&limit=5`);
+                        const data = await res.json();
+                        if (Array.isArray(data)) {
+                          (window as any)[`predictions_${idPrefix}`] = data;
+                          (window as any)[`hasNoPredictions_${idPrefix}`] = data.length === 0;
+                        } else {
+                          (window as any)[`predictions_${idPrefix}`] = [];
+                          (window as any)[`hasNoPredictions_${idPrefix}`] = true;
+                        }
+                        setTrigger(Math.random());
+                      } catch (err) {
+                        (window as any)[`hasNoPredictions_${idPrefix}`] = true;
+                        setTrigger(Math.random());
+                      }
+                    }, 500);
+                  } else {
                     (window as any)[`predictions_${idPrefix}`] = [];
                     (window as any)[`hasNoPredictions_${idPrefix}`] = false;
                     setTrigger(Math.random());
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = "var(--cn-surface)"}
-                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                >
-                  <div style={{ width: "28px", height: "28px", borderRadius: "8px", background: "#f5f3ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: "12px" }}>
-                    <i className="ti ti-map-pin" style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--cn-ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {line1}
+                  }
+                }}
+              />
+              
+              {(Array.isArray(predictions) && predictions.length > 0 && address) ? (
+                <div className="autocomplete-dropdown" style={{ display: "block", position: "absolute", width: "100%", top: "100%", zIndex: 9999, background: "#fff", border: "1.5px solid var(--cn-border)", borderRadius: "12px", marginTop: "4px", boxShadow: "0 10px 25px rgba(15,15,26,0.08)", maxHeight: "200px", overflowY: "auto" }}>
+                  {predictions.map((p: any, i: number) => {
+                    const { line1, line2 } = formatAddress(p, address || '');
+                    return (
+                    <div 
+                      key={i} 
+                      style={{ padding: "11px 14px", display: "flex", alignItems: "center", cursor: "pointer", borderBottom: "1px solid #f1f0f5" }}
+                      onClick={() => {
+                        const a = p.address || {};
+                        const detectedCity = a.city || a.town || a.village || a.municipality || a.county || getLocality(address || '');
+                        if (detectedCity && onUpdateCity) {
+                          onUpdateCity(detectedCity);
+                        }
+                        onUpdateAddress([line1, line2].filter(Boolean).join(', '));
+                        onUpdateCoordinates(parseFloat(p.lat), parseFloat(p.lon));
+                        (window as any)[`predictions_${idPrefix}`] = [];
+                        (window as any)[`hasNoPredictions_${idPrefix}`] = false;
+                        setTrigger(Math.random());
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "var(--cn-surface)"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    >
+                      <div style={{ width: "28px", height: "28px", borderRadius: "8px", background: "#f5f3ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: "12px" }}>
+                        <i className="ti ti-map-pin" style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--cn-ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {line1}
+                        </div>
+                        <div style={{ fontSize: "11px", color: "var(--cn-gray)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {line2}
+                        </div>
+                      </div>
+                      <i className="ti ti-arrow-right" style={{ fontSize: "14px", color: "var(--cn-gray-light)", flexShrink: 0 }}></i>
                     </div>
-                    <div style={{ fontSize: "11px", color: "var(--cn-gray)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {line2}
-                    </div>
-                  </div>
-                  <i className="ti ti-arrow-right" style={{ fontSize: "14px", color: "var(--cn-gray-light)", flexShrink: 0 }}></i>
+                  )})}
                 </div>
-              )})}
-            </div>
-          ) : hasNoPredictions && address ? (
-            <div className="autocomplete-dropdown" style={{ display: "block", position: "absolute", width: "100%", top: "100%", zIndex: 9999, background: "#fff", border: "1.5px solid var(--cn-border)", borderRadius: "12px", marginTop: "4px", boxShadow: "0 10px 25px rgba(15,15,26,0.08)", padding: "14px 16px" }}>
-              <div style={{ fontSize: "12.5px", color: "var(--cn-gray)", display: "flex", alignItems: "flex-start", gap: "8px", marginBottom: "12px" }}>
-                <i className="ti ti-map-pin" style={{ fontSize: "16px", color: "var(--cn-gray-light)", marginTop: "1px" }}></i>
-                <span>We couldn't verify this exact address. You can continue with the address you typed — we'll save it as entered.</span>
-              </div>
-              <button 
-                onClick={handleUseTypedAddress}
-                style={{ fontSize: "12.5px", fontWeight: 700, color: "#fff", background: "var(--cn-purple)", border: "none", padding: "9px 16px", borderRadius: "9px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
-              >
-                <i className="ti ti-check" style={{ fontSize: "14px" }}></i> Use the address I typed
-              </button>
-            </div>
-          ) : null}
-        </div>
-      ) : (
-        <div style={{ marginBottom: "18px" }}>
-          {latitude === 0.0001 ? (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", background: "#fffbeb", border: "1.5px solid #fde68a", borderRadius: "12px", padding: "12px 14px", marginBottom: "18px", position: "relative" }}>
-              <i className="ti ti-alert-triangle" style={{ fontSize: "15px", color: "#d97706", flexShrink: 0, marginTop: "1px" }}></i>
-              <div style={{ fontSize: "12.5px", color: "#92400e", fontWeight: 600 }}>
-                <strong>Saved as you entered it</strong> (not auto-verified): {address}
-              </div>
-              <button 
-                onClick={() => { onUpdateCoordinates(undefined, undefined); onUpdateAddress(""); }}
-                style={{ position: "absolute", top: "10px", right: "10px", background: "none", border: "none", cursor: "pointer", color: "#d97706" }}
-                title="Change address"
-              >
-                <i className="ti ti-pencil" style={{ fontSize: "14px" }}></i>
-              </button>
+              ) : hasNoPredictions && address ? (
+                <div className="autocomplete-dropdown" style={{ display: "block", position: "absolute", width: "100%", top: "100%", zIndex: 9999, background: "#fff", border: "1.5px solid var(--cn-border)", borderRadius: "12px", marginTop: "4px", boxShadow: "0 10px 25px rgba(15,15,26,0.08)", padding: "14px 16px" }}>
+                  <div style={{ fontSize: "12.5px", color: "var(--cn-gray)", display: "flex", alignItems: "flex-start", gap: "8px", marginBottom: "12px" }}>
+                    <i className="ti ti-map-pin" style={{ fontSize: "16px", color: "var(--cn-gray-light)", marginTop: "1px" }}></i>
+                    <span>We couldn't verify this exact address. You can continue with the address you typed — we'll save it as entered.</span>
+                  </div>
+                  <button 
+                    onClick={handleUseTypedAddress}
+                    style={{ fontSize: "12.5px", fontWeight: 700, color: "#fff", background: "var(--cn-purple)", border: "none", padding: "9px 16px", borderRadius: "9px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <i className="ti ti-check" style={{ fontSize: "14px" }}></i> Use the address I typed
+                  </button>
+                </div>
+              ) : null}
             </div>
           ) : (
-            <>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: "12px", padding: "12px 14px", marginBottom: "18px", position: "relative" }}>
-                <i className="ti ti-circle-check-filled" style={{ fontSize: "15px", color: "#16a34a", flexShrink: 0, marginTop: "1px" }}></i>
-                <div style={{ fontSize: "12.5px", color: "#15803d", fontWeight: 600 }}>{address}</div>
-                <button 
-                  onClick={() => { onUpdateCoordinates(undefined, undefined); onUpdateAddress(""); }}
-                  style={{ position: "absolute", top: "10px", right: "10px", background: "none", border: "none", cursor: "pointer", color: "#16a34a" }}
-                  title="Change address"
-                >
-                  <i className="ti ti-pencil" style={{ fontSize: "14px" }}></i>
-                </button>
-              </div>
-              
-              <div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "9px" }}>
-                  <label style={{ margin: 0, fontSize: "12px", fontWeight: 700, color: "var(--cn-ink)" }}>
-                    Confirm or drag the pin to your exact building
-                  </label>
-                  <span style={{ fontSize: "11px", color: "var(--cn-purple)", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
-                    <i className="ti ti-hand-grab" style={{ fontSize: "13px" }}></i> Drag pin to refine location
-                  </span>
+            <div style={{ marginBottom: "18px" }}>
+              {latitude === 0.0001 ? (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", background: "#fffbeb", border: "1.5px solid #fde68a", borderRadius: "12px", padding: "12px 14px", marginBottom: "18px", position: "relative" }}>
+                  <i className="ti ti-alert-triangle" style={{ fontSize: "15px", color: "#d97706", flexShrink: 0, marginTop: "1px" }}></i>
+                  <div style={{ fontSize: "12.5px", color: "#92400e", fontWeight: 600 }}>
+                    <strong>Saved as you entered it</strong> (not auto-verified): {address}
+                  </div>
+                  <button 
+                    onClick={() => { onUpdateCoordinates(undefined, undefined); onUpdateAddress(""); }}
+                    style={{ position: "absolute", top: "10px", right: "10px", background: "none", border: "none", cursor: "pointer", color: "#d97706" }}
+                    title="Change address"
+                  >
+                    <i className="ti ti-pencil" style={{ fontSize: "14px" }}></i>
+                  </button>
                 </div>
-
-                <InteractiveMap 
-                  lat={latitude!} 
-                  lng={longitude!} 
-                  onDragEnd={(newLat, newLng) => {
-                    onUpdateCoordinates(newLat, newLng);
-                  }}
-                />
-              </div>
-            </>
+              ) : (
+                <>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: "12px", padding: "12px 14px", marginBottom: "18px", position: "relative" }}>
+                    <i className="ti ti-circle-check-filled" style={{ fontSize: "15px", color: "#16a34a", flexShrink: 0, marginTop: "1px" }}></i>
+                    <div style={{ fontSize: "12.5px", color: "#15803d", fontWeight: 600 }}>{address}</div>
+                    <button 
+                      onClick={() => { onUpdateCoordinates(undefined, undefined); onUpdateAddress(""); }}
+                      style={{ position: "absolute", top: "10px", right: "10px", background: "none", border: "none", cursor: "pointer", color: "#16a34a" }}
+                      title="Change address"
+                    >
+                      <i className="ti ti-pencil" style={{ fontSize: "14px" }}></i>
+                    </button>
+                  </div>
+                  
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "9px" }}>
+                      <label style={{ margin: 0, fontSize: "12px", fontWeight: 700, color: "var(--cn-ink)" }}>
+                        Confirm or drag the pin to your exact building
+                      </label>
+                      <span style={{ fontSize: "11px", color: "var(--cn-purple)", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                        <i className="ti ti-hand-grab" style={{ fontSize: "13px" }}></i> Drag pin to refine location
+                      </span>
+                    </div>
+    
+                    <InteractiveMap 
+                      lat={latitude!} 
+                      lng={longitude!} 
+                      onDragEnd={(newLat, newLng) => {
+                        onUpdateCoordinates(newLat, newLng);
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
           )}
-        </div>
+          
+          {errors?.address && !latitude ? (
+             <div style={{ color: "red", fontSize: "12px", marginBottom: "14px" }}>{errors.address}</div>
+          ) : !latitude ? (
+            <div style={{ fontSize: "11.5px", color: "var(--cn-gray-light)", marginBottom: "14px", display: "flex", alignItems: "center", gap: "5px" }}>
+              <i className="ti ti-info-circle" style={{ fontSize: "12px" }}></i>
+              Just type your street and number — we validate it and store the rest for you.
+            </div>
+          ) : null}
+        </>
       )}
-      
-      {errors?.address && !latitude ? (
-         <div style={{ color: "red", fontSize: "12px", marginBottom: "14px" }}>{errors.address}</div>
-      ) : !latitude ? (
-        <div style={{ fontSize: "11.5px", color: "var(--cn-gray-light)", marginBottom: "14px", display: "flex", alignItems: "center", gap: "5px" }}>
-          <i className="ti ti-info-circle" style={{ fontSize: "12px" }}></i>
-          Just type your street and number — we validate it and store the rest for you.
-        </div>
-      ) : null}
     </>
   );
 }
