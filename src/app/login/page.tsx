@@ -37,10 +37,15 @@ export default function LoginPage() {
     try {
       if (activeTab === "register") {
         const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+        const redirectUrl = typeof window !== "undefined"
+          ? `${window.location.origin}/add-church`
+          : "https://chruch-gold.vercel.app/add-church";
+
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
+            emailRedirectTo: redirectUrl,
             data: {
               full_name: fullName,
             },
