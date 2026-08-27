@@ -13,6 +13,8 @@ interface ExploreChurch extends Church {
 
 interface ExploreClientProps {
   initialChurches: ExploreChurch[];
+  initialPastors?: any[];
+  initialEvents?: any[];
   initialSearchQuery?: string;
   initialCity?: string;
   initialDenom?: string;
@@ -20,10 +22,14 @@ interface ExploreClientProps {
 
 export default function ExploreClient({
   initialChurches,
+  initialPastors = [],
+  initialEvents = [],
   initialSearchQuery = "",
   initialCity = "",
   initialDenom = "",
 }: ExploreClientProps) {
+  const [exploreType, setExploreType] = useState<"churches" | "pastors" | "events">("churches");
+  const [cardVersion, setCardVersion] = useState<"v0" | "v1" | "v2" | "v3" | "v4">("v0");
   // Search & Filters State
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [openingStatus, setOpeningStatus] = useState<"all" | "open_now" | "custom">("all");
@@ -281,6 +287,95 @@ export default function ExploreClient({
     userLocation,
   ]);
 
+  const filteredPastors = useMemo(() => {
+    return initialPastors
+      .filter((pastor) => {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesQuery =
+          !q ||
+          pastor.full_name?.toLowerCase().includes(q) ||
+          pastor.title?.toLowerCase().includes(q) ||
+          pastor.bio?.toLowerCase().includes(q) ||
+          pastor.church_name_cache?.toLowerCase().includes(q) ||
+          pastor.church?.name?.toLowerCase().includes(q) ||
+          pastor.city?.toLowerCase().includes(q);
+
+        const matchesCity = selectedCity === "all" || pastor.city === selectedCity || pastor.church?.city === selectedCity;
+        return matchesQuery && matchesCity;
+      })
+      .map((pastor) => {
+        let distance: number | null = null;
+        const lat = pastor.church?.latitude;
+        const lng = pastor.church?.longitude;
+        if (userLocation && typeof lat === "number" && typeof lng === "number") {
+          distance = calculateDistance(userLocation.lat, userLocation.lng, lat, lng);
+        }
+        return {
+          ...pastor,
+          name: pastor.full_name,
+          latitude: lat,
+          longitude: lng,
+          distance,
+          type: "pastor",
+        };
+      })
+      .sort((a, b) => {
+        if (sortBy === "name_asc") return a.full_name.localeCompare(b.full_name);
+        if (sortBy === "name_desc") return b.full_name.localeCompare(a.full_name);
+        if (sortBy === "nearby") {
+          if (a.distance !== null && b.distance !== null) return a.distance - b.distance;
+          if (a.distance !== null) return -1;
+          if (b.distance !== null) return 1;
+        }
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      });
+  }, [initialPastors, searchQuery, selectedCity, sortBy, userLocation]);
+
+  const filteredEvents = useMemo(() => {
+    return initialEvents
+      .filter((event) => {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesQuery =
+          !q ||
+          event.title?.toLowerCase().includes(q) ||
+          event.description?.toLowerCase().includes(q) ||
+          event.venue_name?.toLowerCase().includes(q) ||
+          event.city?.toLowerCase().includes(q) ||
+          event.host_church?.name?.toLowerCase().includes(q);
+
+        const matchesCity = selectedCity === "all" || event.city === selectedCity;
+        return matchesQuery && matchesCity;
+      })
+      .map((event) => {
+        let distance: number | null = null;
+        if (userLocation && typeof event.latitude === "number" && typeof event.longitude === "number") {
+          distance = calculateDistance(userLocation.lat, userLocation.lng, event.latitude, event.longitude);
+        }
+        return {
+          ...event,
+          name: event.title,
+          distance,
+          type: "event",
+        };
+      })
+      .sort((a, b) => {
+        if (sortBy === "name_asc") return a.title.localeCompare(b.title);
+        if (sortBy === "name_desc") return b.title.localeCompare(a.title);
+        if (sortBy === "nearby") {
+          if (a.distance !== null && b.distance !== null) return a.distance - b.distance;
+          if (a.distance !== null) return -1;
+          if (b.distance !== null) return 1;
+        }
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      });
+  }, [initialEvents, searchQuery, selectedCity, sortBy, userLocation]);
+
+  const activeItemsForMap = useMemo(() => {
+    if (exploreType === "pastors") return filteredPastors;
+    if (exploreType === "events") return filteredEvents;
+    return filteredChurches.map(c => ({ ...c, type: "church" }));
+  }, [exploreType, filteredChurches, filteredPastors, filteredEvents]);
+
   // Request browser geolocation
   const handleUseMyLocation = () => {
     if (!navigator.geolocation) {
@@ -326,15 +421,210 @@ export default function ExploreClient({
 
   return (
     <div style={{ background: "#f8fafc", height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <style>{`
+        .explore-tab {
+          background: none;
+          border: none;
+          font-size: 13.5px;
+          font-weight: 700;
+          color: #64748b;
+          padding: 8px 18px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          border-radius: 20px;
+          transition: all 0.2s ease;
+          font-family: inherit;
+        }
+        .explore-tab:hover {
+          color: #475569;
+          background: #e2e8f0;
+        }
+        .explore-tab.active {
+          background: #7c3aed;
+          color: #ffffff;
+          box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+        }
+        
+        .pastor-grid-card {
+          display: flex;
+          flex-direction: column;
+          border-radius: 20px;
+          border: 1.5px solid #e2e8f0;
+          background: #ffffff;
+          overflow: hidden;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+          text-decoration: none;
+          color: inherit;
+          position: relative;
+        }
+        .pastor-grid-card:hover {
+          transform: translateY(-6px);
+          box-shadow: 0 20px 25px -5px rgba(124, 58, 237, 0.12), 0 10px 10px -5px rgba(124, 58, 237, 0.06);
+          border-color: #c084fc;
+        }
+        .pastor-card-footer {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 11px 14px;
+          background: #f8fafc;
+          border-top: 1px solid #f1f5f9;
+          color: #7c3aed;
+          font-weight: 700;
+          font-size: 13px;
+          gap: 4px;
+          transition: all 0.2s ease;
+        }
+        .pastor-grid-card:hover .pastor-card-footer {
+          background: #7c3aed !important;
+          color: #ffffff !important;
+        }
+
+        /* CARD VERSION 1: Minimalist centered with circular avatar */
+        .pastor-card-v1 {
+          border-radius: 20px;
+          border: 1.5px solid #e2e8f0;
+          background: #ffffff;
+          padding: 24px 16px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+          text-decoration: none;
+          color: inherit;
+        }
+        .pastor-card-v1:hover {
+          transform: translateY(-6px);
+          border-color: #7c3aed;
+          box-shadow: 0 12px 24px rgba(124, 58, 237, 0.08);
+        }
+
+        /* CARD VERSION 2: Full-image glassmorphism absolute overlay */
+        .pastor-card-v2 {
+          height: 370px;
+          border-radius: 20px;
+          overflow: hidden;
+          position: relative;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          text-decoration: none;
+          color: inherit;
+        }
+        .pastor-card-v2:hover {
+          transform: translateY(-6px) scale(1.02);
+          box-shadow: 0 20px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        /* CARD VERSION 3: Left Accent bar and flat tickets */
+        .pastor-card-v3 {
+          border-radius: 12px;
+          border: 1.5px dashed #cbd5e1;
+          background: #ffffff;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          border-left: 4px solid #9333ea;
+          text-decoration: none;
+          color: inherit;
+        }
+        .pastor-card-v3:hover {
+          border-color: #9333ea;
+          background: #faf5ff;
+          transform: translateX(4px);
+        }
+
+        /* CARD VERSION 4: Premium Dark Theme Accent */
+        .pastor-card-v4 {
+          background: #0f172a;
+          color: #ffffff;
+          border-radius: 20px;
+          border: 1.5px solid #1e293b;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          text-decoration: none;
+        }
+        .pastor-card-v4:hover {
+          border-color: #a855f7;
+          transform: translateY(-6px);
+          box-shadow: 0 15px 30px rgba(168, 85, 247, 0.2);
+        }
+        .pastor-card-footer-v4 {
+          background: #1e293b;
+          color: #c084fc;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 11px;
+          font-weight: 700;
+          font-size: 13px;
+          gap: 4px;
+          transition: all 0.2s;
+        }
+        .pastor-card-v4:hover .pastor-card-footer-v4 {
+          background: #a855f7;
+          color: #ffffff;
+        }
+      `}</style>
       <TopNav />
 
+      {/* Explore Type Selector Strip */}
+      <div style={{
+        background: "#ffffff",
+        borderBottom: "1px solid #ececf2",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "12px",
+        padding: "10px 24px",
+        zIndex: 50,
+      }}>
+        <div style={{
+          background: "#f1f5f9",
+          padding: "4px",
+          borderRadius: "24px",
+          display: "flex",
+          gap: "4px"
+        }}>
+          <button
+            onClick={() => setExploreType("churches")}
+            className={`explore-tab ${exploreType === "churches" ? "active" : ""}`}
+          >
+            <i className="ti ti-building-church" style={{ fontSize: "16px" }}></i> Churches
+          </button>
+          <button
+            onClick={() => setExploreType("pastors")}
+            className={`explore-tab ${exploreType === "pastors" ? "active" : ""}`}
+          >
+            <i className="ti ti-user" style={{ fontSize: "16px" }}></i> Pastors
+          </button>
+          <button
+            onClick={() => setExploreType("events")}
+            className={`explore-tab ${exploreType === "events" ? "active" : ""}`}
+          >
+            <i className="ti ti-calendar-event" style={{ fontSize: "16px" }}></i> Events
+          </button>
+        </div>
+      </div>
+
       {/* Main Explore Split Screen */}
-      <div style={{ display: "flex", flex: 1, height: "calc(100vh - 58px)", position: "relative", overflow: "hidden" }}>
+      <div style={{ display: "flex", flex: 1, position: "relative", overflow: "hidden" }}>
         
         {/* LEFT COLUMN: Controls & Church Cards (Scrollable) */}
         <div style={{
-          width: "56%",
-          maxWidth: "800px",
+          width: exploreType === "pastors" ? "100%" : "64%",
+          maxWidth: exploreType === "pastors" ? "100%" : "1000px",
           minWidth: "460px",
           height: "100%",
           display: "flex",
@@ -349,15 +639,24 @@ export default function ExploreClient({
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
               <div>
                 <h1 style={{ fontSize: "21px", fontWeight: 800, color: "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>
-                  Explore Churches
+                  {exploreType === "churches" ? "Explore Churches" : exploreType === "pastors" ? "Explore Pastors & Ministers" : "Explore Events & Conferences"}
                 </h1>
                 <p style={{ fontSize: "12.5px", color: "#64748b", margin: "2px 0 0" }}>
-                  Showing <strong style={{ color: "#0f172a" }}>{filteredChurches.length}</strong> churches
+                  Showing{" "}
+                  <strong style={{ color: "#0f172a" }}>
+                    {exploreType === "churches"
+                      ? filteredChurches.length
+                      : exploreType === "pastors"
+                      ? filteredPastors.length
+                      : filteredEvents.length}
+                  </strong>{" "}
+                  {exploreType === "churches" ? "churches" : exploreType === "pastors" ? "pastors" : "events"}
                   {sortBy === "nearby" && userLocation ? " sorted by closest to you" : ""}
                 </p>
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+
                 {hasActiveFilters && (
                   <button
                     onClick={clearAllFilters}
@@ -402,452 +701,761 @@ export default function ExploreClient({
               </div>
             </div>
 
-            {/* Search Input */}
-            <div style={{ position: "relative", marginBottom: "12px" }}>
-              <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: "16px" }}></i>
-              <input
-                type="text"
-                placeholder="Search by church name, city, UK postcode (e.g. E12 5LH)..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  paddingLeft: "42px",
-                  paddingRight: "14px",
-                  height: "40px",
-                  fontSize: "13.5px",
-                  borderRadius: "10px",
-                  border: "1.5px solid #e2e8f0",
-                  width: "100%",
-                }}
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  style={{
-                    position: "absolute",
-                    right: "12px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "#94a3b8",
-                    fontSize: "14px",
-                  }}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+
 
             {/* Top Row: Opening Status Pills */}
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#64748b", marginRight: "4px" }}>
-                Status:
-              </span>
-              <button
-                onClick={() => setOpeningStatus("all")}
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  padding: "5px 12px",
-                  borderRadius: "14px",
-                  border: "1.5px solid",
-                  borderColor: openingStatus === "all" ? "#7c3aed" : "#e2e8f0",
-                  background: openingStatus === "all" ? "#7c3aed" : "#fff",
-                  color: openingStatus === "all" ? "#fff" : "#475569",
-                  cursor: "pointer"
-                }}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setOpeningStatus("open_now")}
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  padding: "5px 12px",
-                  borderRadius: "14px",
-                  border: "1.5px solid",
-                  borderColor: openingStatus === "open_now" ? "#16a34a" : "#e2e8f0",
-                  background: openingStatus === "open_now" ? "#16a34a" : "#fff",
-                  color: openingStatus === "open_now" ? "#fff" : "#475569",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "4px"
-                }}
-              >
-                <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: openingStatus === "open_now" ? "#fff" : "#16a34a" }}></span>
-                Open Now
-              </button>
-              <button
-                onClick={() => setOpeningStatus("custom")}
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  padding: "5px 12px",
-                  borderRadius: "14px",
-                  border: "1.5px solid",
-                  borderColor: openingStatus === "custom" ? "#7c3aed" : "#e2e8f0",
-                  background: openingStatus === "custom" ? "#f5f3ff" : "#fff",
-                  color: openingStatus === "custom" ? "#7c3aed" : "#475569",
-                  cursor: "pointer"
-                }}
-              >
-                Custom Day
-              </button>
-
-              {openingStatus === "custom" && (
-                <>
-                  {/* Day Picker */}
-                  <select
-                    value={customDay}
-                    onChange={(e) => setCustomDay(e.target.value)}
+            {exploreType === "churches" && (
+              <>
+                {/* Top Row: Opening Status Pills */}
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#64748b", marginRight: "4px" }}>
+                    Status:
+                  </span>
+                  <button
+                    onClick={() => setOpeningStatus("all")}
                     style={{
-                      width: "auto",
-                      padding: "4px 10px",
                       fontSize: "12px",
-                      borderRadius: "10px",
                       fontWeight: 700,
-                      color: "#7c3aed",
-                      border: "1.5px solid #d8b4fe",
-                      background: "#fff",
+                      padding: "5px 12px",
+                      borderRadius: "14px",
+                      border: "1.5px solid",
+                      borderColor: openingStatus === "all" ? "#7c3aed" : "#e2e8f0",
+                      background: openingStatus === "all" ? "#7c3aed" : "#fff",
+                      color: openingStatus === "all" ? "#fff" : "#475569",
+                      cursor: "pointer"
                     }}
                   >
-                    <option value="Sun">Sun</option>
-                    <option value="Mon">Mon</option>
-                    <option value="Tue">Tue</option>
-                    <option value="Wed">Wed</option>
-                    <option value="Thu">Thu</option>
-                    <option value="Fri">Fri</option>
-                    <option value="Sat">Sat</option>
-                  </select>
-
-                  {/* Time Picker */}
-                  <select
-                    value={customTime}
-                    onChange={(e) => setCustomTime(e.target.value)}
+                    All
+                  </button>
+                  <button
+                    onClick={() => setOpeningStatus("open_now")}
                     style={{
-                      width: "auto",
-                      padding: "4px 10px",
                       fontSize: "12px",
-                      borderRadius: "10px",
                       fontWeight: 700,
-                      color: "#7c3aed",
-                      border: "1.5px solid #d8b4fe",
-                      background: "#fff",
+                      padding: "5px 12px",
+                      borderRadius: "14px",
+                      border: "1.5px solid",
+                      borderColor: openingStatus === "open_now" ? "#16a34a" : "#e2e8f0",
+                      background: openingStatus === "open_now" ? "#16a34a" : "#fff",
+                      color: openingStatus === "open_now" ? "#fff" : "#475569",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px"
                     }}
                   >
-                    <option value="all">Any Time</option>
-                    <option value="morning">Morning (Before 12 PM)</option>
-                    <option value="afternoon">Afternoon (12 PM - 5 PM)</option>
-                    <option value="evening">Evening (After 5 PM)</option>
-                  </select>
-                </>
-              )}
-            </div>
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: openingStatus === "open_now" ? "#fff" : "#16a34a" }}></span>
+                    Open Now
+                  </button>
+                  <button
+                    onClick={() => setOpeningStatus("custom")}
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      padding: "5px 12px",
+                      borderRadius: "14px",
+                      border: "1.5px solid",
+                      borderColor: openingStatus === "custom" ? "#7c3aed" : "#e2e8f0",
+                      background: openingStatus === "custom" ? "#f5f3ff" : "#fff",
+                      color: openingStatus === "custom" ? "#7c3aed" : "#475569",
+                      cursor: "pointer"
+                    }}
+                  >
+                    Custom Day
+                  </button>
 
-            {/* Filter Dropdowns Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "8px" }}>
-              
-              {/* Denominations */}
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "3px" }}>Denomination</label>
-                <select
-                  value={selectedDenom}
-                  onChange={(e) => setSelectedDenom(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "6px 8px",
-                    fontSize: "12.5px",
-                    borderRadius: "8px",
-                    fontWeight: 600,
-                    color: "#334155",
-                    border: "1.5px solid #e2e8f0",
-                    background: "#f8fafc",
-                  }}
-                >
-                  <option value="all">All Denominations</option>
-                  {denominations.filter((d) => d !== "all").map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Languages */}
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "3px" }}>Language</label>
-                <select
-                  value={selectedLanguage}
-                  onChange={(e) => setSelectedLanguage(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "6px 8px",
-                    fontSize: "12.5px",
-                    borderRadius: "8px",
-                    fontWeight: 600,
-                    color: "#334155",
-                    border: "1.5px solid #e2e8f0",
-                    background: "#f8fafc",
-                  }}
-                >
-                  <option value="all">All Languages</option>
-                  {languages.filter((l) => l !== "all").map((lang) => (
-                    <option key={lang} value={lang}>{lang}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Worship Styles */}
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "3px" }}>Worship Style</label>
-                <select
-                  value={selectedWorshipStyle}
-                  onChange={(e) => setSelectedWorshipStyle(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "6px 8px",
-                    fontSize: "12.5px",
-                    borderRadius: "8px",
-                    fontWeight: 600,
-                    color: "#334155",
-                    border: "1.5px solid #e2e8f0",
-                    background: "#f8fafc",
-                  }}
-                >
-                  <option value="all">All Worship Styles</option>
-                  {worshipStyles.filter((w) => w !== "all").map((w) => (
-                    <option key={w} value={w}>{w}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Ministries */}
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "3px" }}>Ministry</label>
-                <select
-                  value={selectedMinistry}
-                  onChange={(e) => setSelectedMinistry(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "6px 8px",
-                    fontSize: "12.5px",
-                    borderRadius: "8px",
-                    fontWeight: 600,
-                    color: "#334155",
-                    border: "1.5px solid #e2e8f0",
-                    background: "#f8fafc",
-                  }}
-                >
-                  <option value="all">All Ministries</option>
-                  {ministries.filter((m) => m !== "all").map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Sort Options */}
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "3px" }}>Sort By</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  style={{
-                    width: "100%",
-                    padding: "6px 8px",
-                    fontSize: "12.5px",
-                    borderRadius: "8px",
-                    fontWeight: 700,
-                    color: "#7c3aed",
-                    border: "1.5px solid #d8b4fe",
-                    background: "#f5f3ff",
-                  }}
-                >
-                  <option value="latest">Latest</option>
-                  <option value="nearby">Nearby</option>
-                  <option value="name_asc">Name A-Z</option>
-                  <option value="name_desc">Name Z-A</option>
-                </select>
-              </div>
-
-            </div>
-          </div>
-
-          {/* List of Churches */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
-            {filteredChurches.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "48px 20px", color: "#64748b" }}>
-                <i className="ti ti-church-off" style={{ fontSize: "40px", color: "#cbd5e1", marginBottom: "12px", display: "block" }}></i>
-                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" }}>No churches match your filters</h3>
-                <p style={{ fontSize: "13px" }}>Try clearing some filters or searching with a broader keyword.</p>
-                <button
-                  onClick={clearAllFilters}
-                  style={{
-                    marginTop: "12px",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    color: "#7c3aed",
-                    background: "#f5f3ff",
-                    border: "1px solid #d8b4fe",
-                    padding: "8px 16px",
-                    borderRadius: "10px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Reset All Filters
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                {filteredChurches.map((church) => {
-                  const isSelected = church.id === selectedChurchId;
-                  const coverImage = church.cover_url ? church.cover_url.split("|||")[0] : null;
-                  const churchWorship = church.worship_style || church.worship_styles;
-                  const worshipLabel = Array.isArray(churchWorship) ? churchWorship[0] : (typeof churchWorship === "string" ? churchWorship.split(",")[0] : null);
-
-                  return (
-                    <div
-                      key={church.id}
-                      onClick={() => setSelectedChurchId(church.id)}
-                      onMouseEnter={() => setHoveredChurchId(church.id)}
-                      onMouseLeave={() => setHoveredChurchId(null)}
-                      style={{
-                        display: "flex",
-                        borderRadius: "16px",
-                        border: isSelected ? "2px solid #7c3aed" : "1.5px solid #e2e8f0",
-                        background: isSelected ? "#faf5ff" : "#fff",
-                        overflow: "hidden",
-                        cursor: "pointer",
-                        transition: "all 0.2s",
-                        boxShadow: isSelected
-                          ? "0 8px 20px rgba(124, 58, 237, 0.12)"
-                          : "0 2px 5px rgba(0,0,0,0.03)",
-                      }}
-                    >
-                      {/* Image Thumbnail */}
-                      <div
+                  {openingStatus === "custom" && (
+                    <>
+                      {/* Day Picker */}
+                      <select
+                        value={customDay}
+                        onChange={(e) => setCustomDay(e.target.value)}
                         style={{
-                          width: "150px",
-                          minWidth: "150px",
-                          background: coverImage
-                            ? `url('${coverImage}') center/cover`
-                            : "linear-gradient(135deg, #7c3aed, #ec4899)",
-                          position: "relative",
+                          width: "auto",
+                          padding: "4px 10px",
+                          fontSize: "12px",
+                          borderRadius: "10px",
+                          fontWeight: 700,
+                          color: "#7c3aed",
+                          border: "1.5px solid #d8b4fe",
+                          background: "#fff",
                         }}
                       >
-                        {church.is_verified && (
+                        <option value="Sun">Sun</option>
+                        <option value="Mon">Mon</option>
+                        <option value="Tue">Tue</option>
+                        <option value="Wed">Wed</option>
+                        <option value="Thu">Thu</option>
+                        <option value="Fri">Fri</option>
+                        <option value="Sat">Sat</option>
+                      </select>
+
+                      {/* Time Picker */}
+                      <select
+                        value={customTime}
+                        onChange={(e) => setCustomTime(e.target.value)}
+                        style={{
+                          width: "auto",
+                          padding: "4px 10px",
+                          fontSize: "12px",
+                          borderRadius: "10px",
+                          fontWeight: 700,
+                          color: "#7c3aed",
+                          border: "1.5px solid #d8b4fe",
+                          background: "#fff",
+                        }}
+                      >
+                        <option value="all">Any Time</option>
+                        <option value="morning">Morning (Before 12 PM)</option>
+                        <option value="afternoon">Afternoon (12 PM - 5 PM)</option>
+                        <option value="evening">Evening (After 5 PM)</option>
+                      </select>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+
+            {exploreType === "churches" ? (
+              <>
+                {/* Search Input - Full Width for Churches */}
+                <div style={{ position: "relative", marginBottom: "12px" }}>
+                  <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: "16px" }}></i>
+                  <input
+                    type="text"
+                    placeholder="Search by church name, city, UK postcode (e.g. E12 5LH)..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      paddingLeft: "42px",
+                      paddingRight: "14px",
+                      height: "40px",
+                      fontSize: "13.5px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #e2e8f0",
+                      width: "100%",
+                    }}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      style={{
+                        position: "absolute",
+                        right: "12px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "#94a3b8",
+                        fontSize: "14px",
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Dropdowns Grid - Only for Churches */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "8px" }}>
+                  {/* Denominations */}
+                  <div>
+                    <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "3px" }}>Denomination</label>
+                    <select
+                      value={selectedDenom}
+                      onChange={(e) => setSelectedDenom(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        fontSize: "12.5px",
+                        borderRadius: "8px",
+                        fontWeight: 600,
+                        color: "#334155",
+                        border: "1.5px solid #e2e8f0",
+                        background: "#f8fafc",
+                      }}
+                    >
+                      <option value="all">All Denominations</option>
+                      {denominations.filter((d) => d !== "all").map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Languages */}
+                  <div>
+                    <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "3px" }}>Language</label>
+                    <select
+                      value={selectedLanguage}
+                      onChange={(e) => setSelectedLanguage(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        fontSize: "12.5px",
+                        borderRadius: "8px",
+                        fontWeight: 600,
+                        color: "#334155",
+                        border: "1.5px solid #e2e8f0",
+                        background: "#f8fafc",
+                      }}
+                    >
+                      <option value="all">All Languages</option>
+                      {languages.filter((l) => l !== "all").map((lang) => (
+                        <option key={lang} value={lang}>{lang}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Worship Styles */}
+                  <div>
+                    <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "3px" }}>Worship Style</label>
+                    <select
+                      value={selectedWorshipStyle}
+                      onChange={(e) => setSelectedWorshipStyle(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        fontSize: "12.5px",
+                        borderRadius: "8px",
+                        fontWeight: 600,
+                        color: "#334155",
+                        border: "1.5px solid #e2e8f0",
+                        background: "#f8fafc",
+                      }}
+                    >
+                      <option value="all">All Worship Styles</option>
+                      {worshipStyles.filter((w) => w !== "all").map((w) => (
+                        <option key={w} value={w}>{w}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Ministries */}
+                  <div>
+                    <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "3px" }}>Ministry</label>
+                    <select
+                      value={selectedMinistry}
+                      onChange={(e) => setSelectedMinistry(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        fontSize: "12.5px",
+                        borderRadius: "8px",
+                        fontWeight: 600,
+                        color: "#334155",
+                        border: "1.5px solid #e2e8f0",
+                        background: "#f8fafc",
+                      }}
+                    >
+                      <option value="all">All Ministries</option>
+                      {ministries.filter((m) => m !== "all").map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Sort Options */}
+                  <div>
+                    <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "3px" }}>Sort By</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        fontSize: "12.5px",
+                        borderRadius: "8px",
+                        fontWeight: 700,
+                        color: "#7c3aed",
+                        border: "1.5px solid #d8b4fe",
+                        background: "#f5f3ff",
+                      }}
+                    >
+                      <option value="latest">Latest</option>
+                      <option value="nearby">Nearby</option>
+                      <option value="name_asc">Name A-Z</option>
+                      <option value="name_desc">Name Z-A</option>
+                    </select>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* Search & Sort on Single Line for Pastors & Events */
+              <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "4px" }}>
+                <div style={{ position: "relative", flex: 1 }}>
+                  <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: "16px" }}></i>
+                  <input
+                    type="text"
+                    placeholder={exploreType === "pastors" ? "Search by pastor name, city..." : "Search by event title, venue, city..."}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      paddingLeft: "42px",
+                      paddingRight: "14px",
+                      height: "40px",
+                      fontSize: "13.5px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #e2e8f0",
+                      width: "100%",
+                    }}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      style={{
+                        position: "absolute",
+                        right: "12px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "#94a3b8",
+                        fontSize: "14px",
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ width: "160px", minWidth: "160px" }}>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    style={{
+                      width: "100%",
+                      height: "40px",
+                      padding: "0 10px",
+                      fontSize: "13px",
+                      borderRadius: "10px",
+                      fontWeight: 700,
+                      color: "#7c3aed",
+                      border: "1.5px solid #d8b4fe",
+                      background: "#f5f3ff",
+                    }}
+                  >
+                    <option value="latest">Latest</option>
+                    <option value="name_asc">Name A-Z</option>
+                    <option value="name_desc">Name Z-A</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* List of Items */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+            {exploreType === "churches" && (
+              filteredChurches.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 20px", color: "#64748b" }}>
+                  <i className="ti ti-church-off" style={{ fontSize: "40px", color: "#cbd5e1", marginBottom: "12px", display: "block" }}></i>
+                  <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" }}>No churches match your filters</h3>
+                  <p style={{ fontSize: "13px" }}>Try clearing some filters or searching with a broader keyword.</p>
+                  <button
+                    onClick={clearAllFilters}
+                    style={{
+                      marginTop: "12px",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      color: "#7c3aed",
+                      background: "#f5f3ff",
+                      border: "1px solid #d8b4fe",
+                      padding: "8px 16px",
+                      borderRadius: "10px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Reset All Filters
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  {filteredChurches.map((church) => {
+                    const isSelected = church.id === selectedChurchId;
+                    const coverImage = church.cover_url ? church.cover_url.split("|||")[0] : null;
+                    const churchWorship = church.worship_style || church.worship_styles;
+                    const worshipLabel = Array.isArray(churchWorship) ? churchWorship[0] : (typeof churchWorship === "string" ? churchWorship.split(",")[0] : null);
+
+                    return (
+                      <div
+                        key={church.id}
+                        onClick={() => setSelectedChurchId(church.id)}
+                        onMouseEnter={() => setHoveredChurchId(church.id)}
+                        onMouseLeave={() => setHoveredChurchId(null)}
+                        style={{
+                          display: "flex",
+                          borderRadius: "16px",
+                          border: isSelected ? "2px solid #7c3aed" : "1.5px solid #e2e8f0",
+                          background: isSelected ? "#faf5ff" : "#fff",
+                          overflow: "hidden",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                          boxShadow: isSelected
+                            ? "0 8px 20px rgba(124, 58, 237, 0.12)"
+                            : "0 2px 5px rgba(0,0,0,0.03)",
+                        }}
+                      >
+                        {/* Image Thumbnail */}
+                        <div
+                          style={{
+                            width: "150px",
+                            minWidth: "150px",
+                            background: coverImage
+                              ? `url('${coverImage}') center/cover`
+                              : "linear-gradient(135deg, #7c3aed, #ec4899)",
+                            position: "relative",
+                          }}
+                        >
+                          {church.is_verified && (
+                            <span style={{
+                              position: "absolute",
+                              top: "8px",
+                              left: "8px",
+                              background: "rgba(22, 163, 74, 0.9)",
+                              color: "#fff",
+                              fontSize: "10px",
+                              fontWeight: 800,
+                              padding: "3px 8px",
+                              borderRadius: "8px",
+                              backdropFilter: "blur(4px)"
+                            }}>
+                              ✓ Verified
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Content Info */}
+                        <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                          <div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                              <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: "0 0 3px 0", lineHeight: 1.3 }}>
+                                {church.name}
+                              </h3>
+                              {typeof church.distance === "number" && (
+                                <span style={{
+                                  fontSize: "11px",
+                                  fontWeight: 700,
+                                  color: "#7c3aed",
+                                  background: "#f3e8ff",
+                                  padding: "2px 8px",
+                                  borderRadius: "8px",
+                                  whiteSpace: "nowrap"
+                                }}>
+                                  {church.distance < 1 ? `${Math.round(church.distance * 1000)} m` : `${church.distance.toFixed(1)} km`}
+                                </span>
+                              )}
+                            </div>
+
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12.5px", color: "#64748b", marginBottom: "8px" }}>
+                              <i className="ti ti-map-pin" style={{ color: "#e11d48" }}></i>
+                              <span>{church.city || church.address_line || "Location available"}</span>
+                              {church.postcode && (
+                                <span style={{ color: "#94a3b8", fontSize: "11.5px" }}>({church.postcode})</span>
+                              )}
+                            </div>
+
+                            {/* Filter tags preview */}
+                            <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "8px" }}>
+                              {church.denomination && (
+                                <span style={{ fontSize: "11px", fontWeight: 700, background: "#f1f5f9", color: "#475569", padding: "2px 7px", borderRadius: "6px" }}>
+                                  {church.denomination.split("|||")[0]}
+                                </span>
+                              )}
+                              {worshipLabel && (
+                                <span style={{ fontSize: "11px", fontWeight: 700, background: "#fef3c7", color: "#b45309", padding: "2px 7px", borderRadius: "6px" }}>
+                                  🎵 {worshipLabel}
+                                </span>
+                              )}
+                              {church.languages && church.languages.length > 0 && (
+                                <span style={{ fontSize: "11px", fontWeight: 600, background: "#f8fafc", color: "#64748b", border: "1px solid #e2e8f0", padding: "2px 7px", borderRadius: "6px" }}>
+                                  🗣 {church.languages[0]}
+                                </span>
+                              )}
+                              {church.ministries && church.ministries.length > 0 && (
+                                <span style={{ fontSize: "11px", fontWeight: 600, background: "#f0fdf4", color: "#166534", padding: "2px 7px", borderRadius: "6px" }}>
+                                  🤝 {church.ministries[0]}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Card Footer */}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "6px", borderTop: "1px solid #f1f5f9" }}>
+                            <span style={{ fontSize: "11.5px", color: typeof church.latitude === "number" ? "#16a34a" : "#94a3b8", fontWeight: 600 }}>
+                              {typeof church.latitude === "number" ? "📍 Location on map" : "No map coordinates"}
+                            </span>
+                            <Link
+                              href={`/church/${church.slug}`}
+                              style={{
+                                fontSize: "12.5px",
+                                fontWeight: 700,
+                                color: "#7c3aed",
+                                textDecoration: "none",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "3px"
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              Profile &rarr;
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            )}
+
+            {exploreType === "pastors" && (
+              filteredPastors.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 20px", color: "#64748b" }}>
+                  <i className="ti ti-user-off" style={{ fontSize: "40px", color: "#cbd5e1", marginBottom: "12px", display: "block" }}></i>
+                  <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" }}>No pastors match your search</h3>
+                  <p style={{ fontSize: "13px" }}>Try typing a different name or checking back later.</p>
+                </div>
+              ) : (
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+                  gap: "20px"
+                }}>
+                  {filteredPastors.map((pastor) => {
+                    const isSelected = pastor.id === selectedChurchId;
+                    const avatarImage = pastor.avatar_url || null;
+                    const coverImage = Array.isArray(pastor.cover_photo_urls) && pastor.cover_photo_urls.length > 0 ? pastor.cover_photo_urls[0] : null;
+
+                    return (
+                      <Link
+                        key={pastor.id}
+                        href={`/pastor/${pastor.slug}`}
+                        className={`pastor-grid-card ${isSelected ? "selected" : ""}`}
+                      >
+                        {/* Image Thumbnail */}
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "220px",
+                            background: avatarImage
+                              ? `url('${avatarImage}') center/cover`
+                              : coverImage
+                              ? `url('${coverImage}') center/cover`
+                              : "linear-gradient(135deg, #a855f7, #6366f1)",
+                            position: "relative",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          {!avatarImage && !coverImage && (
+                            <i className="ti ti-user" style={{ fontSize: "42px", color: "rgba(255,255,255,0.45)" }}></i>
+                          )}
+                          {pastor.is_verified && (
+                            <span style={{
+                              position: "absolute",
+                              top: "8px",
+                              left: "8px",
+                              background: "rgba(22, 163, 74, 0.9)",
+                              color: "#fff",
+                              fontSize: "10px",
+                              fontWeight: 800,
+                              padding: "3px 8px",
+                              borderRadius: "8px",
+                              backdropFilter: "blur(4px)"
+                            }}>
+                              ✓ Verified
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Content Info */}
+                        <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "10px" }}>
+                          <div>
+                            <div style={{ marginBottom: "6px" }}>
+                              <span style={{
+                                fontSize: "9px",
+                                fontWeight: 800,
+                                color: "#7c3aed",
+                                background: "#f3e8ff",
+                                padding: "2.5px 7px",
+                                borderRadius: "6px",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.03em",
+                                display: "inline-block"
+                              }}>
+                                {pastor.title || "Pastor"}
+                              </span>
+                            </div>
+                            
+                            <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: "0 0 6px 0", lineHeight: 1.3 }}>
+                              {pastor.full_name}
+                            </h3>
+
+                            {/* Church affiliation */}
+                            {(pastor.church?.name || pastor.church_name_cache) && (
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#475569", marginBottom: "5px" }}>
+                                <i className="ti ti-building-church" style={{ color: "#7c3aed", fontSize: "14px" }}></i>
+                                <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {pastor.church?.name || pastor.church_name_cache}
+                                </span>
+                              </div>
+                            )}
+
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11.5px", color: "#64748b" }}>
+                              <i className="ti ti-map-pin" style={{ color: "#cbd5e1", fontSize: "14px" }}></i>
+                              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {pastor.city || pastor.church?.city || pastor.country || "Location registered"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Card Footer */}
+                          <div className="pastor-card-footer">
+                            View Profile <i className="ti ti-arrow-up-right" style={{ fontSize: "14px" }}></i>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )
+            )}
+
+            {exploreType === "events" && (
+              filteredEvents.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 20px", color: "#64748b" }}>
+                  <i className="ti ti-calendar-off" style={{ fontSize: "40px", color: "#cbd5e1", marginBottom: "12px", display: "block" }}></i>
+                  <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" }}>No events match your search</h3>
+                  <p style={{ fontSize: "13px" }}>Try checking back later or searching another city.</p>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  {filteredEvents.map((event) => {
+                    const isSelected = event.id === selectedChurchId;
+                    const coverImage = event.cover_url || null;
+                    const dateStr = event.starts_at ? new Date(event.starts_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", weekday: "short" }) : "Upcoming";
+
+                    return (
+                      <div
+                        key={event.id}
+                        onClick={() => setSelectedChurchId(event.id)}
+                        onMouseEnter={() => setHoveredChurchId(event.id)}
+                        onMouseLeave={() => setHoveredChurchId(null)}
+                        style={{
+                          display: "flex",
+                          borderRadius: "16px",
+                          border: isSelected ? "2px solid #7c3aed" : "1.5px solid #e2e8f0",
+                          background: isSelected ? "#faf5ff" : "#fff",
+                          overflow: "hidden",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                          boxShadow: isSelected
+                            ? "0 8px 20px rgba(124, 58, 237, 0.12)"
+                            : "0 2px 5px rgba(0,0,0,0.03)",
+                        }}
+                      >
+                        {/* Image Thumbnail */}
+                        <div
+                          style={{
+                            width: "150px",
+                            minWidth: "150px",
+                            background: coverImage
+                              ? `url('${coverImage}') center/cover`
+                              : "linear-gradient(135deg, #e11d48, #fb7185)",
+                            position: "relative",
+                          }}
+                        >
                           <span style={{
                             position: "absolute",
                             top: "8px",
                             left: "8px",
-                            background: "rgba(22, 163, 74, 0.9)",
+                            background: "rgba(15, 23, 42, 0.8)",
                             color: "#fff",
-                            fontSize: "10px",
+                            fontSize: "9px",
                             fontWeight: 800,
-                            padding: "3px 8px",
-                            borderRadius: "8px",
-                            backdropFilter: "blur(4px)"
+                            padding: "3px 6px",
+                            borderRadius: "6px",
                           }}>
-                            ✓ Verified
+                            {event.type || "Event"}
                           </span>
-                        )}
-                      </div>
+                        </div>
 
-                      {/* Content Info */}
-                      <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                        <div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
-                            <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: "0 0 3px 0", lineHeight: 1.3 }}>
-                              {church.name}
-                            </h3>
-                            {typeof church.distance === "number" && (
-                              <span style={{
-                                fontSize: "11px",
+                        {/* Content Info */}
+                        <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                          <div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                              <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: "0 0 3px 0", lineHeight: 1.3 }}>
+                                {event.title}
+                              </h3>
+                              {typeof event.distance === "number" && (
+                                <span style={{
+                                  fontSize: "11px",
+                                  fontWeight: 700,
+                                  color: "#7c3aed",
+                                  background: "#f3e8ff",
+                                  padding: "2px 8px",
+                                  borderRadius: "8px",
+                                  whiteSpace: "nowrap"
+                                }}>
+                                  {event.distance < 1 ? `${Math.round(event.distance * 1000)} m` : `${event.distance.toFixed(1)} km`}
+                                </span>
+                              )}
+                            </div>
+
+                            <div style={{ fontSize: "12px", color: "#e11d48", fontWeight: 700, marginBottom: "4px" }}>
+                              📅 {dateStr}
+                            </div>
+
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12.5px", color: "#64748b", marginBottom: "8px" }}>
+                              <i className="ti ti-map-pin" style={{ color: "#cbd5e1" }}></i>
+                              <span>{event.venue_name || event.city || "Venue Registered"}</span>
+                            </div>
+                          </div>
+
+                          {/* Card Footer */}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "6px", borderTop: "1px solid #f1f5f9" }}>
+                            <span style={{ fontSize: "11.5px", color: typeof event.latitude === "number" ? "#16a34a" : "#94a3b8", fontWeight: 600 }}>
+                              {typeof event.latitude === "number" ? "📍 Location on map" : "No map coordinates"}
+                            </span>
+                            <Link
+                              href={`/events/${event.slug}`}
+                              style={{
+                                fontSize: "12.5px",
                                 fontWeight: 700,
                                 color: "#7c3aed",
-                                background: "#f3e8ff",
-                                padding: "2px 8px",
-                                borderRadius: "8px",
-                                whiteSpace: "nowrap"
-                              }}>
-                                {church.distance < 1 ? `${Math.round(church.distance * 1000)} m` : `${church.distance.toFixed(1)} km`}
-                              </span>
-                            )}
+                                textDecoration: "none",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "3px"
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              View Event &rarr;
+                            </Link>
                           </div>
-
-                          <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12.5px", color: "#64748b", marginBottom: "8px" }}>
-                            <i className="ti ti-map-pin" style={{ color: "#e11d48" }}></i>
-                            <span>{church.city || church.address_line || "Location available"}</span>
-                            {church.postcode && (
-                              <span style={{ color: "#94a3b8", fontSize: "11.5px" }}>({church.postcode})</span>
-                            )}
-                          </div>
-
-                          {/* Filter tags preview */}
-                          <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "8px" }}>
-                            {church.denomination && (
-                              <span style={{ fontSize: "11px", fontWeight: 700, background: "#f1f5f9", color: "#475569", padding: "2px 7px", borderRadius: "6px" }}>
-                                {church.denomination.split("|||")[0]}
-                              </span>
-                            )}
-                            {worshipLabel && (
-                              <span style={{ fontSize: "11px", fontWeight: 700, background: "#fef3c7", color: "#b45309", padding: "2px 7px", borderRadius: "6px" }}>
-                                🎵 {worshipLabel}
-                              </span>
-                            )}
-                            {church.languages && church.languages.length > 0 && (
-                              <span style={{ fontSize: "11px", fontWeight: 600, background: "#f8fafc", color: "#64748b", border: "1px solid #e2e8f0", padding: "2px 7px", borderRadius: "6px" }}>
-                                🗣 {church.languages[0]}
-                              </span>
-                            )}
-                            {church.ministries && church.ministries.length > 0 && (
-                              <span style={{ fontSize: "11px", fontWeight: 600, background: "#f0fdf4", color: "#166534", padding: "2px 7px", borderRadius: "6px" }}>
-                                🤝 {church.ministries[0]}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Card Footer */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "6px", borderTop: "1px solid #f1f5f9" }}>
-                          <span style={{ fontSize: "11.5px", color: typeof church.latitude === "number" ? "#16a34a" : "#94a3b8", fontWeight: 600 }}>
-                            {typeof church.latitude === "number" ? "📍 Location on map" : "No map coordinates"}
-                          </span>
-                          <Link
-                            href={`/church/${church.slug}`}
-                            style={{
-                              fontSize: "12.5px",
-                              fontWeight: 700,
-                              color: "#7c3aed",
-                              textDecoration: "none",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "3px"
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            Profile &rarr;
-                          </Link>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )
             )}
           </div>
         </div>
 
         {/* RIGHT COLUMN: Interactive Leaflet Map */}
-        <div style={{ flex: 1, height: "100%", minHeight: "100%", position: "relative", background: "#f1f5f9", overflow: "hidden" }}>
-          <ChurchMap
-            churches={filteredChurches}
-            selectedChurchId={selectedChurchId}
-            hoveredChurchId={hoveredChurchId}
-            onSelectChurch={(c) => setSelectedChurchId(c.id)}
-          />
-        </div>
+        {exploreType !== "pastors" && (
+          <div style={{ flex: 1, height: "100%", minHeight: "100%", position: "relative", background: "#f1f5f9", overflow: "hidden" }}>
+            <ChurchMap
+              churches={activeItemsForMap}
+              selectedChurchId={selectedChurchId}
+              hoveredChurchId={hoveredChurchId}
+              onSelectChurch={(c) => setSelectedChurchId(c.id)}
+            />
+          </div>
+        )}
 
       </div>
     </div>

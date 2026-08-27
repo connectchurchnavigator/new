@@ -13,6 +13,7 @@ export default function TopNav() {
   const [user, setUser] = useState<User | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const supabase = createClient();
@@ -71,6 +72,15 @@ export default function TopNav() {
 
   const { initial, label } = getUserDisplay();
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) {
+      params.set("q", searchQuery.trim());
+    }
+    router.push(`/explore?${params.toString()}`);
+  };
+
   return (
     <div className="topnav" style={{ position: "sticky", top: 0, zIndex: 1000, background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(14px)", borderBottom: "1px solid var(--cn-border, #ececf2)", width: "100%" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "58px", padding: "0 36px", width: "100%" }}>
@@ -79,13 +89,19 @@ export default function TopNav() {
         </Link>
 
         <div style={{ display: "flex", alignItems: "center", gap: "24px", flexShrink: 0 }}>
-          <div className="nav-search" style={{ width: "360px", background: "var(--cn-surface, #f6f5fb)", borderRadius: "24px", padding: "8px 18px", display: "flex", alignItems: "center", gap: "10px", border: "1px solid var(--cn-border, #ececf2)" }}>
+          <form 
+            onSubmit={handleSearch}
+            className="nav-search" 
+            style={{ width: "360px", background: "var(--cn-surface, #f6f5fb)", borderRadius: "24px", padding: "8px 18px", display: "flex", alignItems: "center", gap: "10px", border: "1px solid var(--cn-border, #ececf2)" }}
+          >
             <i className="ti ti-search" style={{ fontSize: "16px", color: "var(--cn-gray-light, #6b7280)" }}></i>
             <input 
               placeholder="Search churches, cities, ministries..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               style={{ border: "none", background: "transparent", padding: 0, fontSize: "13.5px", outline: "none", width: "100%", color: "var(--cn-ink, #14142b)" }}
             />
-          </div>
+          </form>
 
           <Link href="/explore" style={{ fontSize: "14px", fontWeight: 600, color: "var(--cn-ink, #14142b)", textDecoration: "none" }}>
             Explore

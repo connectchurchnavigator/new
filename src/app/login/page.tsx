@@ -37,7 +37,7 @@ export default function LoginPage() {
     try {
       if (activeTab === "register") {
         const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -46,13 +46,19 @@ export default function LoginPage() {
             },
           },
         });
-        if (error) throw error;
+        if (signUpError) throw signUpError;
 
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
+        // Try to immediately log in the user so they bypass confirmation if enabled/possible
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInData?.session || signUpData?.session) {
+          setAuthStep(2);
           router.push("/add-church"); // Redirect to unified onboarding welcome selection
         } else {
-          setInfoMsg("Registration successful! Check your email to confirm your account, then sign in.");
+          setInfoMsg("📩 Confirmation email sent! Please check your inbox and click the activation link to complete registration.");
           setActiveTab("signin");
           setBusy(false);
         }

@@ -95,7 +95,9 @@ export default function ChurchMap({
             transition: all 0.2s ease;
             cursor: pointer;
           ">
-            <span style="transform: rotate(45deg); font-size: 14px; font-weight: 800; margin-bottom: 2px; margin-left: 2px;">✝</span>
+            <span style="transform: rotate(45deg); font-size: 14px; font-weight: 800; margin-bottom: 2px; margin-left: 2px;">
+              ${(church as any).type === "pastor" ? "👤" : (church as any).type === "event" ? "📅" : "✝"}
+            </span>
           </div>
         `;
 
@@ -106,6 +108,18 @@ export default function ChurchMap({
           iconAnchor: [16, 32],
           popupAnchor: [0, -32],
         });
+
+        const detailUrl = (church as any).type === "pastor"
+          ? `/pastor/${church.slug}`
+          : (church as any).type === "event"
+            ? `/events/${church.slug}`
+            : `/church/${church.slug}`;
+
+        const btnLabel = (church as any).type === "pastor"
+          ? "View Pastor"
+          : (church as any).type === "event"
+            ? "View Event"
+            : "View Church";
 
         const marker = L.marker([church.latitude, church.longitude], { icon })
           .addTo(map)
@@ -126,8 +140,8 @@ export default function ChurchMap({
             <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">
               📍 ${church.city || church.address_line || "Location"}
             </div>
-            <a href="/church/${church.slug}" style="display: inline-block; background: #7c3aed; color: #fff; text-decoration: none; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 6px;">
-              View Church &rarr;
+            <a href="${detailUrl}" style="display: inline-block; background: #7c3aed; color: #fff; text-decoration: none; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 6px;">
+              ${btnLabel} &rarr;
             </a>
           </div>
         `);
