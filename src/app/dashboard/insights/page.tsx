@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
 import { getVisitorStats, getVisitorFunnel, getVisitorSources, getVisitors } from '@/lib/api';
 import InsightsClient from './InsightsClient';
 import '../dashboard.css'; // Reuse dashboard styles
@@ -18,8 +19,10 @@ export default async function InsightsPage({
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const requestedChurchId = resolvedSearchParams.church_id;
 
+  const adminClient = createAdminClient();
+
   // 1. Fetch user's organizations
-  const { data: userOrgs } = await supabase
+  const { data: userOrgs } = await adminClient
     .from('organizations')
     .select('*')
     .eq('owner_id', user.id)
@@ -28,7 +31,7 @@ export default async function InsightsPage({
   const orgIds = (userOrgs || []).map((o) => o.id);
 
   // 2. Fetch churches belonging to user's orgs or all churches if none
-  const { data: churchesData } = await supabase
+  const { data: churchesData } = await adminClient
     .from('churches')
     .select('id, name, slug, org_id, is_hq')
     .order('created_at', { ascending: false });
@@ -51,7 +54,7 @@ export default async function InsightsPage({
 
   // If requestedChurchId is not in the list, fetch it directly (e.g. admin or created before org linking)
   if (!activeChurch && requestedChurchId) {
-    const { data: directChurch } = await supabase
+    const { data: directChurch } = await adminClient
       .from('churches')
       .select('id, name, slug, org_id, is_hq')
       .eq('id', requestedChurchId)
@@ -69,7 +72,7 @@ export default async function InsightsPage({
     activeChurch = availableChurches.find((b) => b.is_hq) || availableChurches[0];
   }
 
-  // Fetch insights data for active church safely
+  // Fetch insights data for active church safely using admin client
   let stats = null;
   let funnel: { stage: string; count: number }[] = [];
   let sources: { source: string; count: number }[] = [];
@@ -77,10 +80,10 @@ export default async function InsightsPage({
 
   try {
     const [statsRes, funnelRes, sourcesRes, visitorsRes] = await Promise.all([
-      getVisitorStats(supabase, activeChurch.id).catch(() => null),
-      getVisitorFunnel(supabase, activeChurch.id).catch(() => []),
-      getVisitorSources(supabase, activeChurch.id).catch(() => []),
-      getVisitors(supabase, activeChurch.id).catch(() => []),
+      getVisitorStats(adminClient, activeChurch.id).catch(() => null),
+      getVisitorFunnel(adminClient, activeChurch.id).catch(() => []),
+      getVisitorSources(adminClient, activeChurch.id).catch(() => []),
+      getVisitors(adminClient, activeChurch.id).catch(() => []),
     ]);
 
     stats = statsRes;
