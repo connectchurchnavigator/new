@@ -145,11 +145,23 @@ export default async function PastorProfilePage(props: {
                 )}
               </div>
 
-              <h1 style={{ color: '#fff', fontSize: '56px', fontWeight: 800, margin: '0 0 4px 0', letterSpacing: '-0.03em', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
-                {pastor.full_name}
-              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                <h1 style={{ color: '#fff', fontSize: '56px', fontWeight: 800, margin: 0, letterSpacing: '-0.03em', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
+                  {pastor.full_name}
+                </h1>
+                {pastor.is_verified && (
+                  <span title="Verified Minister" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', padding: '6px 14px', borderRadius: '30px', fontSize: '13px', fontWeight: 800, boxShadow: '0 4px 15px rgba(16, 185, 129, 0.45)', border: '1.5px solid rgba(255,255,255,0.4)', backdropFilter: 'blur(8px)' }}>
+                    <i className="ti ti-rosette-discount-check-filled" style={{ fontSize: '17px', color: '#fff' }}></i> Verified Minister
+                  </span>
+                )}
+              </div>
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {pastor.is_verified && (
+                  <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#34d399', backdropFilter: 'blur(12px)', border: '1px solid rgba(16, 185, 129, 0.4)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ti ti-check"></i> Platform Verified
+                  </span>
+                )}
                 {pastor.title && (
                   <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <i className="ti ti-sparkles"></i> {pastor.title}
