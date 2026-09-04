@@ -176,21 +176,29 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
       )}
 
       {/* Gallery Section */}
-      {(isEditing || (church.gallery && church.gallery.length > 0)) && (
-        <div style={{ marginTop: "32px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-            <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Gallery</h2>
-            {renderEditButton("gallery")}
-          </div>
-          {church.gallery && church.gallery.length > 0 ? (
-            <Gallery images={church.gallery} />
-          ) : (
-            <div className="panel" style={{ background: "white", padding: "24px", borderRadius: "20px", border: "1px dashed #cbd5e1", color: "var(--muted)", fontSize: "15px", textAlign: "center" }}>
-              No gallery images added yet. Click the edit icon to add some.
+      {(() => {
+        const galleryList = (Array.isArray(church.gallery) && church.gallery.length > 0)
+          ? church.gallery
+          : (Array.isArray(church.gallery_images) && church.gallery_images.length > 0)
+          ? church.gallery_images
+          : [];
+
+        return (isEditing || galleryList.length > 0) && (
+          <div style={{ marginTop: "32px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+              <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Gallery</h2>
+              {renderEditButton("gallery")}
             </div>
-          )}
-        </div>
-      )}
+            {galleryList.length > 0 ? (
+              <Gallery images={galleryList} />
+            ) : (
+              <div className="panel" style={{ background: "white", padding: "24px", borderRadius: "20px", border: "1px dashed #cbd5e1", color: "var(--muted)", fontSize: "15px", textAlign: "center" }}>
+                No gallery images added yet. Click the edit icon to add some.
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Modals */}
       {editingField === "about" && (
@@ -231,9 +239,20 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
 
       {editingField === "gallery" && (
         <EditGalleryModal 
-          initialGallery={church.gallery || []}
+          initialGallery={
+            (Array.isArray(church.gallery) && church.gallery.length > 0)
+              ? church.gallery
+              : (Array.isArray(church.gallery_images) && church.gallery_images.length > 0)
+              ? church.gallery_images
+              : []
+          }
           onClose={() => setEditingField(null)}
-          onSave={(gallery) => { setChurch({ ...church, gallery }); onChurchChange?.({ ...church, gallery }); setEditingField(null); }}
+          onSave={(gallery) => { 
+            const updated = { ...church, gallery, gallery_images: gallery };
+            setChurch(updated); 
+            onChurchChange?.(updated); 
+            setEditingField(null); 
+          }}
         />
       )}
 

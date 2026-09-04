@@ -122,7 +122,8 @@ export async function POST(req: Request) {
                  (data.telegram ? `|||telegram:${data.telegram}` : ''),
         instagram: data.instagram || data.socialInstagram || null,
         facebook: data.facebook || data.socialFacebook || null,
-        gallery_images: data.galleryImages || [],
+        gallery: data.galleryImages || data.gallery || [],
+        gallery_images: data.galleryImages || data.gallery || [],
         languages: data.languages || [],
         facilities: data.facilities || [],
         ministries: data.ministries || [],
@@ -131,7 +132,7 @@ export async function POST(req: Request) {
       .select().single();
     if (chErr) throw chErr;
 
-    // 4. Upload images (logo and cover are data URLs or HTTP links)
+    // 4. Upload images (logo, cover, and gallery are data URLs or HTTP links)
     const uploadBase64 = async (dataUrl: string, type: string) => {
       if (!dataUrl) return null;
       if (dataUrl.startsWith('http://') || dataUrl.startsWith('https://')) {
@@ -159,6 +160,7 @@ export async function POST(req: Request) {
 
     let logoUrl = null;
     let coverUrls: string[] = [];
+    let uploadedGallery: string[] = [];
 
     if (data.logo) logoUrl = await uploadBase64(data.logo, 'logo');
     if (data.cover) {
@@ -172,11 +174,24 @@ export async function POST(req: Request) {
       }
     }
 
-    if (logoUrl || coverUrls.length > 0) {
-      await sb.from('churches').update({
-        logo_url: logoUrl || undefined,
-        cover_url: coverUrls.length > 0 ? coverUrls.join('|||') : undefined
-      }).eq('id', church.id);
+    const rawGallery = data.galleryImages || data.gallery || [];
+    if (Array.isArray(rawGallery) && rawGallery.length > 0) {
+      for (const item of rawGallery) {
+        const gUrl = await uploadBase64(item, 'gallery');
+        if (gUrl) uploadedGallery.push(gUrl);
+      }
+    }
+
+    const updates: any = {};
+    if (logoUrl) updates.logo_url = logoUrl;
+    if (coverUrls.length > 0) updates.cover_url = coverUrls.join('|||');
+    if (uploadedGallery.length > 0) {
+      updates.gallery = uploadedGallery;
+      updates.gallery_images = uploadedGallery;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await sb.from('churches').update(updates).eq('id', church.id);
     }
 
     // 5. Insert Services
