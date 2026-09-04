@@ -23,15 +23,27 @@ export function supabaseBrowser() {
  * so RLS still applies as that user. Pass your framework's cookie adapter.
  */
 export function supabaseServer(cookieAdapter: {
-  get: (name: string) => string | undefined;
-  set: (name: string, value: string, options: any) => void;
-  remove: (name: string, options: any) => void;
+  getAll?: () => any[];
+  setAll?: (cookiesToSet: { name: string; value: string; options?: any }[]) => void;
+  get?: (name: string) => string | undefined;
+  set?: (name: string, value: string, options: any) => void;
+  remove?: (name: string, options: any) => void;
 }) {
   return createServerClient(URL, ANON, {
     cookies: {
-      get: cookieAdapter.get,
-      set: cookieAdapter.set,
-      remove: cookieAdapter.remove,
+      getAll() {
+        if (cookieAdapter.getAll) return cookieAdapter.getAll();
+        return [];
+      },
+      setAll(cookiesToSet) {
+        if (cookieAdapter.setAll) {
+          cookieAdapter.setAll(cookiesToSet);
+        } else if (cookieAdapter.set) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieAdapter.set!(name, value, options)
+          );
+        }
+      },
     },
   });
 }

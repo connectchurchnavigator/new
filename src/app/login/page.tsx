@@ -1,15 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
-import logoImg from "@/Assets/logo (1).png"; // Assuming this is the correct logo
+import logoImg from "@/Assets/logo (1).png";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+
+  const nextUrl = searchParams.get("next") || "/dashboard";
 
   const [activeTab, setActiveTab] = useState<"signin" | "register">("signin");
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +26,15 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   const [authStep, setAuthStep] = useState(0);
+
+  // Auto-redirect if already signed in
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        router.replace(nextUrl);
+      }
+    });
+  }, [nextUrl, router, supabase]);
 
   async function handleAuth(e: React.FormEvent) {
     e.preventDefault();
@@ -61,7 +73,8 @@ export default function LoginPage() {
 
         if (signInData?.session || signUpData?.session) {
           setAuthStep(2);
-          router.push("/add-church"); // Redirect to unified onboarding welcome selection
+          router.push(searchParams.get("next") || "/add-church");
+          router.refresh();
         } else {
           setInfoMsg("📩 Confirmation email sent! Please check your inbox and click the activation link to complete registration.");
           setActiveTab("signin");
@@ -71,7 +84,8 @@ export default function LoginPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         setAuthStep(2);
-        router.push("/dashboard");
+        router.push(nextUrl);
+        router.refresh();
       }
     } catch (err: any) {
       clearTimeout(stepTimer1);
@@ -379,5 +393,20 @@ export default function LoginPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "var(--cn-purple, #7c3aed)", fontWeight: 600 }}>
+          <i className="ti ti-loader-2 ti-spin" style={{ fontSize: "24px" }}></i>
+          <span>Loading...</span>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
