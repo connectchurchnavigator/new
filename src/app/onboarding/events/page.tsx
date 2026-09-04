@@ -512,6 +512,88 @@ function EventsOnboardingContent() {
   const [publishing, setPublishing] = useState(false);
   const [publishStepIndex, setPublishStepIndex] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
+  const [toastMsg, setToastMsg] = useState("");
+
+  const handleLoadSampleData = () => {
+    if (step === 1) {
+      const defaultHost = hostOptions.length > 0 ? hostOptions[0] : null;
+      setForm(prev => ({
+        ...prev,
+        title: "National Kingdom Life Conference 2025",
+        type: "Conference",
+        custom_type: "",
+        mode: "Offline",
+        description: "A 3-day transformative gathering uniting church leaders, worship teams, and believers from across the nation for deep spiritual revival, apostolic teaching, and kingdom networking.",
+        venue_name: "ExCeL London Convention Centre",
+        address: "Royal Victoria Dock, 1 Western Gateway, London, E16 1XL",
+        city: "London",
+        postcode: "E16 1XL",
+        latitude: 51.5074,
+        longitude: 0.0264,
+        capacity: "2500",
+        has_free_parking: true,
+        near_metro_station: true,
+        near_bus_station: true,
+        step_free_access: true,
+        creche_available: true,
+        has_other_amenity: true,
+        custom_amenities: ["Translation headsets", "Prayer & ministry room", "Christian bookstore & cafe"],
+        ...(defaultHost ? {
+          host_type: defaultHost.type,
+          host_id: defaultHost.id
+        } : {
+          host_type: "individual",
+          custom_host_name: "Kingdom Life Ministries UK"
+        })
+      }));
+      if (defaultHost) setSelectedHostName(defaultHost.name);
+      setErrorMsg("");
+      setToastMsg("✨ Sample event basics, venue details & facilities loaded for Step 1!");
+    } else if (step === 2) {
+      setForm(prev => ({
+        ...prev,
+        dates: [
+          { date: "2025-11-14", starts_time: "09:30 AM", ends_time: "09:00 PM" },
+          { date: "2025-11-15", starts_time: "09:30 AM", ends_time: "09:00 PM" },
+          { date: "2025-11-16", starts_time: "02:00 PM", ends_time: "07:30 PM" }
+        ],
+        sessions: [
+          { time_label: "09:30 AM", title: "Morning Worship & Keynote Opening", description: "Opening worship encounter followed by the apostolic keynote address.", speaker_name: "Bishop David Evans" },
+          { time_label: "11:30 AM", title: "Kingdom Leadership Workshop", description: "Practical breakout masterclass for church planters, department heads, and leaders.", speaker_name: "Pastor Sarah Jenkins" },
+          { time_label: "02:00 PM", title: "Next-Gen Youth & Revival Seminar", description: "Interactive session on raising and discipling the emerging generation.", speaker_name: "Minister Michael Cole" },
+          { time_label: "06:30 PM", title: "Evening Miracle & Prophetic Service", description: "Powerful evening service dedicated to intercession, healing, and prophetic release.", speaker_name: "Dr. Emmanuel Adeyemi" }
+        ],
+        speakers: [
+          { name: "Bishop David Evans", photo_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80", designation: "General Overseer", affiliation: "Grace International Fellowship" },
+          { name: "Pastor Sarah Jenkins", photo_url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80", designation: "Senior Pastor", affiliation: "Hope City Church London" },
+          { name: "Dr. Emmanuel Adeyemi", photo_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&q=80", designation: "Apostolic Leader", affiliation: "Kingsway Christian Centre" }
+        ]
+      }));
+      setErrorMsg("");
+      setToastMsg("✨ Sample 3-day dates, timetable sessions & guest speakers loaded for Step 2!");
+    } else if (step === 3) {
+      setForm(prev => ({
+        ...prev,
+        tickets: [
+          { name: "General Admission (RSVP)", description: "Full 3-day access to all main plenary sessions & worship", price: "Free", capacity: "1800", booking_url: "https://tickets.kingdomlife2025.org/free" },
+          { name: "VIP Delegate Pass", description: "Priority front-row seating, delegates lunch & networking pack", price: "45", capacity: "300", booking_url: "https://tickets.kingdomlife2025.org/vip" }
+        ],
+        faqs: [
+          { question: "Is registration mandatory for free admission?", answer: "Yes, please reserve your Free RSVP ticket in advance so venue security can manage room capacity." },
+          { question: "Is there parking available on-site?", answer: "Yes, attendees can use the paid and complimentary parking bays at ExCeL London East car park." },
+          { question: "Are children and families welcome?", answer: "Children are warmly welcomed! Supervised creche and children's church ministry will run alongside daytime sessions." }
+        ],
+        cover_url: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=1200&q=80",
+        gallery_urls: [
+          "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&q=80",
+          "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80"
+        ]
+      }));
+      setErrorMsg("");
+      setToastMsg("✨ Sample ticket tiers, FAQs & banner media loaded for Step 3!");
+    }
+    setTimeout(() => setToastMsg(""), 4500);
+  };
 
   const handleAddDateSlot = () => {
     setForm(prev => ({
@@ -827,20 +909,67 @@ function EventsOnboardingContent() {
       <div style={{ maxWidth: "920px", margin: "0 auto", padding: "32px 24px 70px", position: "relative", zIndex: 1 }}>
         
         {/* FORM WIZARD HEADER */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "28px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div className="brand-mark" style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)" }}>
               <i className="ti ti-calendar-event" style={{ fontSize: "18px", color: "#fff" }}></i>
             </div>
             <div>
               <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--cn-ink)" }}>Add Event Profile</div>
-              <div style={{ fontSize: "12.5px", color: "var(--cn-gray)" }}>Conferences, summits, crusades, services & retreats</div>
+              <div style={{ fontSize: "12.5px", color: "var(--cn-gray)" }}>Step {step} of {STEPS.length} — Conferences, summits, services & retreats</div>
             </div>
           </div>
-          <button className="btn-secondary" onClick={() => router.push("/add-listing")}>
-            <i className="ti ti-x" style={{ fontSize: "14px" }}></i> Exit
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              type="button"
+              onClick={handleLoadSampleData}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "7px",
+                padding: "8px 16px",
+                borderRadius: "12px",
+                border: "1.5px solid #a855f7",
+                background: "linear-gradient(135deg, #f5f3ff, #faf5ff)",
+                color: "#7e22ce",
+                fontSize: "13.5px",
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(168, 85, 247, 0.15)",
+                transition: "all 0.2s",
+              }}
+              title={`Pre-fill Step ${step} with sample event details`}
+            >
+              <i className="ti ti-sparkles" style={{ fontSize: "16px", color: "#9333ea" }}></i>
+              Load Sample Data
+            </button>
+            <button className="btn-secondary" onClick={() => router.push("/add-listing")}>
+              <i className="ti ti-x" style={{ fontSize: "14px" }}></i> Exit
+            </button>
+          </div>
         </div>
+
+        {/* Toast confirmation message */}
+        {toastMsg && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "12px 18px",
+            marginBottom: "24px",
+            background: "#f0fdf4",
+            border: "1.5px solid #86efac",
+            borderRadius: "14px",
+            color: "#166534",
+            fontSize: "13.5px",
+            fontWeight: 700,
+            boxShadow: "0 4px 12px rgba(22, 101, 52, 0.08)",
+            animation: "fadeIn 0.3s ease"
+          }}>
+            <i className="ti ti-circle-check" style={{ fontSize: "18px", color: "#16a34a" }}></i>
+            <span>{toastMsg}</span>
+          </div>
+        )}
 
         {/* STEP PROGRESS BAR */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "40px", flexWrap: "wrap" }}>
@@ -883,8 +1012,31 @@ function EventsOnboardingContent() {
         {/* STEP 1: BASICS & HOST */}
         {step === 1 && (
           <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: "20px", padding: "32px", boxShadow: "0 10px 30px rgba(15,23,42,0.03)" }}>
-            <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", marginBottom: "20px" }}>
-              1. Event Basics & Host Information
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
+              <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>
+                1. Event Basics & Host Information
+              </div>
+              <button
+                type="button"
+                onClick={handleLoadSampleData}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 14px",
+                  borderRadius: "10px",
+                  border: "1.5px solid #d8b4fe",
+                  background: "#faf5ff",
+                  color: "#7e22ce",
+                  fontSize: "12.5px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s"
+                }}
+              >
+                <i className="ti ti-sparkles" style={{ fontSize: "14px", color: "#9333ea" }}></i>
+                Load Sample Data
+              </button>
             </div>
 
             {/* 1. Event Name */}
@@ -1469,8 +1621,31 @@ function EventsOnboardingContent() {
         {/* STEP 2: DATE, SCHEDULE & SPEAKERS */}
         {step === 2 && (
           <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: "20px", padding: "32px", boxShadow: "0 10px 30px rgba(15,23,42,0.03)" }}>
-            <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", marginBottom: "20px" }}>
-              2. Date, Schedule Timetable & Speakers
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
+              <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>
+                2. Date, Schedule Timetable & Speakers
+              </div>
+              <button
+                type="button"
+                onClick={handleLoadSampleData}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 14px",
+                  borderRadius: "10px",
+                  border: "1.5px solid #d8b4fe",
+                  background: "#faf5ff",
+                  color: "#7e22ce",
+                  fontSize: "12.5px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s"
+                }}
+              >
+                <i className="ti ti-sparkles" style={{ fontSize: "14px", color: "#9333ea" }}></i>
+                Load Sample Data
+              </button>
             </div>
 
             {/* MULTIPLE EVENT DATES & TIMES (+ ADD DATE BUTTON) */}
@@ -1766,8 +1941,31 @@ function EventsOnboardingContent() {
         {/* STEP 3: FAQS, TICKETS & MEDIA */}
         {step === 3 && (
           <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: "20px", padding: "32px", boxShadow: "0 10px 30px rgba(15,23,42,0.03)" }}>
-            <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", marginBottom: "20px" }}>
-              3. Ticket Pricing Tiers, FAQs & Media
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
+              <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>
+                3. Ticket Pricing Tiers, FAQs & Media
+              </div>
+              <button
+                type="button"
+                onClick={handleLoadSampleData}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 14px",
+                  borderRadius: "10px",
+                  border: "1.5px solid #d8b4fe",
+                  background: "#faf5ff",
+                  color: "#7e22ce",
+                  fontSize: "12.5px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s"
+                }}
+              >
+                <i className="ti ti-sparkles" style={{ fontSize: "14px", color: "#9333ea" }}></i>
+                Load Sample Data
+              </button>
             </div>
 
             {/* TICKETS TABLE (Type | Price | # Seats | Link) */}

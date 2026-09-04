@@ -111,6 +111,81 @@ export default function PastorOnboardingPage() {
   const [submitError, setSubmitError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [verified, setVerified] = useState<Record<string, boolean>>({});
+  const [toastMsg, setToastMsg] = useState("");
+
+  const handleLoadSampleData = () => {
+    if (step === 1) {
+      setForm(prev => ({
+        ...prev,
+        full_name: "Pastor Emmanuel Adeyemi",
+        title: "Senior Pastor",
+        church_name_cache: "Kingsway International Christian Centre",
+        city: "London",
+        country: "United Kingdom",
+        address: "Waterberry Drive, Waterlooville, PO7 7XX",
+        latitude: 50.8805,
+        longitude: -1.0261
+      }));
+      setErrors(prev => ({ ...prev, full_name: "", country: "", address: "" }));
+      setVerified(prev => ({ ...prev, full_name: true, country: true, address: true }));
+      setToastMsg("✨ Sample pastor profile & church details loaded for Step 1!");
+    } else if (step === 2) {
+      setForm(prev => ({
+        ...prev,
+        phone: "+44 20 8525 0000",
+        email: "pastor.emmanuel@kicc.org.uk",
+        website_url: "https://emmanueladeyemi.org",
+        facebook_url: "https://facebook.com/pastoremmanuel",
+        instagram_url: "https://instagram.com/pastoremmanuel",
+        youtube_url: "https://youtube.com/@pastoremmanuel",
+        twitter_url: "https://x.com/pastoremmanuel",
+        whatsapp_url: "+447911123456"
+      }));
+      setErrors(prev => ({ ...prev, email: "", phone: "", website_url: "", facebook_url: "", instagram_url: "", youtube_url: "", twitter_url: "" }));
+      setVerified(prev => ({ ...prev, email: true, phone: true, website_url: true, facebook_url: true, instagram_url: true, youtube_url: true, twitter_url: true }));
+      setToastMsg("✨ Sample contact numbers & social channels loaded for Step 2!");
+    } else if (step === 3) {
+      setForm(prev => ({
+        ...prev,
+        bio: "Pastor Emmanuel Adeyemi has been serving the body of Christ for over 22 years, preaching dynamic messages of faith, purpose, and spiritual renewal. He is committed to raising kingdom leaders and transforming communities through the Gospel.",
+        vision_statement: "To empower believers to walk in authentic dominion and manifest God's love in every sphere of influence.",
+        years_in_ministry: "22",
+        churches_planted: "8",
+        nations_reached: "16",
+        preaching_tags: ["Prophetic preaching", "Faith & healing", "Leadership", "Expository teaching"],
+        ministry_area_tags: ["Community outreach", "Youth ministry", "Men's network", "Marriage & family"],
+        available_for_tags: ["Sunday services", "Conferences", "Revival meetings", "Leadership Retreats"],
+      }));
+      setToastMsg("✨ Sample ministry biography, vision, and tags loaded for Step 3!");
+    } else if (step === 4) {
+      setForm(prev => ({
+        ...prev,
+        languages: ["English", "French", "Yoruba", "Spanish"]
+      }));
+      setToastMsg("✨ Sample spoken languages loaded for Step 4!");
+    } else if (step === 5) {
+      setForm(prev => ({
+        ...prev,
+        travel_range: "International",
+        lead_time: "2-4 weeks",
+        availability_status: "available",
+        availability_note: "Available for international apostolic conferences and regional leadership summits with advance notice."
+      }));
+      setToastMsg("✨ Sample travel availability & booking note loaded for Step 5!");
+    } else if (step === 6) {
+      setForm(prev => ({
+        ...prev,
+        avatar_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80",
+        cover_photo_urls: ["https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200&q=80"],
+        gallery_photo_urls: [
+          "https://images.unsplash.com/photo-1519817650390-64a93db51149?w=800&q=80",
+          "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80"
+        ]
+      }));
+      setToastMsg("✨ Sample portrait & ministry media loaded for Step 6!");
+    }
+    setTimeout(() => setToastMsg(""), 4500);
+  };
 
   const SOCIAL_RULES: { [key: string]: { rx: RegExp, others: RegExp, name: string, ex: string } } = {
     facebook_url: { rx: /^(https?:\/\/)?(www\.)?(facebook\.com|fb\.com|fb\.me)\/[A-Za-z0-9._\-\/?=&%]+$/i, others: /(instagram\.com|linkedin\.com|youtube\.com|youtu\.be|twitter\.com|x\.com|tiktok\.com|t\.me)/i, name: 'Facebook', ex: 'facebook.com/yourprofile' },
@@ -274,15 +349,65 @@ export default function PastorOnboardingPage() {
       <TopNav />
       <div className="max-w-[900px] mx-auto px-6 py-8">
         {/* Form Wizard Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "28px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div className="brand-mark"><i className="ti ti-user" style={{ fontSize: "18px", color: "#fff" }}></i></div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--cn-ink)" }}>Add Pastor Profile</div>
+            <div>
+              <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--cn-ink)" }}>Add Pastor Profile</div>
+              <div style={{ fontSize: "12.5px", color: "var(--cn-gray)" }}>Step {step} of {STEPS.length}</div>
+            </div>
           </div>
-          <button className="btn-secondary" onClick={() => router.push('/add-listing')}>
-            <i className="ti ti-x" style={{ fontSize: "14px" }}></i> Exit
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              type="button"
+              onClick={handleLoadSampleData}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "7px",
+                padding: "8px 16px",
+                borderRadius: "12px",
+                border: "1.5px solid #a855f7",
+                background: "linear-gradient(135deg, #f5f3ff, #faf5ff)",
+                color: "#7e22ce",
+                fontSize: "13.5px",
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(168, 85, 247, 0.15)",
+                transition: "all 0.2s",
+              }}
+              title={`Pre-fill Step ${step} with sample pastor data`}
+            >
+              <i className="ti ti-sparkles" style={{ fontSize: "16px", color: "#9333ea" }}></i>
+              Load Sample Data
+            </button>
+            <button className="btn-secondary" onClick={() => router.push('/add-listing')}>
+              <i className="ti ti-x" style={{ fontSize: "14px" }}></i> Exit
+            </button>
+          </div>
         </div>
+
+        {/* Toast confirmation message */}
+        {toastMsg && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "12px 18px",
+            marginBottom: "24px",
+            background: "#f0fdf4",
+            border: "1.5px solid #86efac",
+            borderRadius: "14px",
+            color: "#166534",
+            fontSize: "13.5px",
+            fontWeight: 700,
+            boxShadow: "0 4px 12px rgba(22, 101, 52, 0.08)",
+            animation: "fadeIn 0.3s ease"
+          }}>
+            <i className="ti ti-circle-check" style={{ fontSize: "18px", color: "#16a34a" }}></i>
+            <span>{toastMsg}</span>
+          </div>
+        )}
 
         {/* Step Progress Bar with Icons */}
         <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "54px" }}>
@@ -324,7 +449,7 @@ export default function PastorOnboardingPage() {
 
         {/* Step content */}
         {step === 1 && (
-          <Card title="Profile" icon="ti-user">
+          <Card title="Profile" icon="ti-user" onLoadSample={handleLoadSampleData}>
             <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
               <Field label="Full name" required>
                 <input
@@ -392,7 +517,7 @@ export default function PastorOnboardingPage() {
         )}
 
         {step === 2 && (
-          <Card title="Contact info" icon="ti-phone">
+          <Card title="Contact info" icon="ti-phone" onLoadSample={handleLoadSampleData}>
             <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
                 <Field label="Email" required>
@@ -548,7 +673,7 @@ export default function PastorOnboardingPage() {
         )}
 
         {step === 3 && (
-          <Card title="Ministry & Bio" icon="ti-heart-handshake">
+          <Card title="Ministry & Bio" icon="ti-heart-handshake" onLoadSample={handleLoadSampleData}>
             <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
               <Field label="Biography">
                 <textarea
@@ -614,7 +739,7 @@ export default function PastorOnboardingPage() {
         )}
 
         {step === 4 && (
-          <Card title="Languages, Sermons & Education" icon="ti-school">
+          <Card title="Languages, Sermons & Education" icon="ti-school" onLoadSample={handleLoadSampleData}>
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
               <Field label="Languages you minister in" required>
                 <TagInput value={form.languages} onChange={(v) => {
@@ -809,7 +934,7 @@ export default function PastorOnboardingPage() {
         )}
 
         {step === 5 && (
-          <Card title="Travel & Availability" icon="ti-calendar-check">
+          <Card title="Travel & Availability" icon="ti-calendar-check" onLoadSample={handleLoadSampleData}>
             <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
                 <Field label="Travel range">
@@ -851,7 +976,7 @@ export default function PastorOnboardingPage() {
         )}
 
         {step === 6 && (
-          <Card title="Media & Gallery Uploads" icon="ti-photo">
+          <Card title="Media & Gallery Uploads" icon="ti-photo" onLoadSample={handleLoadSampleData}>
             <div style={{ display: "flex", flexDirection: "column", gap: "24px", marginBottom: "18px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
                 <ImageUpload kind="avatar" label="Profile photo" onUploaded={(url) => update('avatar_url', url)} currentUrl={form.avatar_url} />
@@ -978,18 +1103,44 @@ export default function PastorOnboardingPage() {
 interface CardProps {
   title?: string;
   icon?: string;
+  onLoadSample?: () => void;
   children: React.ReactNode;
 }
 
-function Card({ title, icon, children }: CardProps) {
+function Card({ title, icon, onLoadSample, children }: CardProps) {
   return (
     <div className="scard" style={{ overflow: "visible", marginBottom: "20px" }}>
       {title && (
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "22px" }}>
-          <div style={{ width: "38px", height: "38px", borderRadius: "11px", background: "var(--cn-grad)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <i className={`ti ${icon || 'ti-user'}`} style={{ fontSize: "18px", color: "#fff" }}></i>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "22px", flexWrap: "wrap", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{ width: "38px", height: "38px", borderRadius: "11px", background: "var(--cn-grad)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <i className={`ti ${icon || 'ti-user'}`} style={{ fontSize: "18px", color: "#fff" }}></i>
+            </div>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>{title}</div>
           </div>
-          <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>{title}</div>
+          {onLoadSample && (
+            <button
+              type="button"
+              onClick={onLoadSample}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 13px",
+                borderRadius: "10px",
+                border: "1.5px solid #d8b4fe",
+                background: "#faf5ff",
+                color: "#7e22ce",
+                fontSize: "12.5px",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s"
+              }}
+            >
+              <i className="ti ti-sparkles" style={{ fontSize: "14px", color: "#9333ea" }}></i>
+              Load Sample Data
+            </button>
+          )}
         </div>
       )}
       {children}

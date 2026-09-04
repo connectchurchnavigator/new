@@ -125,6 +125,19 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
+    if (formData.description !== undefined) setDescription(formData.description);
+    if (formData.establishedYear !== undefined) setEstablishedYear(formData.establishedYear);
+    if (formData.pastorName !== undefined || formData.pastor_name !== undefined) setPastorName(formData.pastorName || formData.pastor_name || "");
+    if (formData.pastorBio !== undefined || formData.pastor_bio !== undefined) setPastorBio(formData.pastorBio || formData.pastor_bio || "");
+    if (formData.pastorPhoto || formData.pastor_photo) setPastorPhotoPreview(formData.pastorPhoto || formData.pastor_photo);
+    if (formData.logo) setLogoPreview(formData.logo);
+    if (formData.ministries?.length) setActiveMinistries(formData.ministries);
+    if (formData.languages?.length) setSelectedLangs(formData.languages);
+    if (formData.galleryImages?.length) setGalleryImages(formData.galleryImages);
+    if (formData.facilities?.length) setActiveFacilities(formData.facilities);
+  }, [formData]);
+
+  useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (langContainerRef.current && !langContainerRef.current.contains(e.target as Node)) {
         setIsLangDropdownOpen(false);

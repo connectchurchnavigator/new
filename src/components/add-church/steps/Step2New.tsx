@@ -205,6 +205,12 @@ export default function Step2New({ onNext, onBack }: Step2NewProps) {
   ]);
   const [error, setError] = useState<string>("");
 
+  useEffect(() => {
+    if (formData.services && Array.isArray(formData.services) && formData.services.length > 0) {
+      setServices(formData.services);
+    }
+  }, [formData.services]);
+
   const updateServiceField = (id: number, field: string, value: string) => {
     setServices(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
