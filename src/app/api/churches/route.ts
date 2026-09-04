@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-admin';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { toSlug } from '@/lib/api';
 
 export async function GET(req: Request) {
@@ -36,17 +37,32 @@ export async function POST(req: Request) {
     const data = await req.json();
     const sb = createAdminClient();
 
-    // 1. Get or create a dummy user to own the org
-    const { data: userList } = await sb.auth.admin.listUsers();
-    let ownerId = userList.users[0]?.id;
+    // 1. Get logged in user from cookie session or payload
+    let ownerId = data.userId || data.ownerId || data.owner_id;
     if (!ownerId) {
-      const { data: newUser, error: uErr } = await sb.auth.admin.createUser({
-        email: 'onboarding_dummy@example.com',
-        password: 'Password123!',
-        email_confirm: true
-      });
-      if (uErr) throw uErr;
-      ownerId = newUser.user.id;
+      try {
+        const serverSb = await createServerSupabaseClient();
+        const { data: authData } = await serverSb.auth.getUser();
+        if (authData?.user?.id) {
+          ownerId = authData.user.id;
+        }
+      } catch (e) {
+        // Fallback if no auth cookie
+      }
+    }
+
+    if (!ownerId) {
+      const { data: userList } = await sb.auth.admin.listUsers();
+      ownerId = userList?.users?.[0]?.id;
+      if (!ownerId) {
+        const { data: newUser, error: uErr } = await sb.auth.admin.createUser({
+          email: 'onboarding_dummy@example.com',
+          password: 'Password123!',
+          email_confirm: true
+        });
+        if (uErr) throw uErr;
+        ownerId = newUser.user.id;
+      }
     }
 
     // 2. Generate unique slug for new church submission
