@@ -45,9 +45,29 @@ export default async function InsightsPage({
   const availableChurches = userChurches.length > 0 ? userChurches : allChurches;
 
   // Selected church (from searchParam, or HQ, or first)
-  const activeChurch = (requestedChurchId
+  let activeChurch = requestedChurchId
     ? availableChurches.find((c) => c.id === requestedChurchId)
-    : null) || availableChurches.find((b) => b.is_hq) || availableChurches[0];
+    : null;
+
+  // If requestedChurchId is not in the list, fetch it directly (e.g. admin or created before org linking)
+  if (!activeChurch && requestedChurchId) {
+    const { data: directChurch } = await supabase
+      .from('churches')
+      .select('id, name, slug, org_id, is_hq')
+      .eq('id', requestedChurchId)
+      .maybeSingle();
+
+    if (directChurch) {
+      activeChurch = directChurch;
+      if (!availableChurches.some(c => c.id === directChurch.id)) {
+        availableChurches.unshift(directChurch);
+      }
+    }
+  }
+
+  if (!activeChurch) {
+    activeChurch = availableChurches.find((b) => b.is_hq) || availableChurches[0];
+  }
 
   // Fetch insights data for active church safely
   let stats = null;

@@ -116,7 +116,7 @@ export default async function ChurchProfilePage({ params, searchParams }: { para
           </Link>
           <div style={{ display: 'flex', gap: '12px' }}>
             {isOwner && (
-              <Link href="/dashboard/insights" style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none' }}>
+              <Link href={`/dashboard/insights?church_id=${church.id}`} style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none' }}>
                 <i className="ti ti-chart-bar"></i> Visitor insights
               </Link>
             )}
