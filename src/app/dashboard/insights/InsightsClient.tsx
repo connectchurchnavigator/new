@@ -5,7 +5,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import logoImg from '@/Assets/logo (1).png';
-import { registerVisitor } from '@/app/actions/registerVisitor';
 
 interface ChurchOption {
   id: string;
@@ -105,8 +104,6 @@ export default function InsightsClient({
 }: InsightsClientProps) {
   const router = useRouter();
   const [range, setRange] = useState('30d');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const total = stats?.total || visitors.length;
   const newThisMonth = stats?.new_this_month || visitors.filter(v => v.stage === 'first').length;
@@ -121,54 +118,8 @@ export default function InsightsClient({
   // Process Sources
   const totalSources = sources.reduce((sum, s) => sum + s.count, 0);
 
-  const handleCreateSampleVisitors = async () => {
-    setIsGenerating(true);
-    const mockVisitors = [
-      { first_name: "Sarah", last_name: "Jenkins", email: "sarah.j@example.com", phone: "+44 7700 900123", city: "London", is_first_time: true, service: "Not sure yet", hear_about: "Friend" },
-      { first_name: "David", last_name: "Adeyemi", email: "david.a@example.com", phone: "+44 7700 900456", city: "Manchester", is_first_time: false, service: "Not sure yet", hear_about: "Google" },
-      { first_name: "Emma", last_name: "Taylor", email: "emma.t@example.com", phone: "+44 7700 900789", city: "Birmingham", is_first_time: true, service: "Not sure yet", hear_about: "Instagram" },
-    ];
-
-    try {
-      for (const v of mockVisitors) {
-        await registerVisitor({
-          church_id: churchId,
-          ...v
-        });
-      }
-      setToastMsg("✅ Sample visitors loaded!");
-      setTimeout(() => setToastMsg(null), 3000);
-      router.refresh();
-    } catch (e: any) {
-      alert("Failed to create sample visitors: " + e.message);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   return (
     <>
-      {toastMsg && (
-        <div style={{
-          position: "fixed",
-          top: "20px",
-          right: "24px",
-          zIndex: 9999,
-          background: "#0f172a",
-          color: "#fff",
-          padding: "12px 20px",
-          borderRadius: "12px",
-          fontSize: "14px",
-          fontWeight: 700,
-          boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px"
-        }}>
-          {toastMsg}
-        </div>
-      )}
-
       <div className="top" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Link href="/dashboard" className="brand" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -207,35 +158,10 @@ export default function InsightsClient({
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            type="button"
-            onClick={handleCreateSampleVisitors}
-            disabled={isGenerating}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '10px',
-              border: '1.5px solid #d8b4fe',
-              background: '#faf5ff',
-              color: '#7e22ce',
-              fontSize: '12.5px',
-              fontWeight: 700,
-              cursor: isGenerating ? 'not-allowed' : 'pointer',
-              transition: 'all 0.15s'
-            }}
-          >
-            <i className="ti ti-sparkles" style={{ color: '#9333ea' }}></i>
-            {isGenerating ? 'Loading...' : 'Load Sample Visitors'}
-          </button>
-
-          <div className="seg">
-            <button className={range === '7d' ? 'on' : ''} onClick={() => setRange('7d')}>7 days</button>
-            <button className={range === '30d' ? 'on' : ''} onClick={() => setRange('30d')}>30 days</button>
-            <button className={range === '90d' ? 'on' : ''} onClick={() => setRange('90d')}>90 days</button>
-          </div>
+        <div className="seg">
+          <button className={range === '7d' ? 'on' : ''} onClick={() => setRange('7d')}>7 days</button>
+          <button className={range === '30d' ? 'on' : ''} onClick={() => setRange('30d')}>30 days</button>
+          <button className={range === '90d' ? 'on' : ''} onClick={() => setRange('90d')}>90 days</button>
         </div>
       </div>
 
@@ -351,35 +277,7 @@ export default function InsightsClient({
                   </tr>
                 );
               }) : (
-                <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--cn-gray)', padding: '32px 16px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                      <i className="ti ti-users-minus" style={{ fontSize: '28px', color: '#94a3b8' }}></i>
-                      <span>No visitors recorded for this church yet.</span>
-                      <button
-                        type="button"
-                        onClick={handleCreateSampleVisitors}
-                        disabled={isGenerating}
-                        style={{
-                          marginTop: '6px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 14px',
-                          borderRadius: '10px',
-                          border: '1px solid #d8b4fe',
-                          background: '#faf5ff',
-                          color: '#7e22ce',
-                          fontSize: '13px',
-                          fontWeight: 700,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <i className="ti ti-sparkles"></i> Populate with Sample Visitors
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--cn-gray)', padding: '24px 16px' }}>No visitors recorded yet.</td></tr>
               )}
             </tbody>
           </table>
