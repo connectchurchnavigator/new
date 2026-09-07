@@ -24,17 +24,15 @@ export default function Gallery({ images = [] }: GalleryProps) {
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gridTemplateRows: 'repeat(2, 200px)',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gridAutoRows: '200px',
         gap: '16px'
       }}>
-        {displayImages.slice(0, 5).map((img, i) => (
+        {displayImages.map((img, i) => (
           <div 
             key={i} 
             onClick={() => setSelectedImage(img)}
             style={{
-              gridColumn: i === 0 ? 'span 2' : 'span 1',
-              gridRow: i === 0 ? 'span 2' : 'span 1',
               borderRadius: '16px',
               overflow: 'hidden',
               cursor: 'pointer',

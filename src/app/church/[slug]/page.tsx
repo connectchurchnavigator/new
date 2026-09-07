@@ -14,6 +14,7 @@ import NearbySection from '@/components/church-profile/NearbySection';
 import ViewTracker from '@/components/church-profile/ViewTracker';
 import TopNav from '@/components/layout/TopNav';
 import HeroHeader from '@/components/church-profile/HeroHeader';
+import Footer from '@/components/Footer';
 import './church.css';
 
 export default async function ChurchProfilePage({ params, searchParams }: { params: Promise<{ slug: string }> | { slug: string }, searchParams?: Promise<{ [key: string]: string | string[] | undefined }> | { [key: string]: string | string[] | undefined } }) {
@@ -139,6 +140,7 @@ export default async function ChurchProfilePage({ params, searchParams }: { para
       />
 
     </main>
+    <Footer />
     </>
   );
 }

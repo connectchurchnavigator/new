@@ -62,7 +62,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
             <span className="ic c-indigo" style={{ background: "linear-gradient(135deg, #6366f1, #818cf8)", color: "white", padding: "6px", borderRadius: "8px", display: "flex" }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="#fff" strokeWidth="1.8"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>
             </span>
-            <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Leadership</h2>
+            <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Pastor</h2>
             {renderEditButton("leadership")}
           </div>
 
@@ -122,7 +122,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
         <div className="sec" style={{ marginBottom: "40px" }}>
           <div className="sec-head" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
             <span className="ic c-amber" style={{ background: "linear-gradient(135deg, #f59e0b, #fbbf24)", color: "white", padding: "6px", borderRadius: "8px", display: "flex" }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2a5 5 0 0 0-5 5c0 3 5 8 5 8s5-5 5-8a5 5 0 0 0-5-5zM5 21h14" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
-            <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Ministries & Outreach</h2>
+            <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Ministries</h2>
             {renderEditButton("ministries")}
           </div>
           {church.ministries && church.ministries.length > 0 ? (
