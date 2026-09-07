@@ -36,7 +36,8 @@ export default function Step9Review() {
       clearInterval(stepInterval);
 
       localStorage.removeItem('churchFormData');
-      router.push(`/add-listing/success?slug=${data.church.slug}`);
+      const churchName = formData.churchName || formData.name || 'Your Church';
+      router.push(`/add-listing/success?slug=${data.church.slug}&name=${encodeURIComponent(churchName)}`);
     } catch (err: any) {
       clearInterval(stepInterval);
       console.error(err);

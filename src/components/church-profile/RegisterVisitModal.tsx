@@ -17,11 +17,27 @@ export default function RegisterVisitModal({ churchId, services, onClose }: { ch
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async () => {
-    if (!firstName || !email) {
-      setError("First name and email are required.");
+    const newErrors: { [key: string]: string } = {};
+
+    if (!firstName.trim()) newErrors.firstName = "First name is required";
+    if (!lastName.trim()) newErrors.lastName = "Last name is required";
+    if (!email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+    if (phone.trim() && !/^[\d\s\-\+\(\)]+$/.test(phone.trim())) {
+      newErrors.phone = "Please enter a valid phone number";
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      setError("Please fix the errors below.");
       return;
     }
     
@@ -99,23 +115,27 @@ export default function RegisterVisitModal({ churchId, services, onClose }: { ch
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div>
-              <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>First name</label>
-              <input value={firstName} onChange={e => setFirstName(e.target.value)} type="text" placeholder="First name" style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "14px", outline: "none", fontFamily: "inherit" }} />
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>First name <span style={{ color: "red" }}>*</span></label>
+              <input value={firstName} onChange={e => { setFirstName(e.target.value); setErrors(prev => ({...prev, firstName: ''})); setError(null); }} type="text" placeholder="First name" style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: errors.firstName ? "1px solid red" : "1px solid #e2e8f0", backgroundColor: errors.firstName ? "#fef2f2" : "#fff", fontSize: "14px", outline: "none", fontFamily: "inherit" }} />
+              {errors.firstName && <div style={{ color: "red", fontSize: "11px", marginTop: "4px" }}>{errors.firstName}</div>}
             </div>
             <div>
-              <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>Last name</label>
-              <input value={lastName} onChange={e => setLastName(e.target.value)} type="text" placeholder="Last name" style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "14px", outline: "none", fontFamily: "inherit" }} />
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>Last name <span style={{ color: "red" }}>*</span></label>
+              <input value={lastName} onChange={e => { setLastName(e.target.value); setErrors(prev => ({...prev, lastName: ''})); setError(null); }} type="text" placeholder="Last name" style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: errors.lastName ? "1px solid red" : "1px solid #e2e8f0", backgroundColor: errors.lastName ? "#fef2f2" : "#fff", fontSize: "14px", outline: "none", fontFamily: "inherit" }} />
+              {errors.lastName && <div style={{ color: "red", fontSize: "11px", marginTop: "4px" }}>{errors.lastName}</div>}
             </div>
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>Email</label>
-            <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="you@email.com" style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "14px", outline: "none", fontFamily: "inherit" }} />
+            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>Email <span style={{ color: "red" }}>*</span></label>
+            <input value={email} onChange={e => { setEmail(e.target.value); setErrors(prev => ({...prev, email: ''})); setError(null); }} type="email" placeholder="you@email.com" style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: errors.email ? "1px solid red" : "1px solid #e2e8f0", backgroundColor: errors.email ? "#fef2f2" : "#fff", fontSize: "14px", outline: "none", fontFamily: "inherit" }} />
+            {errors.email && <div style={{ color: "red", fontSize: "11px", marginTop: "4px" }}>{errors.email}</div>}
           </div>
 
           <div>
             <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>Phone <span style={{ color: "#94a3b8", fontWeight: 500 }}>(optional)</span></label>
-            <input value={phone} onChange={e => setPhone(e.target.value)} type="tel" placeholder="+44 ..." style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "14px", outline: "none", fontFamily: "inherit" }} />
+            <input value={phone} onChange={e => { setPhone(e.target.value); setErrors(prev => ({...prev, phone: ''})); setError(null); }} type="tel" placeholder="+44 ..." style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: errors.phone ? "1px solid red" : "1px solid #e2e8f0", backgroundColor: errors.phone ? "#fef2f2" : "#fff", fontSize: "14px", outline: "none", fontFamily: "inherit" }} />
+            {errors.phone && <div style={{ color: "red", fontSize: "11px", marginTop: "4px" }}>{errors.phone}</div>}
           </div>
 
           <div>

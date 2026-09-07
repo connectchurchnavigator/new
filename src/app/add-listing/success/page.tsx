@@ -11,7 +11,8 @@ function SuccessContent() {
   const [copied, setCopied] = useState(false);
 
   const apiSlug = searchParams.get('slug');
-  const name = formData.name || "Your Church";
+  const queryName = searchParams.get('name');
+  const name = queryName || formData.churchName || formData.name || "Your Church";
   const slug = apiSlug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   
   const [domain, setDomain] = useState("");
@@ -54,7 +55,7 @@ function SuccessContent() {
           </div>
         </div>
 
-        <div style={{ fontSize: "32px", fontWeight: 800, color: "var(--cn-ink)", marginBottom: "10px" }}>You're live!</div>
+        <div style={{ fontSize: "32px", fontWeight: 800, color: "var(--cn-ink)", marginBottom: "10px" }}>{name} is now live!</div>
         <div style={{ fontSize: "15px", color: "var(--cn-gray)", marginBottom: "28px" }}>{name} is now on ChurchNavigator</div>
 
         {/* URL Box */}
