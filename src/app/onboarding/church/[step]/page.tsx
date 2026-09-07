@@ -116,7 +116,7 @@ export default function StepPage() {
             <div className="brand-mark"><i className="ti ti-building-church" style={{ fontSize: "18px", color: "#fff" }}></i></div>
             <div>
               <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--cn-ink)" }}>Add Your Church</div>
-              <div style={{ fontSize: "12.5px", color: "var(--cn-gray)" }}>Step {currentStep} of 4</div>
+              <div style={{ fontSize: "12.5px", color: "var(--cn-gray)" }}>{currentStep === 4 ? "Review & Publish" : `Step ${currentStep} of 3`}</div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>

@@ -220,6 +220,19 @@ export default function Step2New({ onNext, onBack }: Step2NewProps) {
   };
 
   const addService = () => {
+    const isAnyRowIncompleteOrInvalid = services.some(s => {
+      if (!s.name?.trim() || !s.from?.trim() || !s.to?.trim()) return true;
+      if (!parseTimeString(s.from)) return true;
+      if (!parseTimeString(s.to)) return true;
+      return false;
+    });
+
+    if (isAnyRowIncompleteOrInvalid) {
+      setError("Please complete all fields for existing service times before adding a new one.");
+      return;
+    }
+
+    setError("");
     setServices(prev => [
       ...prev, 
       { id: Date.now(), day: "Sunday", name: "", from: "", to: "", format: "inperson" }
@@ -239,7 +252,7 @@ export default function Step2New({ onNext, onBack }: Step2NewProps) {
     }
 
     const invalidService = filledServices.find(s => {
-      if (!s.name?.trim() || !s.from?.trim()) return true;
+      if (!s.name?.trim() || !s.from?.trim() || !s.to?.trim()) return true;
       
       const fromVal = s.from?.trim();
       const toVal = s.to?.trim();
@@ -249,7 +262,7 @@ export default function Step2New({ onNext, onBack }: Step2NewProps) {
     });
 
     if (invalidService) {
-      setError("Please complete all service fields (Name and From time are required, e.g. 10am)");
+      setError("Please complete all service fields (Name, From, and To times are required).");
       return;
     }
 

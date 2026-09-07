@@ -52,10 +52,11 @@ export default function WelcomeScreen({ onSelectForm }: WelcomeScreenProps) {
           Select Listing Type
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "18px", marginBottom: "32px" }}>
-          <TypeCard type="church" icon="ti-building-church" title="Church" subtitle="Place of worship" onClick={() => onSelectForm("church")} />
-          <TypeCard type="pastor" icon="ti-user" title="Pastor" subtitle="Clergy & leaders" onClick={() => onSelectForm("pastor")} />
-          <TypeCard type="events" icon="ti-calendar-event" title="Events" subtitle="Conferences & gatherings" onClick={() => onSelectForm("events")} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "18px", marginBottom: "32px" }}>
+          <TypeCard type="church" icon="ti-building-church" title="Church" subtitle="Share your church with the community" onClick={() => onSelectForm("church")} />
+          <TypeCard type="pastor" icon="ti-user" title="Pastor" subtitle="Share your ministry profile" onClick={() => onSelectForm("pastor")} />
+          <TypeCard type="worship_leader" icon="ti-music" title="Worship Leader" subtitle="Share your worship ministry" onClick={() => onSelectForm("worship_leader")} />
+          <TypeCard type="events" icon="ti-calendar-event" title="Events" subtitle="Share your upcoming events" onClick={() => onSelectForm("events")} />
         </div>
       </div>
     </div>
@@ -101,6 +102,16 @@ const TYPE_THEMES: Record<string, {
     hoverBg: "#fffbeb",
     hoverIconBg: "linear-gradient(135deg, #f59e0b, #d97706)",
     hoverShadow: "0 20px 40px -10px rgba(217, 119, 6, 0.22)"
+  },
+  worship_leader: {
+    normalBg: "#ffffff",
+    normalBorder: "#e2e8f0",
+    iconBg: "linear-gradient(135deg, #f0fdfa, #ccfbf1)",
+    iconColor: "#0d9488",
+    hoverBorder: "#0d9488",
+    hoverBg: "#f0fdfa",
+    hoverIconBg: "linear-gradient(135deg, #0d9488, #0f766e)",
+    hoverShadow: "0 20px 40px -10px rgba(13, 148, 136, 0.22)"
   }
 };
 
