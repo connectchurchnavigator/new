@@ -118,6 +118,40 @@ export default function InsightsClient({
   // Process Sources
   const totalSources = sources.reduce((sum, s) => sum + s.count, 0);
 
+  const exportToCSV = () => {
+    if (!visitors || visitors.length === 0) return;
+    
+    const headers = ['Name', 'Email', 'Phone', 'City', 'Source', 'Stage', 'Last Seen', 'Date Registered'];
+    
+    const rows = visitors.map(v => {
+      const stageLabel = STAGES.find(s => s.k === v.stage)?.l || v.stage || '';
+      return [
+        v.name || 'Anonymous visitor',
+        v.email || '',
+        v.phone || '',
+        v.city || '',
+        v.source || 'Unknown',
+        stageLabel,
+        v.last_seen || '',
+        v.created_at || ''
+      ];
+    });
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${churchName ? churchName.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'church'}_visitors.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <>
       <div className="top" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
@@ -242,7 +276,7 @@ export default function InsightsClient({
         <div className="panel">
           <div className="ph">
             <h3>Recent visitors</h3>
-            <button className="followup" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', fontWeight: 600 }}><i className="ti ti-download"></i> Export CSV</button>
+            <button onClick={exportToCSV} className="followup" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', fontWeight: 600 }}><i className="ti ti-download"></i> Export CSV</button>
           </div>
           <table className="tbl">
             <thead>
