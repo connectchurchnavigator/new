@@ -128,13 +128,43 @@ export default function RegisterVisitModal({ churchId, services, onClose }: { ch
 
           <div>
             <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>Email <span style={{ color: "red" }}>*</span></label>
-            <input value={email} onChange={e => { setEmail(e.target.value); setErrors(prev => ({...prev, email: ''})); setError(null); }} type="email" placeholder="you@email.com" style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: errors.email ? "1px solid red" : "1px solid #e2e8f0", backgroundColor: errors.email ? "#fef2f2" : "#fff", fontSize: "14px", outline: "none", fontFamily: "inherit" }} />
+            <input 
+              value={email} 
+              onChange={e => { 
+                setEmail(e.target.value); 
+                setErrors(prev => ({...prev, email: ''})); 
+                setError(null); 
+              }} 
+              onBlur={() => {
+                if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                  setErrors(prev => ({...prev, email: "Please enter a valid email address"}));
+                }
+              }}
+              type="email" 
+              placeholder="you@email.com" 
+              style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: errors.email ? "1px solid red" : "1px solid #e2e8f0", backgroundColor: errors.email ? "#fef2f2" : "#fff", fontSize: "14px", outline: "none", fontFamily: "inherit" }} 
+            />
             {errors.email && <div style={{ color: "red", fontSize: "11px", marginTop: "4px" }}>{errors.email}</div>}
           </div>
 
           <div>
             <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>Phone <span style={{ color: "#94a3b8", fontWeight: 500 }}>(optional)</span></label>
-            <input value={phone} onChange={e => { setPhone(e.target.value); setErrors(prev => ({...prev, phone: ''})); setError(null); }} type="tel" placeholder="+44 ..." style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: errors.phone ? "1px solid red" : "1px solid #e2e8f0", backgroundColor: errors.phone ? "#fef2f2" : "#fff", fontSize: "14px", outline: "none", fontFamily: "inherit" }} />
+            <input 
+              value={phone} 
+              onChange={e => { 
+                const val = e.target.value;
+                setPhone(val); 
+                if (val.trim() && !/^[\d\s\-\+\(\)]+$/.test(val)) {
+                  setErrors(prev => ({...prev, phone: 'Only numbers and valid symbols (+, -, ()) are allowed'}));
+                } else {
+                  setErrors(prev => ({...prev, phone: ''}));
+                }
+                setError(null); 
+              }} 
+              type="tel" 
+              placeholder="+44 ..." 
+              style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: errors.phone ? "1px solid red" : "1px solid #e2e8f0", backgroundColor: errors.phone ? "#fef2f2" : "#fff", fontSize: "14px", outline: "none", fontFamily: "inherit" }} 
+            />
             {errors.phone && <div style={{ color: "red", fontSize: "11px", marginTop: "4px" }}>{errors.phone}</div>}
           </div>
 

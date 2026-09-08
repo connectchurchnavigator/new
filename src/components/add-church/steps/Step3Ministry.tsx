@@ -233,6 +233,17 @@ export default function Step3Ministry({ onNext, onBack }: Step3MinistryProps) {
       if (!activeChips.includes(foundStandard)) {
         setActiveChips(prev => [...prev, foundStandard]);
       }
+      
+      // If the standard ministry is NOT one of the 8 default visible chips,
+      // add it to customMinistriesList so it renders on the screen.
+      const top8VisibleChips = [
+        "Youth Ministry", "Children's Church", "Food Bank", "Bible Study",
+        "Outreach", "Women's Ministry", "Men's Ministry", "Prayer Group"
+      ];
+      if (!top8VisibleChips.includes(foundStandard) && !customMinistriesList.includes(foundStandard)) {
+        setCustomMinistriesList(prev => [...prev, foundStandard]);
+      }
+
       setCustomMinMsg({ text: `“${foundStandard}” already exists — selected it for you.`, type: "success" });
       setCustomMinistry("");
       if (error) setError("");
