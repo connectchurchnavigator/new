@@ -151,32 +151,32 @@ export default function ContactSection({ churchName, email, phone, address, soci
           </div>
 
           <div className="socials">
-            {socials?.facebook && (
+            {socials?.facebook && socials.facebook !== "https://facebook.com/" && (
               <a href={socials.facebook} target="_blank" rel="noreferrer" className="soc" style={{ background: '#1877f2' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
               </a>
             )}
-            {socials?.instagram && (
+            {socials?.instagram && socials.instagram !== "https://instagram.com/" && (
               <a href={socials.instagram} target="_blank" rel="noreferrer" className="soc" style={{ background: 'radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%)' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
               </a>
             )}
-            {socials?.youtube && (
+            {socials?.youtube && socials.youtube !== "https://youtube.com/" && (
               <a href={socials.youtube} target="_blank" rel="noreferrer" className="soc" style={{ background: '#ff0000' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
               </a>
             )}
-            {socials?.twitter && (
+            {socials?.twitter && socials.twitter !== "https://twitter.com/" && (
               <a href={socials.twitter} target="_blank" rel="noreferrer" className="soc" style={{ background: '#000' }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg>
               </a>
             )}
-            {socials?.tiktok && (
+            {socials?.tiktok && socials.tiktok !== "https://tiktok.com/@" && (
               <a href={socials.tiktok} target="_blank" rel="noreferrer" className="soc" style={{ background: '#000' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
               </a>
             )}
-            {socials?.telegram && (
+            {socials?.telegram && socials.telegram !== "https://t.me/" && (
               <a href={socials.telegram} target="_blank" rel="noreferrer" className="soc" style={{ background: '#24A1DE' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 10l-4 4 6 6 4-16-18 7 4 2 2 6 3-4"/></svg>
               </a>

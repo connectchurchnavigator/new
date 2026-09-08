@@ -737,6 +737,11 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
                 updateFormData({ facebook: val });
                 validateSocialField("facebook", val);
               }}
+              onBlur={(e) => {
+                if (e.target.value === "https://facebook.com/") {
+                  updateFormData({ facebook: "" });
+                }
+              }}
             />
             {socialErrors.facebook && (
               <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{socialErrors.facebook}</div>
@@ -758,6 +763,11 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
                 const val = e.target.value;
                 updateFormData({ instagram: val });
                 validateSocialField("instagram", val);
+              }}
+              onBlur={(e) => {
+                if (e.target.value === "https://instagram.com/") {
+                  updateFormData({ instagram: "" });
+                }
               }}
             />
             {socialErrors.instagram && (
@@ -781,6 +791,11 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
                 updateFormData({ youtube: val });
                 validateSocialField("youtube", val);
               }}
+              onBlur={(e) => {
+                if (e.target.value === "https://youtube.com/") {
+                  updateFormData({ youtube: "" });
+                }
+              }}
             />
             {socialErrors.youtube && (
               <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{socialErrors.youtube}</div>
@@ -802,6 +817,11 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
                 const val = e.target.value;
                 updateFormData({ twitter: val });
                 validateSocialField("twitter", val);
+              }}
+              onBlur={(e) => {
+                if (e.target.value === "https://twitter.com/") {
+                  updateFormData({ twitter: "" });
+                }
               }}
             />
             {socialErrors.twitter && (
@@ -825,6 +845,11 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
                 updateFormData({ tiktok: val });
                 validateSocialField("tiktok", val);
               }}
+              onBlur={(e) => {
+                if (e.target.value === "https://tiktok.com/@") {
+                  updateFormData({ tiktok: "" });
+                }
+              }}
             />
             {socialErrors.tiktok && (
               <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{socialErrors.tiktok}</div>
@@ -846,6 +871,11 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
                 const val = e.target.value;
                 updateFormData({ telegram: val });
                 validateSocialField("telegram", val);
+              }}
+              onBlur={(e) => {
+                if (e.target.value === "https://t.me/") {
+                  updateFormData({ telegram: "" });
+                }
               }}
             />
             {socialErrors.telegram && (
