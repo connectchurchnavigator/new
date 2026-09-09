@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-admin';
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const MAX_SIZE_BYTES = 8 * 1024 * 1024; // 8MB
+const ALLOWED_TYPES = [
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp3',
+  'video/mp4', 'video/webm'
+];
+const MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
 
 /**
  * POST /api/upload
@@ -21,17 +25,17 @@ export async function POST(req: NextRequest) {
 
   if (!ALLOWED_TYPES.includes(file.type)) {
     return NextResponse.json(
-      { error: `Unsupported file type: ${file.type}. Use JPEG, PNG, WEBP, or GIF.` },
+      { error: `Unsupported file type: ${file.type}.` },
       { status: 415 }
     );
   }
 
   if (file.size > MAX_SIZE_BYTES) {
-    return NextResponse.json({ error: 'File too large. Max size is 8MB.' }, { status: 413 });
+    return NextResponse.json({ error: 'File too large. Max size is 50MB.' }, { status: 413 });
   }
 
-  const folder = typeof kind === 'string' && ['avatar', 'cover', 'gallery'].includes(kind) ? kind : 'misc';
-  const extension = file.name.split('.').pop() || 'jpg';
+  const folder = typeof kind === 'string' && ['avatar', 'cover', 'gallery', 'song', 'video'].includes(kind) ? kind : 'misc';
+  const extension = file.name.split('.').pop() || 'tmp';
   const filename = `${folder}/${crypto.randomUUID()}.${extension}`;
 
   const supabase = createAdminClient();

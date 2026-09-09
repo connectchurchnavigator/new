@@ -18,6 +18,8 @@ export default function AddChurchPage() {
     updateFormData({ listingType: type });
     if (type === "pastor") {
       router.push("/onboarding/pastor");
+    } else if (type === "worship_leader") {
+      router.push("/onboarding/worship-leader");
     } else if (type === "events") {
       router.push("/onboarding/events");
     } else {

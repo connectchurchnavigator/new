@@ -47,11 +47,19 @@ export default async function ExplorePage(props: ExplorePageProps) {
     .eq("status", "published")
     .order("starts_at", { ascending: true });
 
+  // Fetch all published worship leaders
+  const { data: worshipLeaders } = await supabase
+    .from("worship_leaders")
+    .select("*")
+    .eq("is_published", true)
+    .order("is_verified", { ascending: false });
+
   return (
     <ExploreClient
       initialChurches={churches || []}
       initialPastors={pastors || []}
       initialEvents={events || []}
+      initialWorshipLeaders={worshipLeaders || []}
       initialSearchQuery={initialQ}
       initialCity={initialCity}
       initialDenom={initialDenomination}

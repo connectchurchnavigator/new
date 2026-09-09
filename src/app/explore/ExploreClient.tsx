@@ -15,6 +15,7 @@ interface ExploreClientProps {
   initialChurches: ExploreChurch[];
   initialPastors?: any[];
   initialEvents?: any[];
+  initialWorshipLeaders?: any[];
   initialSearchQuery?: string;
   initialCity?: string;
   initialDenom?: string;
@@ -24,11 +25,12 @@ export default function ExploreClient({
   initialChurches,
   initialPastors = [],
   initialEvents = [],
+  initialWorshipLeaders = [],
   initialSearchQuery = "",
   initialCity = "",
   initialDenom = "",
 }: ExploreClientProps) {
-  const [exploreType, setExploreType] = useState<"churches" | "pastors" | "events">("churches");
+  const [exploreType, setExploreType] = useState<"churches" | "pastors" | "events" | "worship_leaders">("churches");
   const [cardVersion, setCardVersion] = useState<"v0" | "v1" | "v2" | "v3" | "v4">("v0");
   // Search & Filters State
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
@@ -370,6 +372,34 @@ export default function ExploreClient({
       });
   }, [initialEvents, searchQuery, selectedCity, sortBy, userLocation]);
 
+  const filteredWorshipLeaders = useMemo(() => {
+    return initialWorshipLeaders
+      .filter((leader) => {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesQuery =
+          !q ||
+          leader.display_name?.toLowerCase().includes(q) ||
+          leader.tagline?.toLowerCase().includes(q) ||
+          leader.city?.toLowerCase().includes(q);
+
+        const matchesCity = selectedCity === "all" || leader.city === selectedCity;
+        return matchesQuery && matchesCity;
+      })
+      .map((leader) => ({ ...leader, type: "worship_leader" }))
+      .sort((a, b) => {
+        if (sortBy === "name_asc") return a.display_name.localeCompare(b.display_name);
+        if (sortBy === "name_desc") return b.display_name.localeCompare(a.display_name);
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      });
+  }, [initialWorshipLeaders, searchQuery, selectedCity, sortBy]);
+
+  const currentList = useMemo(() => {
+    if (exploreType === "pastors") return filteredPastors;
+    if (exploreType === "events") return filteredEvents;
+    if (exploreType === "worship_leaders") return filteredWorshipLeaders;
+    return filteredChurches.map(c => ({ ...c, type: "church" }));
+  }, [exploreType, filteredChurches, filteredPastors, filteredEvents, filteredWorshipLeaders]);
+
   const activeItemsForMap = useMemo(() => {
     if (exploreType === "pastors") return filteredPastors;
     if (exploreType === "events") return filteredEvents;
@@ -615,6 +645,12 @@ export default function ExploreClient({
           >
             <i className="ti ti-calendar-event" style={{ fontSize: "16px" }}></i> Events
           </button>
+          <button
+            onClick={() => setExploreType("worship_leaders")}
+            className={`explore-tab ${exploreType === "worship_leaders" ? "active" : ""}`}
+          >
+            <i className="ti ti-microphone-2" style={{ fontSize: "16px" }}></i> Worship Leaders
+          </button>
         </div>
       </div>
 
@@ -764,12 +800,52 @@ export default function ExploreClient({
            <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9" }}>
              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 <span style={{ color: "#7c3aed", fontSize: "16px" }}>•</span>
-                SHOWING {exploreType === "churches" ? filteredChurches.length : exploreType === "pastors" ? filteredPastors.length : filteredEvents.length} OF {exploreType === "churches" ? initialChurches.length : exploreType === "pastors" ? initialPastors.length : initialEvents.length} {exploreType.toUpperCase()}
+                SHOWING {exploreType === "churches" ? filteredChurches.length : exploreType === "pastors" ? filteredPastors.length : exploreType === "events" ? filteredEvents.length : filteredWorshipLeaders.length} OF {exploreType === "churches" ? initialChurches.length : exploreType === "pastors" ? initialPastors.length : exploreType === "events" ? initialEvents.length : initialWorshipLeaders.length} {exploreType === "worship_leaders" ? "WORSHIP LEADERS" : exploreType.toUpperCase()}
              </div>
            </div>
 
            {/* Cards Container */}
            <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px", background: "#f8fafc" }}>
+            {exploreType === "worship_leaders" && (
+              filteredWorshipLeaders.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 20px", color: "#64748b" }}>
+                  <i className="ti ti-microphone-2" style={{ fontSize: "40px", color: "#cbd5e1", marginBottom: "12px", display: "block" }}></i>
+                  <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" }}>No worship leaders match your search</h3>
+                  <p style={{ fontSize: "13px" }}>Try clearing some filters.</p>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
+                  {filteredWorshipLeaders.map((leader) => {
+                    const isSelected = leader.id === selectedChurchId;
+                    const avatarImage = leader.avatar_url || null;
+                    const coverImage = Array.isArray(leader.cover_photo_urls) && leader.cover_photo_urls.length > 0 ? leader.cover_photo_urls[0] : null;
+
+                    return (
+                      <Link key={leader.id} href={`/worship-leader/${leader.slug}`} className={`pastor-grid-card ${isSelected ? "selected" : ""}`} style={{ textDecoration: 'none' }}>
+                        <div style={{ width: "100%", height: "220px", background: avatarImage ? `url('${avatarImage}') center/cover` : coverImage ? `url('${coverImage}') center/cover` : "linear-gradient(135deg, #f43f5e, #db2777)", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {!avatarImage && !coverImage && <i className="ti ti-user" style={{ fontSize: "42px", color: "rgba(255,255,255,0.45)" }}></i>}
+                        </div>
+                        <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "10px" }}>
+                          <div>
+                            <div style={{ marginBottom: "6px" }}>
+                              <span style={{ fontSize: "9px", fontWeight: 800, color: "#e11d48", background: "#ffe4e6", padding: "2.5px 7px", borderRadius: "6px", textTransform: "uppercase", letterSpacing: "0.03em", display: "inline-block" }}>Worship Leader</span>
+                            </div>
+                            <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: "0 0 6px 0", lineHeight: 1.3 }}>{leader.display_name}</h3>
+                            {leader.city && (
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#475569", marginBottom: "5px" }}>
+                                <i className="ti ti-map-pin" style={{ color: "#e11d48", fontSize: "14px" }}></i>
+                                <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{leader.city}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="pastor-card-footer" style={{ borderTop: "1px solid #f1f5f9", paddingTop: "12px", marginTop: "4px", fontSize: "13px", fontWeight: 800, color: "#e11d48", display: "flex", justifyContent: "space-between" }}>View Profile <i className="ti ti-arrow-up-right" style={{ fontSize: "14px" }}></i></div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )
+            )}
             {exploreType === "churches" && (
               filteredChurches.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "48px 20px", color: "#64748b" }}>

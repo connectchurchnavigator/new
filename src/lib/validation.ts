@@ -103,3 +103,41 @@ export const pastorEnquirySchema = z.object({
 });
 
 export type PastorEnquiryPayload = z.output<typeof pastorEnquirySchema>;
+
+/**
+ * Validates the payload sent from the Worship Leader onboarding wizard
+ */
+export const worshipLeaderOnboardingSchema = z.object({
+  display_name: z.string().trim().min(3, 'Name must be at least 3 characters').max(120),
+  tagline: optionalString,
+  city: optionalString,
+  country: z.string().trim().max(80).default('United Kingdom'),
+  years_leading: z.coerce.number().int().min(0).max(100).optional(),
+  bio: optionalString,
+
+  // Tags
+  styles: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
+  instruments: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
+  languages: z.array(z.string().trim().min(1).max(40)).max(15).default([]),
+  available_for: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
+  fee_model: z.array(z.string().trim().min(1).max(60)).max(10).default([]),
+
+  // Availability
+  travel_range: optionalString,
+  lead_time: optionalString,
+
+  // Media & Socials
+  avatar_url: optionalUrl,
+  song_url: optionalUrl,
+  video_url: optionalUrl,
+  cover_photo_urls: z.array(z.string().trim().max(500)).max(10).default([]),
+  website_url: optionalUrl,
+  instagram_url: optionalUrl,
+  youtube_url: optionalUrl,
+  spotify_url: optionalUrl,
+});
+
+export type WorshipLeaderOnboardingInput = z.input<typeof worshipLeaderOnboardingSchema>;
+export type WorshipLeaderOnboardingPayload = z.output<typeof worshipLeaderOnboardingSchema>;
+
+// Trigger rebuild
