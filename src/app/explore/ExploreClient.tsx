@@ -44,6 +44,21 @@ export default function ExploreClient({
   const [selectedCity, setSelectedCity] = useState(initialCity || "all");
   const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "nearby" | "latest">("latest");
 
+  // Event specific filters
+  const [selectedEventType, setSelectedEventType] = useState("all");
+  const [selectedEventPrice, setSelectedEventPrice] = useState<"all" | "free" | "paid">("all");
+  const [selectedEventTime, setSelectedEventTime] = useState<"all" | "upcoming" | "past">("upcoming");
+
+  // Pastor specific filters
+  const [selectedPastorAvailability, setSelectedPastorAvailability] = useState("all");
+  const [selectedPastorSpecialism, setSelectedPastorSpecialism] = useState("all");
+
+  // Worship Leader specific filters
+  const [selectedWlStyle, setSelectedWlStyle] = useState("all");
+  const [selectedWlInstrument, setSelectedWlInstrument] = useState("all");
+  const [selectedWlLanguage, setSelectedWlLanguage] = useState("all");
+  const [selectedWlAvailability, setSelectedWlAvailability] = useState("all");
+
   // Selection & Hover State
   const [selectedChurchId, setSelectedChurchId] = useState<string | null>(null);
   const [hoveredChurchId, setHoveredChurchId] = useState<string | null>(null);
@@ -92,9 +107,87 @@ export default function ExploreClient({
   }, [initialChurches]);
 
   const cities = useMemo(() => {
-    const list = initialChurches.map((c) => c.city?.trim()).filter(Boolean) as string[];
+    let rawList: (string | null | undefined)[] = [];
+    if (exploreType === "churches") {
+      rawList = initialChurches.map((c) => c.city);
+    } else if (exploreType === "pastors") {
+      rawList = initialPastors.flatMap((p) => [p.city, p.church?.city]);
+    } else if (exploreType === "events") {
+      rawList = initialEvents.map((e) => e.city);
+    } else if (exploreType === "worship_leaders") {
+      rawList = initialWorshipLeaders.map((w) => w.city);
+    }
+    const list = rawList.map((c) => c?.trim()).filter(Boolean) as string[];
     return ["all", ...Array.from(new Set(list)).sort()];
-  }, [initialChurches]);
+  }, [initialChurches, initialPastors, initialEvents, initialWorshipLeaders, exploreType]);
+
+  // Event filter lists
+  const eventTypes = useMemo(() => {
+    const list = initialEvents.map((e) => e.type?.trim()).filter(Boolean) as string[];
+    return ["all", ...Array.from(new Set(list)).sort()];
+  }, [initialEvents]);
+
+  // Pastor filter lists
+  const pastorSpecialisms = useMemo(() => {
+    const list: string[] = [];
+    initialPastors.forEach((p) => {
+      if (Array.isArray(p.tags)) {
+        p.tags.forEach((t: any) => {
+          if (t?.label) list.push(t.label.trim());
+        });
+      }
+    });
+    return ["all", ...Array.from(new Set(list)).sort()];
+  }, [initialPastors]);
+
+  // Worship Leader filter lists
+  const wlStyles = useMemo(() => {
+    const list: string[] = [];
+    initialWorshipLeaders.forEach((w) => {
+      if (Array.isArray(w.tags)) {
+        w.tags.forEach((t: any) => {
+          if (t?.category === "style" && t?.label) list.push(t.label.trim());
+        });
+      }
+    });
+    return ["all", ...Array.from(new Set(list)).sort()];
+  }, [initialWorshipLeaders]);
+
+  const wlInstruments = useMemo(() => {
+    const list: string[] = [];
+    initialWorshipLeaders.forEach((w) => {
+      if (Array.isArray(w.tags)) {
+        w.tags.forEach((t: any) => {
+          if (t?.category === "instrument" && t?.label) list.push(t.label.trim());
+        });
+      }
+    });
+    return ["all", ...Array.from(new Set(list)).sort()];
+  }, [initialWorshipLeaders]);
+
+  const wlLanguages = useMemo(() => {
+    const list: string[] = [];
+    initialWorshipLeaders.forEach((w) => {
+      if (Array.isArray(w.tags)) {
+        w.tags.forEach((t: any) => {
+          if (t?.category === "language" && t?.label) list.push(t.label.trim());
+        });
+      }
+    });
+    return ["all", ...Array.from(new Set(list)).sort()];
+  }, [initialWorshipLeaders]);
+
+  const wlAvailabilities = useMemo(() => {
+    const list: string[] = [];
+    initialWorshipLeaders.forEach((w) => {
+      if (Array.isArray(w.tags)) {
+        w.tags.forEach((t: any) => {
+          if (t?.category === "available_for" && t?.label) list.push(t.label.trim());
+        });
+      }
+    });
+    return ["all", ...Array.from(new Set(list)).sort()];
+  }, [initialWorshipLeaders]);
 
   // Haversine distance in km
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -303,7 +396,17 @@ export default function ExploreClient({
           pastor.city?.toLowerCase().includes(q);
 
         const matchesCity = selectedCity === "all" || pastor.city === selectedCity || pastor.church?.city === selectedCity;
-        return matchesQuery && matchesCity;
+
+        const matchesAvailability =
+          selectedPastorAvailability === "all" ||
+          pastor.availability_status === selectedPastorAvailability;
+
+        const matchesSpecialism =
+          selectedPastorSpecialism === "all" ||
+          (Array.isArray(pastor.tags) &&
+            pastor.tags.some((t: any) => t?.label?.toLowerCase() === selectedPastorSpecialism.toLowerCase()));
+
+        return matchesQuery && matchesCity && matchesAvailability && matchesSpecialism;
       })
       .map((pastor) => {
         let distance: number | null = null;
@@ -331,9 +434,10 @@ export default function ExploreClient({
         }
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
-  }, [initialPastors, searchQuery, selectedCity, sortBy, userLocation]);
+  }, [initialPastors, searchQuery, selectedCity, selectedPastorAvailability, selectedPastorSpecialism, sortBy, userLocation]);
 
   const filteredEvents = useMemo(() => {
+    const now = new Date().getTime();
     return initialEvents
       .filter((event) => {
         const q = searchQuery.toLowerCase().trim();
@@ -346,7 +450,26 @@ export default function ExploreClient({
           event.host_church?.name?.toLowerCase().includes(q);
 
         const matchesCity = selectedCity === "all" || event.city === selectedCity;
-        return matchesQuery && matchesCity;
+
+        const matchesType =
+          selectedEventType === "all" ||
+          (event.type && event.type.toLowerCase() === selectedEventType.toLowerCase());
+
+        const matchesPrice =
+          selectedEventPrice === "all" ||
+          (selectedEventPrice === "free" ? event.is_free : !event.is_free);
+
+        let matchesTime = true;
+        if (event.starts_at) {
+          const eventTime = new Date(event.starts_at).getTime();
+          if (selectedEventTime === "upcoming") {
+            matchesTime = eventTime >= now - 1000 * 60 * 60 * 24; // buffer 1 day
+          } else if (selectedEventTime === "past") {
+            matchesTime = eventTime < now - 1000 * 60 * 60 * 24;
+          }
+        }
+
+        return matchesQuery && matchesCity && matchesType && matchesPrice && matchesTime;
       })
       .map((event) => {
         let distance: number | null = null;
@@ -368,9 +491,9 @@ export default function ExploreClient({
           if (a.distance !== null) return -1;
           if (b.distance !== null) return 1;
         }
-        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        return new Date(b.starts_at || b.created_at || 0).getTime() - new Date(a.starts_at || a.created_at || 0).getTime();
       });
-  }, [initialEvents, searchQuery, selectedCity, sortBy, userLocation]);
+  }, [initialEvents, searchQuery, selectedCity, selectedEventType, selectedEventPrice, selectedEventTime, sortBy, userLocation]);
 
   const filteredWorshipLeaders = useMemo(() => {
     return initialWorshipLeaders
@@ -383,7 +506,51 @@ export default function ExploreClient({
           leader.city?.toLowerCase().includes(q);
 
         const matchesCity = selectedCity === "all" || leader.city === selectedCity;
-        return matchesQuery && matchesCity;
+
+        const matchesStyle =
+          selectedWlStyle === "all" ||
+          (Array.isArray(leader.tags) &&
+            leader.tags.some(
+              (t: any) =>
+                t?.category === "style" &&
+                t?.label?.toLowerCase() === selectedWlStyle.toLowerCase()
+            ));
+
+        const matchesInstrument =
+          selectedWlInstrument === "all" ||
+          (Array.isArray(leader.tags) &&
+            leader.tags.some(
+              (t: any) =>
+                t?.category === "instrument" &&
+                t?.label?.toLowerCase() === selectedWlInstrument.toLowerCase()
+            ));
+
+        const matchesLanguage =
+          selectedWlLanguage === "all" ||
+          (Array.isArray(leader.tags) &&
+            leader.tags.some(
+              (t: any) =>
+                t?.category === "language" &&
+                t?.label?.toLowerCase() === selectedWlLanguage.toLowerCase()
+            ));
+
+        const matchesAvailability =
+          selectedWlAvailability === "all" ||
+          (Array.isArray(leader.tags) &&
+            leader.tags.some(
+              (t: any) =>
+                t?.category === "available_for" &&
+                t?.label?.toLowerCase() === selectedWlAvailability.toLowerCase()
+            ));
+
+        return (
+          matchesQuery &&
+          matchesCity &&
+          matchesStyle &&
+          matchesInstrument &&
+          matchesLanguage &&
+          matchesAvailability
+        );
       })
       .map((leader) => ({ ...leader, type: "worship_leader" }))
       .sort((a, b) => {
@@ -391,7 +558,7 @@ export default function ExploreClient({
         if (sortBy === "name_desc") return b.display_name.localeCompare(a.display_name);
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
-  }, [initialWorshipLeaders, searchQuery, selectedCity, sortBy]);
+  }, [initialWorshipLeaders, searchQuery, selectedCity, selectedWlStyle, selectedWlInstrument, selectedWlLanguage, selectedWlAvailability, sortBy]);
 
   const currentList = useMemo(() => {
     if (exploreType === "pastors") return filteredPastors;
@@ -430,23 +597,53 @@ export default function ExploreClient({
   };
 
   const hasActiveFilters =
-    selectedDenom !== "all" ||
-    selectedLanguage !== "all" ||
-    selectedWorshipStyle !== "all" ||
-    selectedMinistry !== "all" ||
+    searchQuery.trim() !== "" ||
     selectedCity !== "all" ||
-    openingStatus !== "all" ||
-    searchQuery.trim() !== "";
+    (exploreType === "churches" && (
+      selectedDenom !== "all" ||
+      selectedLanguage !== "all" ||
+      selectedWorshipStyle !== "all" ||
+      selectedMinistry !== "all" ||
+      openingStatus !== "all"
+    )) ||
+    (exploreType === "events" && (
+      selectedEventType !== "all" ||
+      selectedEventPrice !== "all" ||
+      selectedEventTime !== "all"
+    )) ||
+    (exploreType === "pastors" && (
+      selectedPastorAvailability !== "all" ||
+      selectedPastorSpecialism !== "all"
+    )) ||
+    (exploreType === "worship_leaders" && (
+      selectedWlStyle !== "all" ||
+      selectedWlInstrument !== "all" ||
+      selectedWlLanguage !== "all" ||
+      selectedWlAvailability !== "all"
+    ));
 
   const clearAllFilters = () => {
     setSearchQuery("");
+    setSelectedCity("all");
+    setSortBy("latest");
+    // Church filters
     setOpeningStatus("all");
     setSelectedDenom("all");
     setSelectedLanguage("all");
     setSelectedWorshipStyle("all");
     setSelectedMinistry("all");
-    setSelectedCity("all");
-    setSortBy("latest");
+    // Event filters
+    setSelectedEventType("all");
+    setSelectedEventPrice("all");
+    setSelectedEventTime("all");
+    // Pastor filters
+    setSelectedPastorAvailability("all");
+    setSelectedPastorSpecialism("all");
+    // Worship Leader filters
+    setSelectedWlStyle("all");
+    setSelectedWlInstrument("all");
+    setSelectedWlLanguage("all");
+    setSelectedWlAvailability("all");
   };
 
   return (
@@ -628,25 +825,41 @@ export default function ExploreClient({
           gap: "4px"
         }}>
           <button
-            onClick={() => setExploreType("churches")}
+            onClick={() => {
+              setExploreType("churches");
+              setSelectedCity("all");
+              setSelectedChurchId(null);
+            }}
             className={`explore-tab ${exploreType === "churches" ? "active" : ""}`}
           >
             <i className="ti ti-building-church" style={{ fontSize: "16px" }}></i> Churches
           </button>
           <button
-            onClick={() => setExploreType("pastors")}
+            onClick={() => {
+              setExploreType("pastors");
+              setSelectedCity("all");
+              setSelectedChurchId(null);
+            }}
             className={`explore-tab ${exploreType === "pastors" ? "active" : ""}`}
           >
             <i className="ti ti-user" style={{ fontSize: "16px" }}></i> Pastors
           </button>
           <button
-            onClick={() => setExploreType("events")}
+            onClick={() => {
+              setExploreType("events");
+              setSelectedCity("all");
+              setSelectedChurchId(null);
+            }}
             className={`explore-tab ${exploreType === "events" ? "active" : ""}`}
           >
             <i className="ti ti-calendar-event" style={{ fontSize: "16px" }}></i> Events
           </button>
           <button
-            onClick={() => setExploreType("worship_leaders")}
+            onClick={() => {
+              setExploreType("worship_leaders");
+              setSelectedCity("all");
+              setSelectedChurchId(null);
+            }}
             className={`explore-tab ${exploreType === "worship_leaders" ? "active" : ""}`}
           >
             <i className="ti ti-microphone-2" style={{ fontSize: "16px" }}></i> Worship Leaders
@@ -678,12 +891,20 @@ export default function ExploreClient({
           </div>
           
           <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "24px" }}>
-             {/* Search */}
-             <div style={{ position: "relative" }}>
+              {/* Search */}
+              <div style={{ position: "relative" }}>
                 <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: "16px" }}></i>
                 <input
                   type="text"
-                  placeholder="Church name..."
+                  placeholder={
+                    exploreType === "churches"
+                      ? "Search church name, city, denom..."
+                      : exploreType === "pastors"
+                      ? "Search pastor name, church, city..."
+                      : exploreType === "events"
+                      ? "Search event title, venue, city..."
+                      : "Search worship leader name, city..."
+                  }
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{ width: "100%", height: "44px", paddingLeft: "40px", paddingRight: "30px", borderRadius: "8px", border: "1.5px solid #e2e8f0", fontSize: "13.5px" }}
@@ -691,10 +912,10 @@ export default function ExploreClient({
                 {searchQuery && (
                   <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: "14px" }}>✕</button>
                 )}
-             </div>
+              </div>
 
-             {/* Location (Near Me) */}
-             <div>
+              {/* Location (Near Me) */}
+              <div>
                 <button
                   onClick={handleUseMyLocation}
                   disabled={isLocating}
@@ -718,77 +939,275 @@ export default function ExploreClient({
                   <i className="ti ti-current-location"></i>
                   {isLocating ? "Locating..." : userLocation ? "Using Your Location" : "Near Me"}
                 </button>
-             </div>
+              </div>
 
-             {/* Opening Status */}
-             {exploreType === "churches" && (
-                <div>
-                  <h3 style={{ fontSize: "10px", textTransform: "uppercase", fontWeight: 800, color: "#94a3b8", letterSpacing: "0.05em", marginBottom: "12px" }}>Opening Status</h3>
-                  <div style={{ display: "flex", background: "#f1f5f9", borderRadius: "8px", padding: "4px" }}>
-                    {["all", "open_now", "custom"].map(status => (
-                      <button
-                        key={status}
-                        onClick={() => setOpeningStatus(status as any)}
-                        style={{ flex: 1, padding: "8px 0", fontSize: "11px", fontWeight: 700, borderRadius: "6px", border: "none", background: openingStatus === status ? "#fff" : "transparent", color: openingStatus === status ? "#0f172a" : "#64748b", boxShadow: openingStatus === status ? "0 1px 3px rgba(0,0,0,0.1)" : "none", cursor: "pointer" }}
-                      >
-                        {status === "all" ? "ALL" : status === "open_now" ? "OPEN NOW" : "CUSTOM"}
-                      </button>
-                    ))}
+              {/* City Filter (Available for all tabs) */}
+              {cities.length > 2 && (
+                <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
+                  <div style={{ position: "relative", width: "100%" }}>
+                    <select
+                      value={selectedCity}
+                      onChange={(e) => setSelectedCity(e.target.value)}
+                      style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedCity === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
+                    >
+                      <option value="all">All Cities</option>
+                      {cities.filter((c: string) => c !== "all").map((c: string) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                    <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
                   </div>
                 </div>
-             )}
+              )}
 
-             {/* Dropdowns */}
-             {exploreType === "churches" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {[ 
-                    { label: "All Denominations", value: selectedDenom, setter: setSelectedDenom, options: denominations },
-                    { label: "All Languages", value: selectedLanguage, setter: setSelectedLanguage, options: languages },
-                    { label: "All Worship Styles", value: selectedWorshipStyle, setter: setSelectedWorshipStyle, options: worshipStyles },
-                    { label: "All Ministries", value: selectedMinistry, setter: setSelectedMinistry, options: ministries }
-                  ].map((filter, i) => (
-                    <div key={i} style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
-                      <div style={{ position: "relative", width: "100%" }}>
-                        <select
-                          value={filter.value}
-                          onChange={(e) => filter.setter(e.target.value)}
-                          style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: filter.value === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
+              {/* CHURCH FILTERS */}
+              {exploreType === "churches" && (
+                <>
+                  <div>
+                    <h3 style={{ fontSize: "10px", textTransform: "uppercase", fontWeight: 800, color: "#94a3b8", letterSpacing: "0.05em", marginBottom: "12px" }}>Opening Status</h3>
+                    <div style={{ display: "flex", background: "#f1f5f9", borderRadius: "8px", padding: "4px" }}>
+                      {["all", "open_now", "custom"].map(status => (
+                        <button
+                          key={status}
+                          onClick={() => setOpeningStatus(status as any)}
+                          style={{ flex: 1, padding: "8px 0", fontSize: "11px", fontWeight: 700, borderRadius: "6px", border: "none", background: openingStatus === status ? "#fff" : "transparent", color: openingStatus === status ? "#0f172a" : "#64748b", boxShadow: openingStatus === status ? "0 1px 3px rgba(0,0,0,0.1)" : "none", cursor: "pointer" }}
                         >
-                          <option value="all">{filter.label}</option>
-                          {filter.options.filter((o: string) => o !== "all").map((o: string) => (
-                            <option key={o} value={o}>{o}</option>
-                          ))}
-                        </select>
-                        <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
-                      </div>
+                          {status === "all" ? "ALL" : status === "open_now" ? "OPEN NOW" : "CUSTOM"}
+                        </button>
+                      ))}
                     </div>
-                  ))}
+                  </div>
 
-                  {/* Sort By Dropdown */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    {[ 
+                      { label: "All Denominations", value: selectedDenom, setter: setSelectedDenom, options: denominations },
+                      { label: "All Languages", value: selectedLanguage, setter: setSelectedLanguage, options: languages },
+                      { label: "All Worship Styles", value: selectedWorshipStyle, setter: setSelectedWorshipStyle, options: worshipStyles },
+                      { label: "All Ministries", value: selectedMinistry, setter: setSelectedMinistry, options: ministries }
+                    ].map((filter, i) => (
+                      <div key={i} style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
+                        <div style={{ position: "relative", width: "100%" }}>
+                          <select
+                            value={filter.value}
+                            onChange={(e) => filter.setter(e.target.value)}
+                            style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: filter.value === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
+                          >
+                            <option value="all">{filter.label}</option>
+                            {filter.options.filter((o: string) => o !== "all").map((o: string) => (
+                              <option key={o} value={o}>{o}</option>
+                            ))}
+                          </select>
+                          <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* EVENT FILTERS */}
+              {exploreType === "events" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {/* Event Timing Filter (Upcoming vs Past) */}
+                  <div>
+                    <h3 style={{ fontSize: "10px", textTransform: "uppercase", fontWeight: 800, color: "#94a3b8", letterSpacing: "0.05em", marginBottom: "12px" }}>Timeframe</h3>
+                    <div style={{ display: "flex", background: "#f1f5f9", borderRadius: "8px", padding: "4px" }}>
+                      {[
+                        { label: "ALL", value: "all" },
+                        { label: "UPCOMING", value: "upcoming" },
+                        { label: "PAST", value: "past" }
+                      ].map(t => (
+                        <button
+                          key={t.value}
+                          onClick={() => setSelectedEventTime(t.value as any)}
+                          style={{ flex: 1, padding: "8px 0", fontSize: "11px", fontWeight: 700, borderRadius: "6px", border: "none", background: selectedEventTime === t.value ? "#fff" : "transparent", color: selectedEventTime === t.value ? "#0f172a" : "#64748b", boxShadow: selectedEventTime === t.value ? "0 1px 3px rgba(0,0,0,0.1)" : "none", cursor: "pointer" }}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Event Type Dropdown */}
                   <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
                     <div style={{ position: "relative", width: "100%" }}>
                       <select
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as any)}
-                        style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: "#334155", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
+                        value={selectedEventType}
+                        onChange={(e) => setSelectedEventType(e.target.value)}
+                        style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedEventType === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
                       >
-                        <option value="latest">Sort By: Latest</option>
-                        <option value="nearby">Sort By: Nearby</option>
-                        <option value="name_asc">Sort By: Name A-Z</option>
-                        <option value="name_desc">Sort By: Name Z-A</option>
+                        <option value="all">All Event Types</option>
+                        {eventTypes.filter((t: string) => t !== "all").map((t: string) => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                      <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
+                    </div>
+                  </div>
+
+                  {/* Price Filter (Free vs Ticketed) */}
+                  <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
+                    <div style={{ position: "relative", width: "100%" }}>
+                      <select
+                        value={selectedEventPrice}
+                        onChange={(e) => setSelectedEventPrice(e.target.value as any)}
+                        style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedEventPrice === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
+                      >
+                        <option value="all">All Pricing</option>
+                        <option value="free">Free Events Only</option>
+                        <option value="paid">Ticketed / Paid</option>
                       </select>
                       <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
                     </div>
                   </div>
                 </div>
-             )}
+              )}
+
+              {/* PASTOR FILTERS */}
+              {exploreType === "pastors" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {/* Availability Status */}
+                  <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
+                    <div style={{ position: "relative", width: "100%" }}>
+                      <select
+                        value={selectedPastorAvailability}
+                        onChange={(e) => setSelectedPastorAvailability(e.target.value)}
+                        style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedPastorAvailability === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
+                      >
+                        <option value="all">All Availability</option>
+                        <option value="available">Available for Bookings</option>
+                        <option value="limited">Limited Availability</option>
+                        <option value="unavailable">Booked / Unavailable</option>
+                      </select>
+                      <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
+                    </div>
+                  </div>
+
+                  {/* Preaching Specialism */}
+                  {pastorSpecialisms.length > 1 && (
+                    <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
+                      <div style={{ position: "relative", width: "100%" }}>
+                        <select
+                          value={selectedPastorSpecialism}
+                          onChange={(e) => setSelectedPastorSpecialism(e.target.value)}
+                          style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedPastorSpecialism === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
+                        >
+                          <option value="all">All Preaching Focus / Tags</option>
+                          {pastorSpecialisms.filter((s: string) => s !== "all").map((s: string) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                        <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* WORSHIP LEADER FILTERS */}
+              {exploreType === "worship_leaders" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {/* Style */}
+                  {wlStyles.length > 1 && (
+                    <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
+                      <div style={{ position: "relative", width: "100%" }}>
+                        <select
+                          value={selectedWlStyle}
+                          onChange={(e) => setSelectedWlStyle(e.target.value)}
+                          style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedWlStyle === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
+                        >
+                          <option value="all">All Worship Styles</option>
+                          {wlStyles.filter((s: string) => s !== "all").map((s: string) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                        <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Instrument */}
+                  {wlInstruments.length > 1 && (
+                    <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
+                      <div style={{ position: "relative", width: "100%" }}>
+                        <select
+                          value={selectedWlInstrument}
+                          onChange={(e) => setSelectedWlInstrument(e.target.value)}
+                          style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedWlInstrument === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
+                        >
+                          <option value="all">All Instruments</option>
+                          {wlInstruments.filter((inst: string) => inst !== "all").map((inst: string) => (
+                            <option key={inst} value={inst}>{inst}</option>
+                          ))}
+                        </select>
+                        <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Language */}
+                  {wlLanguages.length > 1 && (
+                    <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
+                      <div style={{ position: "relative", width: "100%" }}>
+                        <select
+                          value={selectedWlLanguage}
+                          onChange={(e) => setSelectedWlLanguage(e.target.value)}
+                          style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedWlLanguage === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
+                        >
+                          <option value="all">All Languages</option>
+                          {wlLanguages.filter((l: string) => l !== "all").map((l: string) => (
+                            <option key={l} value={l}>{l}</option>
+                          ))}
+                        </select>
+                        <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Available For */}
+                  {wlAvailabilities.length > 1 && (
+                    <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
+                      <div style={{ position: "relative", width: "100%" }}>
+                        <select
+                          value={selectedWlAvailability}
+                          onChange={(e) => setSelectedWlAvailability(e.target.value)}
+                          style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedWlAvailability === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
+                        >
+                          <option value="all">Available For (All)</option>
+                          {wlAvailabilities.filter((a: string) => a !== "all").map((a: string) => (
+                            <option key={a} value={a}>{a}</option>
+                          ))}
+                        </select>
+                        <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Sort By Dropdown (Universal) */}
+              <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
+                <div style={{ position: "relative", width: "100%" }}>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: "#334155", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
+                  >
+                    <option value="latest">{exploreType === "events" ? "Sort By: Event Date" : "Sort By: Latest"}</option>
+                    <option value="nearby">Sort By: Nearby</option>
+                    <option value="name_asc">Sort By: Name A-Z</option>
+                    <option value="name_desc">Sort By: Name Z-A</option>
+                  </select>
+                  <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
+                </div>
+              </div>
           </div>
         </div>
 
-        {/* LIST COLUMN (Middle) */}
+        {/* LIST COLUMN (Middle / Full if no map) */}
         <div style={{
-          width: exploreType === "pastors" ? "100%" : "400px",
-          minWidth: exploreType === "pastors" ? "0" : "400px",
+          width: (exploreType === "pastors" || exploreType === "worship_leaders") ? "100%" : "400px",
+          minWidth: (exploreType === "pastors" || exploreType === "worship_leaders") ? "0" : "400px",
           height: "100%",
           display: "flex",
           flexDirection: "column",
@@ -1037,8 +1456,8 @@ export default function ExploreClient({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Interactive Leaflet Map */}
-        {exploreType !== "pastors" && (
+        {/* RIGHT COLUMN: Interactive Leaflet Map (for Churches and Events) */}
+        {(exploreType === "churches" || exploreType === "events") && (
           <div style={{ flex: 1, height: "100%", minHeight: "100%", position: "relative", background: "#f1f5f9", overflow: "hidden" }}>
             <ChurchMap
               churches={activeItemsForMap}

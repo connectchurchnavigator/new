@@ -81,17 +81,22 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
 
     const parsed = parseTimeString(val);
     setParsedTime(parsed);
-    setError(!parsed);
 
-    if (parsed && !parsed.ambiguous) {
+    if (!parsed) {
+      setError(true);
+      setIsOpen(true);
+      onChange("");
+    } else if (!parsed.ambiguous) {
+      setError(false);
       const formatted = formatTime(parsed);
       onChange(formatted);
       setIsOpen(false);
-    } else if (parsed && parsed.ambiguous) {
-      setIsOpen(true);
     } else {
+      // Ambiguous (e.g. "1111" where am/pm is not yet confirmed/selected)
+      // Do not mark as valid green — user must pick AM or PM
+      setError(true);
       setIsOpen(true);
-      onChange(val);
+      onChange("");
     }
   };
 
@@ -120,6 +125,9 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
     }
   };
 
+  const isValid = Boolean(value && !error);
+  const isInvalid = Boolean(inputValue.trim() && (error || !isValid));
+
   return (
     <div style={{ position: "relative" }}>
       <input
@@ -142,8 +150,8 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
         style={{
           fontSize: "13px",
           padding: "10px 12px",
-          border: error ? "1.5px solid red" : value ? "1.5px solid #16a34a" : "1.5px solid var(--cn-border)",
-          backgroundColor: error ? "#fef2f2" : value ? "#f0fdf4" : ""
+          border: isInvalid ? "1.5px solid #ef4444" : isValid ? "1.5px solid #16a34a" : "1.5px solid var(--cn-border)",
+          backgroundColor: isInvalid ? "#fef2f2" : isValid ? "#f0fdf4" : ""
         }}
       />
       {isOpen && (

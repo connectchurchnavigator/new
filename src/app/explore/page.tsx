@@ -36,7 +36,7 @@ export default async function ExplorePage(props: ExplorePageProps) {
   // Fetch all published pastors
   const { data: pastors } = await supabase
     .from("pastors")
-    .select("*, church:churches(name, slug, latitude, longitude)")
+    .select("*, church:churches(name, slug, latitude, longitude), tags:pastor_tags(*)")
     .eq("is_published", true)
     .order("is_verified", { ascending: false });
 
@@ -50,7 +50,7 @@ export default async function ExplorePage(props: ExplorePageProps) {
   // Fetch all published worship leaders
   const { data: worshipLeaders } = await supabase
     .from("worship_leaders")
-    .select("*")
+    .select("*, tags:worship_leader_tags(*)")
     .eq("is_published", true)
     .order("is_verified", { ascending: false });
 

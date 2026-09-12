@@ -80,11 +80,19 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
 
     const parsed = parseTimeString(val);
     setParsedTime(parsed);
-    setError(!parsed);
-    setIsOpen(true);
 
-    if (parsed && !parsed.ambiguous) {
+    if (!parsed) {
+      setError(true);
+      setIsOpen(true);
+      onChange("");
+    } else if (!parsed.ambiguous) {
+      setError(false);
       onChange(formatTime(parsed));
+      setIsOpen(false);
+    } else {
+      setError(true);
+      setIsOpen(true);
+      onChange("");
     }
   };
 
@@ -92,7 +100,7 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
     if (inputValue.trim()) {
       const parsed = parseTimeString(inputValue);
       setParsedTime(parsed);
-      setError(!parsed);
+      setError(!parsed || parsed.ambiguous);
       setIsOpen(true);
     }
   };
@@ -103,7 +111,7 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
       const v = inputValue.trim();
       if (v) {
         const parsed = parseTimeString(v);
-        if (parsed) {
+        if (parsed && !parsed.ambiguous) {
           setError(false);
           const finalVal = formatTime(parsed);
           setInputValue(finalVal);
@@ -126,6 +134,9 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
     onChange(optVal);
   };
 
+  const isValid = Boolean(value && !error);
+  const isInvalid = Boolean(inputValue.trim() && (error || !isValid));
+
   return (
     <div style={{ position: "relative", width: "100%" }}>
       <input
@@ -134,8 +145,8 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
         style={{
           fontSize: "13px",
           padding: "10px 12px",
-          border: error ? "1.5px solid red" : inputValue && !error ? "1.5px solid #16a34a" : "1.5px solid var(--cn-border)",
-          backgroundColor: error ? "#fef2f2" : inputValue && !error ? "#f0fdf4" : ""
+          border: isInvalid ? "1.5px solid #ef4444" : isValid ? "1.5px solid #16a34a" : "1.5px solid var(--cn-border)",
+          backgroundColor: isInvalid ? "#fef2f2" : isValid ? "#f0fdf4" : ""
         }}
         value={inputValue}
         onChange={(e) => handleInputChange(e.target.value)}

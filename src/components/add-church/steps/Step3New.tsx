@@ -106,10 +106,37 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
   };
 
   // Ministries
+  const POPULAR_MINISTRIES = [
+    "Youth Ministry",
+    "Children's Church",
+    "Food Bank",
+    "Bible Study",
+    "Outreach",
+    "Worship Team",
+    "Ushering",
+    "Prayer & Intercession",
+    "Evangelism",
+    "Women's Ministry",
+    "Men's Ministry",
+    "Young Adults",
+    "Marriage & Family"
+  ];
+
+  const ALL_MINISTRIES = [
+    "Youth Ministry", "Children's Church", "Worship Team", "Ushering", "Technical / Media", 
+    "Prayer & Intercession", "Evangelism", "Women's Ministry", "Men's Ministry", "Young Adults", "Marriage & Family",
+    "Crèche / Nursery", "Junior Church", "Teen Ministry", "Parent & Toddler", "Seniors Ministry", "Singles Ministry",
+    "Food Bank", "Community Café", "Prison Ministry", "Street Ministry",
+    "Praise & Worship", "Dance Ministry", "Drama & Theatre", "Choir",
+    "Global Missions", "Church Planting", "Evangelism Team", "Local Outreach", "Bible Study", "Outreach",
+    "Hospital Visitation", "Discipleship", "Media & Tech", "Single Parents", "Addiction Recovery",
+    "Homeless Ministry", "Benevolence", "Grief Care", "Missions", "Student Ministry", "College & Career"
+  ];
+
   const [activeMinistries, setActiveMinistries] = useState<string[]>(formData.ministries?.length ? formData.ministries : []);
-  const [customMinistry, setCustomMinistry] = useState("");
-  const [customMinistriesList, setCustomMinistriesList] = useState<string[]>([]);
-  const [customMinMsg, setCustomMinMsg] = useState<{ text: string; type: "success" | "warning" | "" }>({ text: "", type: "" });
+  const [ministrySearchQuery, setMinistrySearchQuery] = useState("");
+  const [isMinistryDropdownOpen, setIsMinistryDropdownOpen] = useState(false);
+  const ministryContainerRef = useRef<HTMLDivElement>(null);
 
   // Languages
   const [selectedLangs, setSelectedLangs] = useState<string[]>(formData.languages?.length ? formData.languages : ["English"]);
@@ -141,6 +168,9 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
     const handleOutsideClick = (e: MouseEvent) => {
       if (langContainerRef.current && !langContainerRef.current.contains(e.target as Node)) {
         setIsLangDropdownOpen(false);
+      }
+      if (ministryContainerRef.current && !ministryContainerRef.current.contains(e.target as Node)) {
+        setIsMinistryDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleOutsideClick);
@@ -257,69 +287,19 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
   };
 
   // Ministries toggles
-  const toggleMinistry = (chip: string) => {
+  const toggleMinistry = (min: string) => {
     setActiveMinistries(prev => 
-      prev.includes(chip) ? prev.filter(c => c !== chip) : [...prev, chip]
+      prev.includes(min) ? prev.filter(m => m !== min) : [...prev, min]
     );
   };
 
-  const addCustomMinistry = () => {
-    const val = customMinistry.replace(/\s+/g, ' ').trim().replace(/(^|\s)(\w)/g, (m, p, c) => p + c.toUpperCase());
-    if (val.length < 2) {
-      setCustomMinMsg({ text: "Type a ministry name to add it.", type: "warning" });
-      return;
-    }
-
-    const ALL_EXISTING_CHIPS = [
-      "Youth Ministry", "Children's Church", "Worship Team", "Ushering", "Technical / Media", 
-      "Prayer & Intercession", "Evangelism", "Women's Ministry", "Men's Ministry", "Young Adults", "Marriage & Family",
-      "Crèche / Nursery", "Junior Church", "Teen Ministry", "Parent & Toddler", "Seniors Ministry", "Singles Ministry",
-      "Food Bank", "Community Café", "Prison Ministry", "Street Ministry",
-      "Praise & Worship", "Dance Ministry", "Drama & Theatre", "Choir",
-      "Global Missions", "Church Planting", "Evangelism Team", "Local Outreach"
-    ];
-
-    const foundStandard = ALL_EXISTING_CHIPS.find(c => c.toLowerCase() === val.toLowerCase());
-    
-    if (foundStandard) {
-      if (!activeMinistries.includes(foundStandard)) {
-        setActiveMinistries(prev => [...prev, foundStandard]);
-      }
-
-      // If the standard ministry is NOT one of the 13 default visible chips,
-      // add it to customMinistriesList so it renders on the screen.
-      const visibleChips = [
-        "Youth Ministry", "Children's Church", "Food Bank", "Bible Study",
-        "Outreach", "Worship Team", "Ushering", "Prayer & Intercession",
-        "Evangelism", "Women's Ministry", "Men's Ministry", "Young Adults",
-        "Marriage & Family"
-      ];
-      if (!visibleChips.includes(foundStandard) && !customMinistriesList.includes(foundStandard)) {
-        setCustomMinistriesList(prev => [...prev, foundStandard]);
-      }
-
-      setCustomMinMsg({ text: `“${foundStandard}” already exists — selected it for you.`, type: "success" });
-      setCustomMinistry("");
-      setTimeout(() => {
-        setCustomMinMsg(prev => prev.text.includes(foundStandard) ? { text: "", type: "" } : prev);
-      }, 2500);
-      return;
-    }
-
-    if (customMinistriesList.some(m => m.toLowerCase() === val.toLowerCase())) {
-      setCustomMinMsg({ text: `“${val}” already exists in your ministries.`, type: "success" });
-      setCustomMinistry("");
-      return;
-    }
-
-    setCustomMinistriesList(prev => [...prev, val]);
-    setActiveMinistries(prev => [...prev, val]);
-    setCustomMinMsg({ text: `Added “${val}” to your ministries.`, type: "success" });
-    setCustomMinistry("");
-
-    setTimeout(() => {
-      setCustomMinMsg(prev => prev.text.includes(val) ? { text: "", type: "" } : prev);
-    }, 2500);
+  const getFilteredMinistries = () => {
+    const q = ministrySearchQuery.trim().toLowerCase();
+    const all = Array.from(new Set([...POPULAR_MINISTRIES, ...ALL_MINISTRIES, ...activeMinistries]));
+    if (!q) return all;
+    const starts = all.filter(m => m.toLowerCase().startsWith(q));
+    const contains = all.filter(m => !m.toLowerCase().startsWith(q) && m.toLowerCase().includes(q));
+    return [...starts, ...contains];
   };
 
   // Languages toggle
@@ -384,7 +364,7 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
       pastor_name: pastorName,
       pastorBio,
       pastor_bio: pastorBio,
-      ministries: Array.from(new Set([...activeMinistries, ...customMinistriesList])),
+      ministries: activeMinistries,
       languages: selectedLangs,
       facilities: activeFacilities,
     });
@@ -886,65 +866,168 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
       </div>
 
       {/* MINISTRIES & OUTREACH */}
-      <div className="scard">
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>
+      <div className="scard" style={{ overflow: "visible" }} id="f-ministries">
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
           <div style={{ width: "38px", height: "38px", borderRadius: "11px", background: "linear-gradient(135deg,#fb7185,#be123c)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <i className="ti ti-heart-handshake" style={{ fontSize: "18px", color: "#fff" }}></i>
           </div>
-          <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>Ministries & outreach</div>
+          <div>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>Ministries & outreach</div>
+            <div style={{ fontSize: "12.5px", color: "var(--cn-gray)", marginTop: "2px" }}>Select active ministries and outreach programs at your church</div>
+          </div>
         </div>
 
-        <div id="ministry-chips" style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "14px" }}>
-          {[
-            { name: "Youth Ministry", icon: "ti-users" },
-            { name: "Children's Church", icon: "ti-baby-carriage" },
-            { name: "Food Bank", icon: "ti-bread" },
-            { name: "Bible Study", icon: "ti-book" },
-            { name: "Outreach", icon: "ti-heart-handshake" },
-            { name: "Worship Team", icon: "ti-music" },
-            { name: "Ushering", icon: "ti-user-check" },
-            { name: "Prayer & Intercession", icon: "ti-sparkles" },
-            { name: "Evangelism", icon: "ti-speakerphone" },
-            { name: "Women's Ministry", icon: "ti-woman" },
-            { name: "Men's Ministry", icon: "ti-man" },
-            { name: "Young Adults", icon: "ti-user" },
-            { name: "Marriage & Family", icon: "ti-ring" }
-          ].map(m => (
-            <button 
-              key={m.name} 
-              className={`chip ${activeMinistries.includes(m.name) ? "on" : ""}`}
-              onClick={() => toggleMinistry(m.name)}
-              style={{ display: "inline-flex", cursor: "pointer" }}
-            >
-              <i className={`ti ${m.icon}`} style={{ fontSize: "12px" }}></i> {m.name}
-            </button>
-          ))}
-          {customMinistriesList.map(m => (
-            <button key={m} className={`chip ${activeMinistries.includes(m) ? "on" : ""}`} onClick={() => toggleMinistry(m)}>
-              <i className="ti ti-plus" style={{ fontSize: "12px" }}></i> {m}
-            </button>
-          ))}
+        {/* Quick Picks / Popular Ministries */}
+        <div style={{ marginBottom: "16px" }}>
+          <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "8px" }}>POPULAR MINISTRIES</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {POPULAR_MINISTRIES.map(min => {
+              const isSel = activeMinistries.includes(min);
+              return (
+                <button 
+                  key={min} 
+                  type="button"
+                  onClick={() => toggleMinistry(min)}
+                  style={{
+                    padding: "7px 14px",
+                    borderRadius: "20px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    border: isSel ? "1.5px solid #7e22ce" : "1.5px solid var(--cn-border)",
+                    background: isSel ? "#f3e8ff" : "#fff",
+                    color: isSel ? "#7e22ce" : "var(--cn-ink)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  {isSel && <i className="ti ti-check" style={{ fontSize: "13px", color: "#7e22ce" }}></i>}
+                  {min}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div style={{ display: "flex", gap: "9px", marginBottom: "16px" }}>
+        {/* Search Input */}
+        <div style={{ position: "relative", marginBottom: "14px" }} ref={ministryContainerRef}>
+          <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "var(--cn-gray)" }}></i>
           <input 
-            placeholder="Don't see yours? Type a custom ministry — e.g. Prison Ministry" 
-            value={customMinistry}
-            onChange={(e) => setCustomMinistry(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomMinistry(); } }}
-            style={{ fontSize: "13px", flex: 1 }}
+            placeholder="Search ministries (e.g. Prison Ministry, Community Café)..." 
+            value={ministrySearchQuery}
+            onChange={(e) => {
+              setMinistrySearchQuery(e.target.value);
+              setIsMinistryDropdownOpen(true);
+            }}
+            onFocus={() => setIsMinistryDropdownOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const val = ministrySearchQuery.trim().replace(/(^|\s)(\w)/g, (m, p, c) => p + c.toUpperCase());
+                if (val && !activeMinistries.includes(val)) {
+                  toggleMinistry(val);
+                }
+                setMinistrySearchQuery("");
+                setIsMinistryDropdownOpen(false);
+              }
+            }}
+            style={{ 
+              paddingLeft: "40px", 
+              fontSize: "13.5px",
+              height: "44px",
+              borderRadius: "12px",
+              border: "1.5px solid var(--cn-border)" 
+            }}
+            autoComplete="off"
           />
-          <button 
-            onClick={addCustomMinistry} 
-            style={{ flexShrink: 0, fontSize: "13px", fontWeight: 700, color: "#fff", background: "var(--cn-purple)", border: "none", padding: "0 18px", borderRadius: "11px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
-          >
-            <i className="ti ti-plus" style={{ fontSize: "15px" }}></i> Add
-          </button>
+
+          {isMinistryDropdownOpen && (
+            <div className="autocomplete-dropdown" style={{ display: "block", maxHeight: "220px", overflowY: "auto", borderRadius: "12px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }}>
+              {getFilteredMinistries().length === 0 ? (
+                <div>
+                  <div style={{ padding: "10px 14px", fontSize: "12.5px", color: "var(--cn-gray)" }}>
+                    No exact match for "{ministrySearchQuery}"
+                  </div>
+                  <div 
+                    className="autocomplete-item" 
+                    onClick={() => {
+                      const val = ministrySearchQuery.trim().replace(/(^|\s)(\w)/g, (m, p, c) => p + c.toUpperCase());
+                      if (val && !activeMinistries.includes(val)) {
+                        toggleMinistry(val);
+                      }
+                      setMinistrySearchQuery("");
+                      setIsMinistryDropdownOpen(false);
+                    }}
+                    style={{ borderTop: "1px solid var(--cn-border)", fontWeight: 600, color: "#7e22ce", display: "flex", alignItems: "center", gap: "8px", padding: "11px 14px", cursor: "pointer" }}
+                  >
+                    <i className="ti ti-plus" style={{ fontSize: "14px" }}></i> Add "{ministrySearchQuery}" as custom ministry
+                  </div>
+                </div>
+              ) : (
+                getFilteredMinistries().slice(0, 50).map(min => {
+                  const isAdded = activeMinistries.includes(min);
+                  return (
+                    <div 
+                      key={min}
+                      onClick={() => {
+                        toggleMinistry(min);
+                        setMinistrySearchQuery("");
+                        setIsMinistryDropdownOpen(false);
+                      }}
+                      className="autocomplete-item"
+                      style={{
+                        padding: "10px 14px",
+                        cursor: "pointer",
+                        fontSize: "13.5px",
+                        fontWeight: isAdded ? 600 : 400,
+                        color: isAdded ? "#7e22ce" : "var(--cn-ink)",
+                        background: isAdded ? "#faf5ff" : "transparent",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between"
+                      }}
+                    >
+                      <span>{min}</span>
+                      {isAdded && <i className="ti ti-check" style={{ fontSize: "14px", color: "#7e22ce" }}></i>}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
 
-        {customMinMsg.text && (
-          <div style={{ fontSize: "12px", color: customMinMsg.type === "success" ? "#16a34a" : "#d97706", marginBottom: "12px" }}>
-            {customMinMsg.text}
+        {/* Selected Ministries Pills */}
+        {activeMinistries.length > 0 && (
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "8px" }}>SELECTED MINISTRIES ({activeMinistries.length})</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {activeMinistries.map(min => (
+                <span 
+                  key={min} 
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    background: "#7e22ce",
+                    color: "#fff",
+                    borderRadius: "20px",
+                    padding: "6px 12px",
+                    fontSize: "13px",
+                    fontWeight: 600
+                  }}
+                >
+                  {min}
+                  <i 
+                    className="ti ti-x" 
+                    onClick={() => toggleMinistry(min)}
+                    style={{ cursor: "pointer", fontSize: "12px", opacity: 0.8 }}
+                  ></i>
+                </span>
+              ))}
+            </div>
           </div>
         )}
 
