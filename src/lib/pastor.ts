@@ -7,6 +7,7 @@ export type EnquiryStatus = 'new' | 'read' | 'responded' | 'archived';
 export interface Pastor {
   id: string;
   slug: string;
+  owner_id?: string | null;
 
   full_name: string;
   title: string | null;

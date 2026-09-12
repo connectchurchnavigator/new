@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase-admin';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import type { PastorProfile, PastorTag } from '@/lib/pastor';
 import { HeroSliderProvider, HeroSlide } from '@/components/HeroSlider';
 import { ProfileTabs } from '@/components/ProfileTabs';
@@ -93,8 +94,20 @@ export default async function PastorProfilePage(props: {
   const pastor = await getPastor(params.slug);
   if (!pastor) notFound();
 
+  // Check if current user is the actual verified owner of this pastor profile
+  let isActualOwner = false;
+  try {
+    const serverSupabase = await createServerSupabaseClient();
+    const { data: { user } } = await serverSupabase.auth.getUser();
+    if (user && pastor.owner_id === user.id) {
+      isActualOwner = true;
+    }
+  } catch (authErr) {
+    console.warn('Pastor owner auth verification check failed:', authErr);
+  }
+
   const resolvedSearchParams = props.searchParams ? await props.searchParams : {};
-  const isOwner = resolvedSearchParams.owner === 'true';
+  const isOwner = isActualOwner && resolvedSearchParams.owner !== 'false';
 
   const firstName = pastor.full_name.split(' ').find((w) => !/^(pastor|rev\.?|dr\.?)$/i.test(w)) ?? pastor.full_name;
   const preachingTags = pastor.tags.filter((t) => t.category === 'preaching');
@@ -119,14 +132,16 @@ export default async function PastorProfilePage(props: {
             All pastors
           </Link>
           <div style={{ display: 'flex', gap: '12px' }}>
-            {isOwner && (
+            {isActualOwner && isOwner && (
               <Link href="/dashboard" style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none' }}>
                 <i className="ti ti-chart-bar"></i> Pastor Dashboard
               </Link>
             )}
-            <Link href={`/pastor/${pastor.slug}${isOwner ? '' : '?owner=true'}`} scroll={false} style={{ textDecoration: 'none', background: isOwner ? '#7e22ce' : '#f3e8ff', color: isOwner ? '#fff' : '#7e22ce', border: '1px solid #e9d5ff', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
-              Owner View {isOwner ? 'ON' : 'OFF'}
-            </Link>
+            {isActualOwner && (
+              <Link href={`/pastor/${pastor.slug}${isOwner ? '?owner=false' : '?owner=true'}`} scroll={false} style={{ textDecoration: 'none', background: isOwner ? '#7e22ce' : '#f3e8ff', color: isOwner ? '#fff' : '#7e22ce', border: '1px solid #e9d5ff', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
+                Owner View {isOwner ? 'ON' : 'OFF'}
+              </Link>
+            )}
           </div>
         </div>
 

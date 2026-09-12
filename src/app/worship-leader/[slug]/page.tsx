@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase-admin';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { EnquiryForm } from '@/components/EnquiryForm';
 import { ProfileTabs } from '@/components/ProfileTabs';
 import HeroCarousel from '@/components/church-profile/HeroCarousel';
@@ -55,8 +56,20 @@ export default async function WorshipLeaderProfilePage(props: {
   const leader = await getWorshipLeader(params.slug);
   if (!leader) notFound();
 
+  // Check if current user is the actual verified owner of this worship leader profile
+  let isActualOwner = false;
+  try {
+    const serverSupabase = await createServerSupabaseClient();
+    const { data: { user } } = await serverSupabase.auth.getUser();
+    if (user && leader.owner_id === user.id) {
+      isActualOwner = true;
+    }
+  } catch (authErr) {
+    console.warn('Worship leader owner auth verification check failed:', authErr);
+  }
+
   const resolvedSearchParams = props.searchParams ? await props.searchParams : {};
-  const isOwner = resolvedSearchParams.owner === 'true';
+  const isOwner = isActualOwner && resolvedSearchParams.owner !== 'false';
 
   const firstName = leader.display_name.split(' ')[0] ?? leader.display_name;
   
@@ -79,9 +92,11 @@ export default async function WorshipLeaderProfilePage(props: {
             All worship leaders
           </Link>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <Link href={`/worship-leader/${leader.slug}${isOwner ? '' : '?owner=true'}`} scroll={false} style={{ textDecoration: 'none', background: isOwner ? '#7e22ce' : '#f3e8ff', color: isOwner ? '#fff' : '#7e22ce', border: '1px solid #e9d5ff', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
-              Owner View {isOwner ? 'ON' : 'OFF'}
-            </Link>
+            {isActualOwner && (
+              <Link href={`/worship-leader/${leader.slug}${isOwner ? '?owner=false' : '?owner=true'}`} scroll={false} style={{ textDecoration: 'none', background: isOwner ? '#7e22ce' : '#f3e8ff', color: isOwner ? '#fff' : '#7e22ce', border: '1px solid #e9d5ff', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
+                Owner View {isOwner ? 'ON' : 'OFF'}
+              </Link>
+            )}
           </div>
         </div>
 

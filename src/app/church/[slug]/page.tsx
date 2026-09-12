@@ -12,6 +12,7 @@ import ContactSection from '@/components/church-profile/ContactSection';
 import NearbySection from '@/components/church-profile/NearbySection';
 import ViewTracker from '@/components/church-profile/ViewTracker';
 import TopNav from '@/components/layout/TopNav';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import HeroHeader from '@/components/church-profile/HeroHeader';
 import Footer from '@/components/Footer';
 import './church.css';
@@ -27,11 +28,31 @@ export default async function ChurchProfilePage({ params, searchParams }: { para
     return notFound();
   }
 
-  const resolvedSearchParams = searchParams ? await searchParams : {};
-  const isOwner = resolvedSearchParams.owner === 'true';
-  const isEditing = resolvedSearchParams.edit === 'true';
-
   if (!church) return notFound();
+
+  // Check if current user is the actual verified owner of this church
+  let isActualOwner = false;
+  try {
+    const serverSupabase = await createServerSupabaseClient();
+    const { data: { user } } = await serverSupabase.auth.getUser();
+    if (user && church.org_id) {
+      const { data: org } = await sb
+        .from('organizations')
+        .select('owner_id')
+        .eq('id', church.org_id)
+        .single();
+      if (org && org.owner_id === user.id) {
+        isActualOwner = true;
+      }
+    }
+  } catch (authErr) {
+    console.warn('Owner auth verification check failed:', authErr);
+  }
+
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  // Only allow owner view if user is verified as actual owner
+  const isOwner = isActualOwner && resolvedSearchParams.owner !== 'false';
+  const isEditing = isOwner;
 
   // Fetch branches count
   const { count: branchesCountRes } = await sb
@@ -115,14 +136,16 @@ export default async function ChurchProfilePage({ params, searchParams }: { para
             All churches
           </Link>
           <div style={{ display: 'flex', gap: '12px' }}>
-            {isOwner && (
+            {isActualOwner && isOwner && (
               <Link href={`/dashboard/insights?church_id=${church.id}`} style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none' }}>
                 <i className="ti ti-chart-bar"></i> Visitor insights
               </Link>
             )}
-            <Link id="tour-owner-toggle" href={`/church/${church.slug}${isOwner ? '' : '?owner=true'}`} scroll={false} style={{ textDecoration: 'none', background: isOwner ? '#7e22ce' : '#f3e8ff', color: isOwner ? '#fff' : '#7e22ce', border: '1px solid #e9d5ff', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
-              Owner View {isOwner ? 'ON' : 'OFF'}
-            </Link>
+            {isActualOwner && (
+              <Link id="tour-owner-toggle" href={`/church/${church.slug}${isOwner ? '?owner=false' : '?owner=true'}`} scroll={false} style={{ textDecoration: 'none', background: isOwner ? '#7e22ce' : '#f3e8ff', color: isOwner ? '#fff' : '#7e22ce', border: '1px solid #e9d5ff', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
+                Owner View {isOwner ? 'ON' : 'OFF'}
+              </Link>
+            )}
           </div>
         </div>
 
