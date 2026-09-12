@@ -444,15 +444,15 @@ function AboutPane({
         </div>
       )}
 
-      {availableForTags.length > 0 && (
+      {pastor.languages.length > 0 && (
         <div className="pastor-card">
           <div className="pastor-card-h">
-            <div className="ic"><i className="ti ti-calendar-event"></i></div>
-            <h3>Available for</h3>
+            <div className="ic"><i className="ti ti-language"></i></div>
+            <h3>Languages</h3>
           </div>
           <div className="pastor-chips">
-            {availableForTags.map((t) => (
-              <span key={t.id} className="pastor-chip green">{t.label}</span>
+            {pastor.languages.map((lang, idx) => (
+              <span key={idx} className="pastor-chip green">{lang}</span>
             ))}
           </div>
         </div>
@@ -565,12 +565,6 @@ function Sidebar({ pastor }: { pastor: PastorProfile }) {
               {pastor.availability_note || pastor.availability_status}
             </span>
           </div>
-          {pastor.languages.length > 0 && (
-            <div className="spec-row">
-              <span className="k">Languages</span>
-              <span className="v">{pastor.languages.join(', ')}</span>
-            </div>
-          )}
         </div>
       </div>
 

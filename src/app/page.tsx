@@ -19,19 +19,27 @@ export default async function Home() {
     .order("created_at", { ascending: false })
     .limit(6);
 
-  // 2. Fetch upcoming events
-  const { data: events } = await supabase
-    .from("events")
-    .select("id, slug, title, type, venue_name, city, starts_at, ends_at, price_label, is_free, cover_url, host_church:churches(name, slug)")
-    .order("starts_at", { ascending: true })
-    .limit(4);
-
-  // 3. Fetch featured pastors
+  // 2. Fetch featured pastors
   const { data: pastors } = await supabase
     .from("pastors")
     .select("id, slug, full_name, title, avatar_url, cover_photo_urls, city, country, is_verified, years_in_ministry, church_name_cache, church:churches(name, slug)")
     .eq("is_published", true)
     .order("is_verified", { ascending: false })
+    .limit(4);
+
+  // 3. Fetch featured worship leaders
+  const { data: worshipLeaders } = await supabase
+    .from("worship_leaders")
+    .select("id, slug, display_name, full_name, stage_name, title, avatar_url, cover_photo_urls, city, country, is_verified, tagline, primary_church_name")
+    .eq("is_published", true)
+    .order("is_verified", { ascending: false })
+    .limit(4);
+
+  // 4. Fetch upcoming events
+  const { data: events } = await supabase
+    .from("events")
+    .select("id, slug, title, type, venue_name, city, starts_at, ends_at, price_label, is_free, cover_url, host_church:churches(name, slug)")
+    .order("starts_at", { ascending: true })
     .limit(4);
 
   return (
@@ -95,7 +103,7 @@ export default async function Home() {
             backdropFilter: "blur(8px)",
           }}>
             <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#22c55e" }} />
-            <span>Discover Verified Churches, Events & Ministers</span>
+            <span>Discover Churches, Pastors, Worship Leaders & Events</span>
           </div>
 
           {/* Main Title */}
@@ -105,16 +113,16 @@ export default async function Home() {
             lineHeight: 1.15,
             letterSpacing: "-0.03em",
             marginBottom: "18px",
-            maxWidth: "850px",
+            maxWidth: "920px",
             margin: "0 auto 18px",
           }}>
-            Find Churches, Events & Pastors <br className="hidden sm:inline" />
+            Find Churches, Pastors, Worship Leaders <br className="hidden sm:inline" />
             <span style={{
               background: "linear-gradient(135deg, #f43f5e, #a855f7)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
             }}>
-              Near You & Around the World.
+              & Events Near You & Around the World.
             </span>
           </h1>
 
@@ -122,11 +130,11 @@ export default async function Home() {
           <p style={{
             fontSize: "16px",
             color: "rgba(255, 255, 255, 0.8)",
-            maxWidth: "640px",
+            maxWidth: "680px",
             margin: "0 auto 36px",
             lineHeight: 1.5,
           }}>
-            Explore local church directories, attend conferences & gatherings, and connect with pastors & ministers.
+            Explore verified churches, connect with pastors and worship leaders, and attend upcoming gatherings & conferences.
           </p>
 
           {/* Search Bar */}
@@ -282,117 +290,7 @@ export default async function Home() {
       </section>
 
 
-      {/* ── SECTION 2: EVENTS ───────────────────────────────────────────────────── */}
-      <section id="events-section" style={{ background: "#f8fafc", padding: "60px 24px", borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "28px" }}>
-            <div>
-              <div style={{ fontSize: "12px", fontWeight: 800, color: "#e11d48", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "4px" }}>
-                Upcoming Gatherings
-              </div>
-              <h2 style={{ fontSize: "28px", fontWeight: 900, color: "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>
-                Events & Conferences
-              </h2>
-            </div>
-            <Link href="/events" style={{ fontSize: "14px", fontWeight: 700, color: "#e11d48", textDecoration: "none" }}>
-              View all events &rarr;
-            </Link>
-          </div>
-
-          {(!events || events.length === 0) ? (
-            <div style={{ textAlign: "center", padding: "40px 20px", background: "#ffffff", borderRadius: "20px", border: "1.5px dashed #cbd5e1" }}>
-              <i className="ti ti-calendar-event" style={{ fontSize: "40px", color: "#94a3b8", marginBottom: "10px", display: "block" }}></i>
-              <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", margin: "0 0 4px 0" }}>No upcoming public events scheduled</h3>
-              <p style={{ fontSize: "13.5px", color: "#64748b", margin: "0 0 16px 0" }}>Be the first church or ministry to publish a conference, workshop or worship night.</p>
-              <Link href="/onboarding/events" style={{ background: "#7c3aed", color: "#fff", padding: "8px 18px", borderRadius: "10px", textDecoration: "none", fontSize: "13px", fontWeight: 700 }}>
-                Publish Event
-              </Link>
-            </div>
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))", gap: "20px" }}>
-              {events.map((ev) => {
-                const dateStr = ev.starts_at ? new Date(ev.starts_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", weekday: "short" }) : "Upcoming";
-                const timeStr = ev.starts_at ? new Date(ev.starts_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
-
-                return (
-                  <Link
-                    key={ev.id}
-                    href={`/events/${ev.slug}`}
-                    style={{
-                      background: "#ffffff",
-                      borderRadius: "18px",
-                      overflow: "hidden",
-                      border: "1.5px solid #e2e8f0",
-                      textDecoration: "none",
-                      color: "inherit",
-                      display: "flex",
-                      flexDirection: "column",
-                      boxShadow: "0 4px 6px -1px rgba(0,0,0,0.03)",
-                    }}
-                  >
-                    <div style={{
-                      height: "140px",
-                      background: ev.cover_url ? `url('${ev.cover_url}') center/cover` : "linear-gradient(135deg, #e11d48, #fb7185)",
-                      position: "relative",
-                    }}>
-                      <span style={{
-                        position: "absolute",
-                        top: "10px",
-                        left: "10px",
-                        background: "rgba(15, 23, 42, 0.85)",
-                        color: "#fff",
-                        fontSize: "11px",
-                        fontWeight: 800,
-                        padding: "3px 9px",
-                        borderRadius: "8px",
-                        backdropFilter: "blur(4px)",
-                      }}>
-                        {ev.type || "Conference"}
-                      </span>
-
-                      <span style={{
-                        position: "absolute",
-                        top: "10px",
-                        right: "10px",
-                        background: ev.is_free ? "rgba(22, 163, 74, 0.95)" : "rgba(124, 58, 237, 0.95)",
-                        color: "#fff",
-                        fontSize: "11px",
-                        fontWeight: 800,
-                        padding: "3px 9px",
-                        borderRadius: "8px",
-                      }}>
-                        {ev.price_label || (ev.is_free ? "Free" : "Ticketed")}
-                      </span>
-                    </div>
-
-                    <div style={{ padding: "16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                      <div>
-                        <div style={{ fontSize: "12px", color: "#e11d48", fontWeight: 800, marginBottom: "4px" }}>
-                          📅 {dateStr} {timeStr ? `· ${timeStr}` : ""}
-                        </div>
-                        <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: "0 0 6px 0", lineHeight: 1.3 }}>
-                          {ev.title}
-                        </h3>
-                        <div style={{ fontSize: "12.5px", color: "#64748b", display: "flex", alignItems: "center", gap: "4px" }}>
-                          <i className="ti ti-map-pin" style={{ color: "#94a3b8" }}></i>
-                          <span>{ev.venue_name || ev.city || "Venue TBA"}</span>
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: "14px", paddingTop: "10px", borderTop: "1px solid #f1f5f9", fontSize: "12.5px", fontWeight: 700, color: "#7c3aed" }}>
-                        View Event &rarr;
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </section>
-
-
-      {/* ── SECTION 3: PASTORS & LEADERS ───────────────────────────────────────── */}
+      {/* ── SECTION 2: PASTORS & LEADERS ───────────────────────────────────────── */}
       <section id="pastors-section" style={{ maxWidth: "1200px", margin: "0 auto", padding: "60px 24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "28px" }}>
           <div>
@@ -521,6 +419,248 @@ export default async function Home() {
       </section>
 
 
+      {/* ── SECTION 3: WORSHIP LEADERS ─────────────────────────────────────────── */}
+      <section id="worship-leaders-section" style={{ background: "#fbfbfe", padding: "60px 24px", borderTop: "1px solid #f1f5f9" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "28px" }}>
+            <div>
+              <div style={{ fontSize: "12px", fontWeight: 800, color: "#e11d48", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "4px" }}>
+                Praise & Music
+              </div>
+              <h2 style={{ fontSize: "28px", fontWeight: 900, color: "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>
+                Worship Leaders & Musicians
+              </h2>
+            </div>
+            <Link href="/explore" style={{ fontSize: "14px", fontWeight: 700, color: "#e11d48", textDecoration: "none" }}>
+              Explore worship leaders &rarr;
+            </Link>
+          </div>
+
+          {(!worshipLeaders || worshipLeaders.length === 0) ? (
+            <div style={{ textAlign: "center", padding: "40px 20px", background: "#ffffff", borderRadius: "20px", border: "1.5px dashed #cbd5e1" }}>
+              <i className="ti ti-microphone-2" style={{ fontSize: "40px", color: "#94a3b8", marginBottom: "10px", display: "block" }}></i>
+              <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", margin: "0 0 4px 0" }}>No worship leaders registered yet</h3>
+              <p style={{ fontSize: "13.5px", color: "#64748b", margin: "0 0 16px 0" }}>Be among the first worship artists and directors to share your profile.</p>
+              <Link href="/onboarding/worship-leader" style={{ background: "#e11d48", color: "#fff", padding: "8px 18px", borderRadius: "10px", textDecoration: "none", fontSize: "13px", fontWeight: 700 }}>
+                Join as Worship Leader
+              </Link>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))", gap: "24px" }}>
+              {worshipLeaders.map((leader) => {
+                const coverImage = Array.isArray(leader.cover_photo_urls) && leader.cover_photo_urls.length > 0
+                  ? leader.cover_photo_urls[0]
+                  : null;
+
+                return (
+                  <Link
+                    key={leader.id}
+                    href={`/worship-leader/${leader.slug}`}
+                    style={{
+                      background: "#ffffff",
+                      borderRadius: "20px",
+                      overflow: "hidden",
+                      border: "1.5px solid #e2e8f0",
+                      textDecoration: "none",
+                      color: "inherit",
+                      display: "flex",
+                      flexDirection: "column",
+                      boxShadow: "0 4px 6px -1px rgba(0,0,0,0.03)",
+                      transition: "transform 0.2s, box-shadow 0.2s",
+                    }}
+                  >
+                    {/* Cover */}
+                    <div style={{
+                      height: "120px",
+                      background: coverImage ? `url('${coverImage}') center/cover` : "linear-gradient(135deg, #f43f5e, #db2777)",
+                      position: "relative",
+                    }} />
+
+                    {/* Content */}
+                    <div style={{ padding: "0 18px 18px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "-26px", marginBottom: "12px", position: "relative", zIndex: 2 }}>
+                        {leader.avatar_url ? (
+                          <div style={{
+                            width: "52px",
+                            height: "52px",
+                            borderRadius: "14px",
+                            background: `url('${leader.avatar_url}') center/cover`,
+                            border: "3px solid #ffffff",
+                            boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+                            overflow: "hidden",
+                          }} />
+                        ) : (
+                          <div style={{
+                            width: "52px",
+                            height: "52px",
+                            borderRadius: "14px",
+                            background: "linear-gradient(135deg, #f43f5e, #e11d48)",
+                            border: "3px solid #ffffff",
+                            boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#ffffff",
+                            fontWeight: 900,
+                            fontSize: "18px",
+                          }}>
+                            {(leader.display_name || leader.full_name || "WL").slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+
+                        {leader.is_verified && (
+                          <span style={{ fontSize: "11px", fontWeight: 800, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "2px 8px", borderRadius: "8px" }}>
+                            ✓ Verified
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ marginBottom: "14px" }}>
+                        <span style={{ fontSize: "10.5px", fontWeight: 800, color: "#e11d48", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: "4px" }}>
+                          {leader.title || "Worship Leader"}
+                        </span>
+                        
+                        <h3 style={{ fontSize: "17.5px", fontWeight: 900, color: "#0f172a", margin: "0 0 8px 0", lineHeight: 1.3 }}>
+                          {leader.display_name || leader.full_name}
+                        </h3>
+
+                        {leader.city && (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#475569", marginBottom: "6px" }}>
+                            <i className="ti ti-map-pin" style={{ color: "#e11d48", fontSize: "14px" }}></i>
+                            <span style={{ fontWeight: 600 }}>{leader.city}{leader.country ? `, ${leader.country}` : ""}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "12px", borderTop: "1px solid #f1f5f9" }}>
+                        <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#475569", background: "#f1f5f9", padding: "3px 9px", borderRadius: "8px" }}>
+                          {leader.tagline ? leader.tagline.slice(0, 22) : "Artist"}
+                        </span>
+                        
+                        <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#e11d48" }}>
+                          Profile &rarr;
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+
+      {/* ── SECTION 4: EVENTS ───────────────────────────────────────────────────── */}
+      <section id="events-section" style={{ background: "#f8fafc", padding: "60px 24px", borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "28px" }}>
+            <div>
+              <div style={{ fontSize: "12px", fontWeight: 800, color: "#e11d48", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "4px" }}>
+                Upcoming Gatherings
+              </div>
+              <h2 style={{ fontSize: "28px", fontWeight: 900, color: "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>
+                Events & Conferences
+              </h2>
+            </div>
+            <Link href="/events" style={{ fontSize: "14px", fontWeight: 700, color: "#e11d48", textDecoration: "none" }}>
+              View all events &rarr;
+            </Link>
+          </div>
+
+          {(!events || events.length === 0) ? (
+            <div style={{ textAlign: "center", padding: "40px 20px", background: "#ffffff", borderRadius: "20px", border: "1.5px dashed #cbd5e1" }}>
+              <i className="ti ti-calendar-event" style={{ fontSize: "40px", color: "#94a3b8", marginBottom: "10px", display: "block" }}></i>
+              <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", margin: "0 0 4px 0" }}>No upcoming public events scheduled</h3>
+              <p style={{ fontSize: "13.5px", color: "#64748b", margin: "0 0 16px 0" }}>Be the first church or ministry to publish a conference, workshop or worship night.</p>
+              <Link href="/onboarding/events" style={{ background: "#7c3aed", color: "#fff", padding: "8px 18px", borderRadius: "10px", textDecoration: "none", fontSize: "13px", fontWeight: 700 }}>
+                Publish Event
+              </Link>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))", gap: "20px" }}>
+              {events.map((ev) => {
+                const dateStr = ev.starts_at ? new Date(ev.starts_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", weekday: "short" }) : "Upcoming";
+                const timeStr = ev.starts_at ? new Date(ev.starts_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
+
+                return (
+                  <Link
+                    key={ev.id}
+                    href={`/events/${ev.slug}`}
+                    style={{
+                      background: "#ffffff",
+                      borderRadius: "18px",
+                      overflow: "hidden",
+                      border: "1.5px solid #e2e8f0",
+                      textDecoration: "none",
+                      color: "inherit",
+                      display: "flex",
+                      flexDirection: "column",
+                      boxShadow: "0 4px 6px -1px rgba(0,0,0,0.03)",
+                    }}
+                  >
+                    <div style={{
+                      height: "140px",
+                      background: ev.cover_url ? `url('${ev.cover_url}') center/cover` : "linear-gradient(135deg, #e11d48, #fb7185)",
+                      position: "relative",
+                    }}>
+                      <span style={{
+                        position: "absolute",
+                        top: "10px",
+                        left: "10px",
+                        background: "rgba(15, 23, 42, 0.85)",
+                        color: "#fff",
+                        fontSize: "11px",
+                        fontWeight: 800,
+                        padding: "3px 9px",
+                        borderRadius: "8px",
+                        backdropFilter: "blur(4px)",
+                      }}>
+                        {ev.type || "Conference"}
+                      </span>
+
+                      <span style={{
+                        position: "absolute",
+                        top: "10px",
+                        right: "10px",
+                        background: ev.is_free ? "rgba(22, 163, 74, 0.95)" : "rgba(124, 58, 237, 0.95)",
+                        color: "#fff",
+                        fontSize: "11px",
+                        fontWeight: 800,
+                        padding: "3px 9px",
+                        borderRadius: "8px",
+                      }}>
+                        {ev.price_label || (ev.is_free ? "Free" : "Ticketed")}
+                      </span>
+                    </div>
+
+                    <div style={{ padding: "16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#e11d48", fontWeight: 800, marginBottom: "4px" }}>
+                          📅 {dateStr} {timeStr ? `· ${timeStr}` : ""}
+                        </div>
+                        <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: "0 0 6px 0", lineHeight: 1.3 }}>
+                          {ev.title}
+                        </h3>
+                        <div style={{ fontSize: "12.5px", color: "#64748b", display: "flex", alignItems: "center", gap: "4px" }}>
+                          <i className="ti ti-map-pin" style={{ color: "#94a3b8" }}></i>
+                          <span>{ev.venue_name || ev.city || "Venue TBA"}</span>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: "14px", paddingTop: "10px", borderTop: "1px solid #f1f5f9", fontSize: "12.5px", fontWeight: 700, color: "#7c3aed" }}>
+                        View Event &rarr;
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+
       {/* ── 7. FOR CHURCH LEADERS / CTA BANNER ───────────────────────────────────── */}
       <section style={{ maxWidth: "1200px", margin: "30px auto 60px", padding: "0 24px" }}>
         <div style={{
@@ -603,8 +743,9 @@ export default async function Home() {
             <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "10px", fontSize: "13.5px" }}>
               <li><Link href="/explore" style={{ color: "inherit", textDecoration: "none" }}>Interactive Map</Link></li>
               <li><a href="#churches-section" style={{ color: "inherit", textDecoration: "none" }}>Churches Directory</a></li>
+              <li><a href="#pastors-section" style={{ color: "inherit", textDecoration: "none" }}>Pastors & Speakers</a></li>
+              <li><a href="#worship-leaders-section" style={{ color: "inherit", textDecoration: "none" }}>Worship Leaders</a></li>
               <li><a href="#events-section" style={{ color: "inherit", textDecoration: "none" }}>Christian Events</a></li>
-              <li><Link href="/pastors" style={{ color: "inherit", textDecoration: "none" }}>Pastors & Speakers</Link></li>
             </ul>
           </div>
 
@@ -613,6 +754,7 @@ export default async function Home() {
             <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "10px", fontSize: "13.5px" }}>
               <li><Link href="/add-listing" style={{ color: "inherit", textDecoration: "none" }}>Add Church</Link></li>
               <li><Link href="/onboarding/pastor" style={{ color: "inherit", textDecoration: "none" }}>Add Pastor Profile</Link></li>
+              <li><Link href="/onboarding/worship-leader" style={{ color: "inherit", textDecoration: "none" }}>Add Worship Leader</Link></li>
               <li><Link href="/onboarding/events" style={{ color: "inherit", textDecoration: "none" }}>Host Event</Link></li>
               <li><Link href="/login" style={{ color: "inherit", textDecoration: "none" }}>Dashboard Login</Link></li>
             </ul>

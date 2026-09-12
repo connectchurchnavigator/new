@@ -31,13 +31,32 @@ export default function WorshipLeaderOnboardingPage() {
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
-  // State for media inputs
-  const [songFileName, setSongFileName] = useState("");
-  const [songFile, setSongFile] = useState<File | null>(null);
-  const [videoFileName, setVideoFileName] = useState("");
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [photosCount, setPhotosCount] = useState(0);
+  // State for media inputs (multiple files and multiple links)
+  const [songFiles, setSongFiles] = useState<{ file: File; name: string }[]>([]);
+  const [videoFiles, setVideoFiles] = useState<{ file: File; name: string }[]>([]);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  
+  // Dynamic links list
+  const [links, setLinks] = useState<string[]>([""]);
+
+  const addLinkInput = () => {
+    setLinks(prev => [...prev, ""]);
+  };
+
+  const updateLink = (index: number, value: string) => {
+    setLinks(prev => {
+      const copy = [...prev];
+      copy[index] = value;
+      return copy;
+    });
+  };
+
+  const removeLink = (index: number) => {
+    setLinks(prev => {
+      const filtered = prev.filter((_, i) => i !== index);
+      return filtered.length === 0 ? [""] : filtered;
+    });
+  };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -61,9 +80,33 @@ export default function WorshipLeaderOnboardingPage() {
   const availableOptions = ["Sundays", "Events & conferences", "Worship nights", "Recordings", "Online / livestream", "Dep / cover"];
   const feeOptions = ["Love offering", "Fixed fee", "Fee on request", "Expenses only"];
 
+  // Field-specific validation errors
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
+
   const handleSubmit = async () => {
-    setSubmitting(true);
     setSubmitError("");
+    const errors: { [key: string]: string } = {};
+
+    if (!displayName.trim()) {
+      errors.displayName = "Display name is required.";
+    } else if (displayName.trim().length < 3) {
+      errors.displayName = "Display name must be at least 3 characters.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setSubmitError(errors.displayName || "Please check required fields.");
+      // Scroll to the first error
+      const firstErrorEl = document.getElementById("field-displayName");
+      if (firstErrorEl) {
+        firstErrorEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        firstErrorEl.focus();
+      }
+      return;
+    }
+
+    setFieldErrors({});
+    setSubmitting(true);
 
     let finalAvatarUrl = "";
     let finalSongUrl = "";
@@ -90,23 +133,36 @@ export default function WorshipLeaderOnboardingPage() {
     if (avatarFile) {
       finalAvatarUrl = await uploadFile(avatarFile, "avatar") || "";
     }
-    if (songFile) {
-      finalSongUrl = await uploadFile(songFile, "song") || "";
+    for (const song of songFiles) {
+      const url = await uploadFile(song.file, "song");
+      if (url && !finalSongUrl) finalSongUrl = url;
     }
-    if (videoFile) {
-      finalVideoUrl = await uploadFile(videoFile, "video") || "";
+    for (const vid of videoFiles) {
+      const url = await uploadFile(vid.file, "video");
+      if (url && !finalVideoUrl) finalVideoUrl = url;
     }
     for (const photo of photoFiles) {
       const url = await uploadFile(photo, "gallery");
       if (url) finalPhotoUrls.push(url);
     }
 
+    // Extract social/streaming links and format them
+    const validLinks = links
+      .map(l => l.trim())
+      .filter(Boolean)
+      .map(l => (l.startsWith("http://") || l.startsWith("https://") ? l : `https://${l}`));
+
+    const spotifyLink = validLinks.find(l => l.includes("spotify")) || undefined;
+    const youtubeLink = validLinks.find(l => l.includes("youtube") || l.includes("youtu.be")) || undefined;
+    const instagramLink = validLinks.find(l => l.includes("instagram")) || undefined;
+    const websiteLink = validLinks.find(l => !l.includes("spotify") && !l.includes("youtube") && !l.includes("youtu.be") && !l.includes("instagram")) || undefined;
+
     const payload = {
-      display_name: displayName,
-      tagline,
-      city: location,
+      display_name: displayName.trim(),
+      tagline: tagline.trim() || undefined,
+      city: location.trim() || undefined,
       years_leading: parseInt(yearsLeading) || 0,
-      bio,
+      bio: bio.trim() || undefined,
       styles,
       instruments,
       languages,
@@ -117,7 +173,11 @@ export default function WorshipLeaderOnboardingPage() {
       avatar_url: finalAvatarUrl || undefined,
       song_url: finalSongUrl || undefined,
       video_url: finalVideoUrl || undefined,
-      cover_photo_urls: finalPhotoUrls
+      cover_photo_urls: finalPhotoUrls,
+      spotify_url: spotifyLink,
+      youtube_url: youtubeLink,
+      instagram_url: instagramLink,
+      website_url: websiteLink,
     };
 
     try {
@@ -129,6 +189,13 @@ export default function WorshipLeaderOnboardingPage() {
 
       const data = await res.json();
       if (!res.ok) {
+        if (data.issues?.fieldErrors) {
+          const fe: { [k: string]: string } = {};
+          for (const [k, v] of Object.entries(data.issues.fieldErrors)) {
+            fe[k] = Array.isArray(v) ? v.join(", ") : String(v);
+          }
+          setFieldErrors(fe);
+        }
         throw new Error(data.error || "Failed to create profile");
       }
 
@@ -240,7 +307,36 @@ export default function WorshipLeaderOnboardingPage() {
                 </label>
                 <div><div style={{fontWeight: 700, fontSize: "13.5px"}}>Profile photo</div><div className="wl-hint" style={{marginTop: "2px"}}>A clear headshot or on-stage shot works best.</div></div>
               </div>
-              <div className="wl-field"><label>Display name</label><input placeholder="e.g. David Okonkwo" value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></div>
+              <div className="wl-field">
+                <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>Display name *</span>
+                  {(fieldErrors.displayName || fieldErrors.display_name) && (
+                    <span style={{ color: "#ef4444", textTransform: "none", fontSize: "11.5px", fontWeight: 600 }}>
+                      {fieldErrors.displayName || fieldErrors.display_name}
+                    </span>
+                  )}
+                </label>
+                <input
+                  id="field-displayName"
+                  placeholder="e.g. David Okonkwo"
+                  value={displayName}
+                  onChange={(e) => {
+                    setDisplayName(e.target.value);
+                    if (fieldErrors.displayName || fieldErrors.display_name) {
+                      setFieldErrors(prev => {
+                        const copy = { ...prev };
+                        delete copy.displayName;
+                        delete copy.display_name;
+                        return copy;
+                      });
+                    }
+                  }}
+                  style={{
+                    borderColor: (fieldErrors.displayName || fieldErrors.display_name) ? "#ef4444" : undefined,
+                    boxShadow: (fieldErrors.displayName || fieldErrors.display_name) ? "0 0 0 1px #ef4444" : undefined,
+                  }}
+                />
+              </div>
               <div className="wl-field"><label>Tagline</label><input placeholder="e.g. Worship leader, songwriter & recording artist" value={tagline} onChange={(e) => setTagline(e.target.value)} /></div>
               <div className="wl-row2">
                 <div className="wl-field"><label>City / area</label><input placeholder="Start typing your area…" value={location} onChange={(e) => setLocation(e.target.value)} /></div>
@@ -301,48 +397,243 @@ export default function WorshipLeaderOnboardingPage() {
 
             <div className="wl-card">
               <div className="wl-card-h"><div className="ic" style={{background: "linear-gradient(135deg,#f59e0b,#d97706)"}}><i className="ti ti-player-play"></i></div><h3>Your media</h3></div>
-              <div className="wl-up-grid" style={{marginBottom: "14px"}}>
+              
+              {/* UPLOAD CARDS (SUPPORTS MULTIPLE FILES) */}
+              <div className="wl-up-grid" style={{marginBottom: "16px"}}>
                 <label className="wl-up">
-                  <input type="file" accept="audio/*" style={{display: "none"}} onChange={(e) => { 
-                    if(e.target.files && e.target.files[0]) {
-                      setSongFileName(e.target.files[0].name);
-                      setSongFile(e.target.files[0]);
-                    } 
-                  }} />
-                  <div className="uic" style={{background: songFileName ? "#10b981" : "linear-gradient(135deg,#2dd4bf,#0891b2)"}}>
-                    <i className={songFileName ? "ti ti-check" : "ti ti-music-plus"}></i>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    multiple
+                    style={{display: "none"}}
+                    onChange={(e) => { 
+                      if(e.target.files) {
+                        const newFiles = Array.from(e.target.files).map(f => ({ file: f, name: f.name }));
+                        setSongFiles(prev => [...prev, ...newFiles]);
+                      } 
+                    }}
+                  />
+                  <div className="uic" style={{background: songFiles.length > 0 ? "#10b981" : "linear-gradient(135deg,#2dd4bf,#0891b2)"}}>
+                    <i className={songFiles.length > 0 ? "ti ti-check" : "ti ti-music-plus"}></i>
                   </div>
-                  <div className="t">{songFileName ? "Song added" : "Add a song"}</div>
-                  <div className="d">{songFileName || "MP3 / WAV"}</div>
+                  <div className="t">{songFiles.length > 0 ? `${songFiles.length} song${songFiles.length > 1 ? 's' : ''} added` : "Add songs"}</div>
+                  <div className="d">{songFiles.length > 0 ? "Click to add more" : "MP3 / WAV (Multiple)"}</div>
                 </label>
+
                 <label className="wl-up">
-                  <input type="file" accept="video/*" style={{display: "none"}} onChange={(e) => { 
-                    if(e.target.files && e.target.files[0]) {
-                      setVideoFileName(e.target.files[0].name);
-                      setVideoFile(e.target.files[0]);
-                    } 
-                  }} />
-                  <div className="uic" style={{background: videoFileName ? "#10b981" : "linear-gradient(135deg,#f43f5e,#db2777)"}}>
-                    <i className={videoFileName ? "ti ti-check" : "ti ti-video-plus"}></i>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    multiple
+                    style={{display: "none"}}
+                    onChange={(e) => { 
+                      if(e.target.files) {
+                        const newFiles = Array.from(e.target.files).map(f => ({ file: f, name: f.name }));
+                        setVideoFiles(prev => [...prev, ...newFiles]);
+                      } 
+                    }}
+                  />
+                  <div className="uic" style={{background: videoFiles.length > 0 ? "#10b981" : "linear-gradient(135deg,#f43f5e,#db2777)"}}>
+                    <i className={videoFiles.length > 0 ? "ti ti-check" : "ti ti-video-plus"}></i>
                   </div>
-                  <div className="t">{videoFileName ? "Video added" : "Add a video"}</div>
-                  <div className="d">{videoFileName || "File or link"}</div>
+                  <div className="t">{videoFiles.length > 0 ? `${videoFiles.length} video${videoFiles.length > 1 ? 's' : ''} added` : "Add videos"}</div>
+                  <div className="d">{videoFiles.length > 0 ? "Click to add more" : "MP4 / WebM (Multiple)"}</div>
                 </label>
+
                 <label className="wl-up">
-                  <input type="file" accept="image/*" multiple style={{display: "none"}} onChange={(e) => { 
-                    if(e.target.files) {
-                      setPhotosCount(e.target.files.length);
-                      setPhotoFiles(Array.from(e.target.files));
-                    } 
-                  }} />
-                  <div className="uic" style={{background: photosCount > 0 ? "#10b981" : "linear-gradient(135deg,#a855f7,#7c3aed)"}}>
-                    <i className={photosCount > 0 ? "ti ti-check" : "ti ti-photo-plus"}></i>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    style={{display: "none"}}
+                    onChange={(e) => { 
+                      if(e.target.files) {
+                        const newFiles = Array.from(e.target.files);
+                        setPhotoFiles(prev => [...prev, ...newFiles]);
+                      } 
+                    }}
+                  />
+                  <div className="uic" style={{background: photoFiles.length > 0 ? "#10b981" : "linear-gradient(135deg,#a855f7,#7c3aed)"}}>
+                    <i className={photoFiles.length > 0 ? "ti ti-check" : "ti ti-photo-plus"}></i>
                   </div>
-                  <div className="t">{photosCount > 0 ? `${photosCount} photos` : "Add photos"}</div>
-                  <div className="d">{photosCount > 0 ? "Added to gallery" : "Gallery"}</div>
+                  <div className="t">{photoFiles.length > 0 ? `${photoFiles.length} photo${photoFiles.length > 1 ? 's' : ''}` : "Add photos"}</div>
+                  <div className="d">{photoFiles.length > 0 ? "Click to add more" : "Gallery (Multiple)"}</div>
                 </label>
               </div>
-              <div className="wl-field" style={{marginBottom: 0}}><label>Or paste links (Spotify, YouTube, Instagram, website)</label><input placeholder="https://open.spotify.com/artist/…" /></div>
+
+              {/* LIST OF SELECTED AUDIO/VIDEO FILES WITH TICK AND REMOVE BUTTONS */}
+              {(songFiles.length > 0 || videoFiles.length > 0 || photoFiles.length > 0) && (
+                <div style={{ background: "#f8fafc", borderRadius: "12px", border: "1px solid var(--border)", padding: "12px 14px", marginBottom: "18px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--gray)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "8px" }}>
+                    Selected files ({songFiles.length + videoFiles.length + photoFiles.length})
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                    {songFiles.map((s, idx) => (
+                      <span key={`song-${idx}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#065f46", fontSize: "12px", fontWeight: 700, padding: "5px 10px", borderRadius: "16px" }}>
+                        <i className="ti ti-circle-check-filled" style={{ color: "#10b981", fontSize: "14px" }}></i>
+                        <span style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
+                        <button type="button" onClick={() => setSongFiles(prev => prev.filter((_, i) => i !== idx))} style={{ border: "none", background: "none", color: "#065f46", cursor: "pointer", padding: "0 2px", fontSize: "12px", fontWeight: 800 }}>×</button>
+                      </span>
+                    ))}
+                    {videoFiles.map((v, idx) => (
+                      <span key={`video-${idx}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#fdf2f8", border: "1px solid #fbcfe8", color: "#9d174d", fontSize: "12px", fontWeight: 700, padding: "5px 10px", borderRadius: "16px" }}>
+                        <i className="ti ti-circle-check-filled" style={{ color: "#ec4899", fontSize: "14px" }}></i>
+                        <span style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.name}</span>
+                        <button type="button" onClick={() => setVideoFiles(prev => prev.filter((_, i) => i !== idx))} style={{ border: "none", background: "none", color: "#9d174d", cursor: "pointer", padding: "0 2px", fontSize: "12px", fontWeight: 800 }}>×</button>
+                      </span>
+                    ))}
+                    {photoFiles.map((p, idx) => (
+                      <span key={`photo-${idx}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#f3e8ff", border: "1px solid #e9d5ff", color: "#6b21a8", fontSize: "12px", fontWeight: 700, padding: "5px 10px", borderRadius: "16px" }}>
+                        <i className="ti ti-circle-check-filled" style={{ color: "#8b5cf6", fontSize: "14px" }}></i>
+                        <span style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                        <button type="button" onClick={() => setPhotoFiles(prev => prev.filter((_, i) => i !== idx))} style={{ border: "none", background: "none", color: "#6b21a8", cursor: "pointer", padding: "0 2px", fontSize: "12px", fontWeight: 800 }}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* DYNAMIC MULTIPLE LINKS WITH [+] AND [✓] BUTTONS */}
+              <div className="wl-field" style={{marginBottom: 0}}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <label style={{ margin: 0 }}>Paste links (Spotify, YouTube, Instagram, website)</label>
+                  <button
+                    type="button"
+                    onClick={addLinkInput}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      background: "var(--grad)",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "20px",
+                      padding: "5px 12px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      boxShadow: "0 2px 8px rgba(124, 58, 237, 0.25)"
+                    }}
+                  >
+                    <i className="ti ti-plus" style={{ fontSize: "14px" }}></i> Add another link
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {links.map((linkValue, idx) => {
+                    const isValid = linkValue.trim().startsWith("http://") || linkValue.trim().startsWith("https://");
+                    return (
+                      <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div style={{ position: "relative", flex: 1 }}>
+                          <input
+                            placeholder={idx === 0 ? "e.g. https://open.spotify.com/artist/..." : "e.g. https://youtube.com/@channel or Instagram"}
+                            value={linkValue}
+                            onChange={(e) => updateLink(idx, e.target.value)}
+                            style={{
+                              paddingRight: "36px",
+                              borderColor: linkValue.trim() ? (isValid ? "#10b981" : "var(--border)") : "var(--border)"
+                            }}
+                          />
+                          {/* Tick indicator inside input when valid link is entered */}
+                          {linkValue.trim() && (
+                            <span
+                              title={isValid ? "Valid URL" : "Enter full URL starting with https://"}
+                              style={{
+                                position: "absolute",
+                                right: "12px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: isValid ? "#10b981" : "#9ca3af"
+                              }}
+                            >
+                              <i className={isValid ? "ti ti-circle-check-filled" : "ti ti-link"} style={{ fontSize: "17px" }}></i>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Confirmed / Save Tick Action Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (linkValue.trim() && !isValid) {
+                              updateLink(idx, `https://${linkValue.trim().replace(/^https?:\/\//, '')}`);
+                            }
+                          }}
+                          title={isValid ? "Link saved & verified" : "Click to format as https:// link"}
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                            borderRadius: "11px",
+                            border: isValid ? "1.5px solid #10b981" : "1.5px solid var(--border)",
+                            background: isValid ? "#ecfdf5" : "#fff",
+                            color: isValid ? "#10b981" : "#64748b",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            fontSize: "18px",
+                            flexShrink: 0,
+                            transition: "all 0.15s"
+                          }}
+                        >
+                          <i className="ti ti-check"></i>
+                        </button>
+
+                        {/* Add button on the first row, or remove button on extra rows */}
+                        {idx === links.length - 1 ? (
+                          <button
+                            type="button"
+                            onClick={addLinkInput}
+                            title="Add another link (+)"
+                            style={{
+                              width: "40px",
+                              height: "40px",
+                              borderRadius: "11px",
+                              border: "none",
+                              background: "var(--surface)",
+                              color: "var(--purple-d)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              fontSize: "18px",
+                              flexShrink: 0,
+                              fontWeight: 800
+                            }}
+                          >
+                            <i className="ti ti-plus"></i>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => removeLink(idx)}
+                            title="Remove link"
+                            style={{
+                              width: "40px",
+                              height: "40px",
+                              borderRadius: "11px",
+                              border: "1.5px solid #fee2e2",
+                              background: "#fef2f2",
+                              color: "#ef4444",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              fontSize: "18px",
+                              flexShrink: 0
+                            }}
+                          >
+                            <i className="ti ti-trash"></i>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -370,7 +661,30 @@ export default function WorshipLeaderOnboardingPage() {
             <button className="wl-btn wl-btn-primary" style={{width: "100%", marginBottom: "10px"}} onClick={handleSubmit} disabled={submitting}>
               <i className="ti ti-rocket"></i> {submitting ? "Publishing..." : "Publish profile"}
             </button>
-            {submitError && <div style={{ color: "#ef4444", fontSize: "13px", marginBottom: "10px", textAlign: "center" }}>{submitError}</div>}
+            {submitError && (
+              <div
+                style={{
+                  background: "#fef2f2",
+                  border: "1.5px solid #fecaca",
+                  borderRadius: "12px",
+                  padding: "12px 14px",
+                  color: "#991b1b",
+                  fontSize: "13px",
+                  lineHeight: 1.4,
+                  marginBottom: "14px",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "8px",
+                  textAlign: "left"
+                }}
+              >
+                <i className="ti ti-alert-circle" style={{ fontSize: "17px", color: "#ef4444", flexShrink: 0, marginTop: "1px" }}></i>
+                <div>
+                  <div style={{ fontWeight: 700, marginBottom: "2px", color: "#b91c1c" }}>Validation Notice</div>
+                  <div>{submitError}</div>
+                </div>
+              </div>
+            )}
             <button className="wl-btn wl-btn-ghost" style={{width: "100%", marginBottom: "16px"}}><i className="ti ti-device-floppy"></i> Save as draft</button>
             <div className="wl-tips">
               <h4>💡 Get booked faster</h4>

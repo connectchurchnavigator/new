@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import TopNav from "@/components/layout/TopNav";
 import Link from "next/link";
 
@@ -837,6 +838,93 @@ export default function EventClientView({ slug }: EventClientViewProps) {
         </div>
 
       </div>
+
+      {/* QR MODAL (PORTALED WITH HIGH Z-INDEX) */}
+      {showQRModal && typeof document !== "undefined" && createPortal(
+        <div
+          onClick={() => setShowQRModal(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 999999,
+            backgroundColor: "rgba(15, 23, 42, 0.75)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff",
+              borderRadius: "24px",
+              padding: "28px",
+              maxWidth: "360px",
+              width: "100%",
+              textAlign: "center",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
+              position: "relative"
+            }}
+          >
+            <button
+              onClick={() => setShowQRModal(false)}
+              style={{
+                position: "absolute",
+                top: "16px",
+                right: "16px",
+                width: "32px",
+                height: "32px",
+                borderRadius: "50%",
+                background: "#f1f5f9",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: "#64748b"
+              }}
+            >
+              <i className="ti ti-x" style={{ fontSize: "16px" }}></i>
+            </button>
+
+            <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", marginBottom: "8px" }}>Scan QR Code</h3>
+            <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "20px" }}>Scan with your phone camera to open this event page</p>
+
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px", background: "#f8fafc", padding: "16px", borderRadius: "16px" }}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(currentUrl || "https://churchnavigator.com")}`}
+                alt="Event QR Code"
+                style={{ width: "200px", height: "200px", borderRadius: "10px" }}
+              />
+            </div>
+
+            <button
+              onClick={handleShare}
+              style={{
+                width: "100%",
+                padding: "10px 16px",
+                borderRadius: "12px",
+                background: "#7c3aed",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: "13.5px",
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px"
+              }}
+            >
+              <i className="ti ti-share" style={{ fontSize: "15px" }}></i> {copied ? "Link Copied!" : "Share Link"}
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
     </div>
   );
 }

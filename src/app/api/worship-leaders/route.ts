@@ -28,8 +28,13 @@ export async function POST(req: NextRequest) {
 
   const parsed = worshipLeaderOnboardingSchema.safeParse(body);
   if (!parsed.success) {
+    console.error('Worship leader validation failed:', JSON.stringify(parsed.error.flatten(), null, 2));
+    const fieldErrors = parsed.error.flatten().fieldErrors;
+    const errorDetails = Object.entries(fieldErrors)
+      .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(', ')}`)
+      .join('; ');
     return NextResponse.json(
-      { error: 'Validation failed', issues: parsed.error.flatten() },
+      { error: `Validation failed: ${errorDetails || 'Please check required fields'}`, issues: parsed.error.flatten() },
       { status: 422 }
     );
   }

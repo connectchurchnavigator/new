@@ -1294,16 +1294,6 @@ export default function ExploreClient({
           </button>
           <button
             onClick={() => {
-              setExploreType("events");
-              setSelectedCities([]);
-              setSelectedChurchId(null);
-            }}
-            className={`explore-tab ${exploreType === "events" ? "active" : ""}`}
-          >
-            <i className="ti ti-calendar-event" style={{ fontSize: "16px" }}></i> Events
-          </button>
-          <button
-            onClick={() => {
               setExploreType("worship_leaders");
               setSelectedCities([]);
               setSelectedChurchId(null);
@@ -1311,6 +1301,16 @@ export default function ExploreClient({
             className={`explore-tab ${exploreType === "worship_leaders" ? "active" : ""}`}
           >
             <i className="ti ti-microphone-2" style={{ fontSize: "16px" }}></i> Worship Leaders
+          </button>
+          <button
+            onClick={() => {
+              setExploreType("events");
+              setSelectedCities([]);
+              setSelectedChurchId(null);
+            }}
+            className={`explore-tab ${exploreType === "events" ? "active" : ""}`}
+          >
+            <i className="ti ti-calendar-event" style={{ fontSize: "16px" }}></i> Events
           </button>
         </div>
       </div>

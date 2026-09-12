@@ -1,11 +1,17 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { ChurchService } from '@/lib/types';
 import { registerVisitor } from '@/app/actions/registerVisitor';
 
 export default function RegisterVisitModal({ churchId, services, onClose }: { churchId: string, services: ChurchService[], onClose: () => void }) {
+  const [mounted, setMounted] = useState(false);
   const [isFirstTime, setIsFirstTime] = useState(true);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -72,9 +78,11 @@ export default function RegisterVisitModal({ churchId, services, onClose }: { ch
     }
   };
 
+  if (!mounted) return null;
+
   if (success) {
-    return (
-      <div style={{ position: "fixed", inset: 0, zIndex: 9000, background: "rgba(20,20,43,.78)", backdropFilter: "blur(8px)", display: "grid", placeItems: "center", padding: "24px" }}>
+    return createPortal(
+      <div style={{ position: "fixed", inset: 0, zIndex: 999999, background: "rgba(20,20,43,.78)", backdropFilter: "blur(8px)", display: "grid", placeItems: "center", padding: "24px" }}>
         <div style={{ width: "100%", maxWidth: "400px", background: "#fff", borderRadius: "20px", boxShadow: "0 28px 60px -20px rgba(20,20,43,.28)", display: "flex", flexDirection: "column", overflow: "hidden", alignItems: "center", padding: "40px 24px", textAlign: "center" }}>
           <div style={{ width: "60px", height: "60px", borderRadius: "50%", background: "#f3e8ff", color: "#7c3aed", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px", marginBottom: "16px" }}>
             <i className="ti ti-check"></i>
@@ -82,12 +90,13 @@ export default function RegisterVisitModal({ churchId, services, onClose }: { ch
           <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a", marginBottom: "8px" }}>Seat Saved!</h3>
           <p style={{ color: "#64748b", fontSize: "15px", lineHeight: "1.5" }}>Thank you for registering your visit. We look forward to seeing you!</p>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 9000, background: "rgba(20,20,43,.78)", backdropFilter: "blur(8px)", display: "grid", placeItems: "center", padding: "24px" }}>
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, zIndex: 999999, background: "rgba(20,20,43,.78)", backdropFilter: "blur(8px)", display: "grid", placeItems: "center", padding: "24px" }}>
       <div style={{ width: "100%", maxWidth: "520px", background: "#fff", borderRadius: "20px", boxShadow: "0 28px 60px -20px rgba(20,20,43,.28)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         
         {/* Header */}
@@ -228,6 +237,7 @@ export default function RegisterVisitModal({ churchId, services, onClose }: { ch
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

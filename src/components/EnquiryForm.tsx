@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface EnquiryFormProps {
   pastorSlug: string;
@@ -16,6 +17,11 @@ export function EnquiryForm({ pastorSlug, pastorFirstName, trigger }: EnquiryFor
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -50,25 +56,21 @@ export function EnquiryForm({ pastorSlug, pastorFirstName, trigger }: EnquiryFor
     }
   }
 
-  return (
-    <>
-      <div onClick={() => setOpen(true)}>{trigger}</div>
-
-      {open && (
-        <div
-          onClick={() => setOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.65)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px',
-          }}
-        >
+  const modalContent = open && mounted ? (
+    <div
+      onClick={() => setOpen(false)}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        backdropFilter: 'blur(5px)',
+        zIndex: 999999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+      }}
+    >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
@@ -201,7 +203,12 @@ export function EnquiryForm({ pastorSlug, pastorFirstName, trigger }: EnquiryFor
             )}
           </div>
         </div>
-      )}
+  ) : null;
+
+  return (
+    <>
+      <div onClick={() => setOpen(true)}>{trigger}</div>
+      {modalContent && createPortal(modalContent, document.body)}
     </>
   );
 }

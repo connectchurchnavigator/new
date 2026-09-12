@@ -52,7 +52,8 @@ export default async function ChurchProfilePage({ params, searchParams }: { para
   const resolvedSearchParams = searchParams ? await searchParams : {};
   // Only allow owner view if user is verified as actual owner
   const isOwner = isActualOwner && resolvedSearchParams.owner !== 'false';
-  const isEditing = isOwner;
+  // Only show the Edit Cover modal if explicitly triggered via edit=true
+  const isEditing = isOwner && resolvedSearchParams.edit === 'true';
 
   // Fetch branches count
   const { count: branchesCountRes } = await sb

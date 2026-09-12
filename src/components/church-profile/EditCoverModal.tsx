@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 interface EditCoverModalProps {
@@ -9,7 +10,12 @@ interface EditCoverModalProps {
 
 export default function EditCoverModal({ church }: EditCoverModalProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const [logo, setLogo] = useState<string | null>(church.logo_url || null);
   const [covers, setCovers] = useState<string[]>(church.cover_urls || (church.cover_url ? [church.cover_url] : []));
@@ -82,9 +88,11 @@ export default function EditCoverModal({ church }: EditCoverModalProps) {
     }
   };
 
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,23,42,0.8)", padding: "20px" }}>
-      <div style={{ background: "#fff", width: "100%", maxWidth: "600px", borderRadius: "24px", maxHeight: "90vh", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+  if (!mounted) return null;
+
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, zIndex: 999999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,23,42,0.8)", backdropFilter: "blur(6px)", padding: "20px" }}>
+      <div style={{ background: "#fff", width: "100%", maxWidth: "600px", borderRadius: "24px", maxHeight: "90vh", overflowY: "auto", display: "flex", flexDirection: "column", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.3)" }}>
         
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: "1px solid var(--cn-border)", position: "sticky", top: 0, background: "#fff", zIndex: 10, borderRadius: "24px 24px 0 0" }}>
@@ -163,6 +171,7 @@ export default function EditCoverModal({ church }: EditCoverModalProps) {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
