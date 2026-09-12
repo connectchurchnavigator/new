@@ -214,15 +214,230 @@ export default async function WorshipLeaderProfilePage(props: {
           <ProfileTabs
             tabs={[
               { id: 'about', label: 'About', icon: 'ti-user' },
+              { id: 'music', label: 'Music & Media', icon: 'ti-music', iconColor: '#ec4899' },
             ]}
             panes={{
-              about: <AboutPane leader={leader} styleTags={styleTags} instrumentTags={instrumentTags} languageTags={languageTags} availableForTags={availableForTags} feeModelTags={feeModelTags} />,
+              about: (
+                <AboutPane
+                  leader={leader}
+                  styleTags={styleTags}
+                  instrumentTags={instrumentTags}
+                  languageTags={languageTags}
+                  availableForTags={availableForTags}
+                  feeModelTags={feeModelTags}
+                />
+              ),
+              music: <MusicPane leader={leader} />,
             }}
             sidebar={<Sidebar leader={leader} />}
           />
         </div>
       </main>
     </>
+  );
+}
+
+function getYouTubeEmbedUrl(url?: string | null): string | null {
+  if (!url) return null;
+  try {
+    if (url.includes('youtube.com/watch')) {
+      const v = new URL(url).searchParams.get('v');
+      return v ? `https://www.youtube.com/embed/${v}` : null;
+    }
+    if (url.includes('youtu.be/')) {
+      const id = url.split('youtu.be/')[1]?.split('?')[0];
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+    if (url.includes('youtube.com/embed/')) {
+      return url;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function getSpotifyEmbedUrl(url?: string | null): string | null {
+  if (!url) return null;
+  try {
+    // e.g. https://open.spotify.com/track/... -> https://open.spotify.com/embed/track/...
+    if (url.includes('spotify.com/')) {
+      return url.replace('spotify.com/', 'spotify.com/embed/');
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function MusicPane({ leader }: { leader: any }) {
+  const ytEmbed = getYouTubeEmbedUrl(leader.youtube_url);
+  const spotifyEmbed = getSpotifyEmbedUrl(leader.spotify_url);
+  const hasAnyMedia =
+    leader.song_url ||
+    leader.video_url ||
+    leader.youtube_url ||
+    leader.spotify_url ||
+    (leader.cover_photo_urls && leader.cover_photo_urls.length > 0);
+
+  if (!hasAnyMedia) {
+    return (
+      <div className="pastor-card" style={{ textAlign: 'center', padding: '40px 20px' }}>
+        <div style={{ width: '54px', height: '54px', borderRadius: '16px', background: 'rgba(236,72,153,0.1)', color: '#ec4899', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', fontSize: '24px' }}>
+          <i className="ti ti-music"></i>
+        </div>
+        <h3 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: 800 }}>No media uploaded yet</h3>
+        <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>Music tracks, videos, and media links will appear here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Uploaded Audio Song */}
+      {leader.song_url && (
+        <div className="pastor-card">
+          <div className="pastor-card-h">
+            <div className="ic" style={{ background: 'linear-gradient(135deg,#2dd4bf,#0891b2)' }}>
+              <i className="ti ti-headphones"></i>
+            </div>
+            <h3>Featured Song</h3>
+          </div>
+          <div style={{ marginTop: '12px' }}>
+            <audio controls style={{ width: '100%', outline: 'none' }} src={leader.song_url} />
+          </div>
+        </div>
+      )}
+
+      {/* YouTube Video / Stream */}
+      {leader.youtube_url && (
+        <div className="pastor-card">
+          <div className="pastor-card-h">
+            <div className="ic" style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)' }}>
+              <i className="ti ti-brand-youtube"></i>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: 1 }}>
+              <h3 style={{ margin: 0 }}>YouTube Channel / Video</h3>
+              <a
+                href={leader.youtube_url}
+                target="_blank"
+                rel="noreferrer"
+                style={{ fontSize: '12.5px', color: '#ef4444', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                Watch on YouTube <i className="ti ti-external-link"></i>
+              </a>
+            </div>
+          </div>
+          {ytEmbed ? (
+            <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '14px', marginTop: '14px', background: '#000' }}>
+              <iframe
+                src={ytEmbed}
+                title="YouTube video"
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          ) : (
+            <div style={{ marginTop: '12px' }}>
+              <a
+                href={leader.youtube_url}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#ef4444', color: '#fff', padding: '10px 18px', borderRadius: '12px', fontSize: '13.5px', fontWeight: 700, textDecoration: 'none' }}
+              >
+                <i className="ti ti-brand-youtube" style={{ fontSize: '18px' }}></i> Open YouTube Link
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Spotify Embed / Link */}
+      {leader.spotify_url && (
+        <div className="pastor-card">
+          <div className="pastor-card-h">
+            <div className="ic" style={{ background: 'linear-gradient(135deg,#10b981,#059669)' }}>
+              <i className="ti ti-brand-spotify"></i>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: 1 }}>
+              <h3 style={{ margin: 0 }}>Spotify Music</h3>
+              <a
+                href={leader.spotify_url}
+                target="_blank"
+                rel="noreferrer"
+                style={{ fontSize: '12.5px', color: '#10b981', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                Open in Spotify <i className="ti ti-external-link"></i>
+              </a>
+            </div>
+          </div>
+          {spotifyEmbed ? (
+            <div style={{ marginTop: '14px', borderRadius: '14px', overflow: 'hidden' }}>
+              <iframe
+                src={spotifyEmbed}
+                width="100%"
+                height="152"
+                frameBorder="0"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                loading="lazy"
+              />
+            </div>
+          ) : (
+            <div style={{ marginTop: '12px' }}>
+              <a
+                href={leader.spotify_url}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#1db954', color: '#fff', padding: '10px 18px', borderRadius: '12px', fontSize: '13.5px', fontWeight: 700, textDecoration: 'none' }}
+              >
+                <i className="ti ti-brand-spotify" style={{ fontSize: '18px' }}></i> Listen on Spotify
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Uploaded Video File */}
+      {leader.video_url && (
+        <div className="pastor-card">
+          <div className="pastor-card-h">
+            <div className="ic" style={{ background: 'linear-gradient(135deg,#f43f5e,#db2777)' }}>
+              <i className="ti ti-video"></i>
+            </div>
+            <h3>Uploaded Video</h3>
+          </div>
+          <div style={{ marginTop: '14px', borderRadius: '14px', overflow: 'hidden', background: '#000' }}>
+            <video controls style={{ width: '100%', display: 'block', maxHeight: '460px' }} src={leader.video_url} />
+          </div>
+        </div>
+      )}
+
+      {/* Photos / Media Gallery */}
+      {leader.cover_photo_urls && leader.cover_photo_urls.length > 0 && (
+        <div className="pastor-card">
+          <div className="pastor-card-h">
+            <div className="ic" style={{ background: 'linear-gradient(135deg,#a855f7,#7c3aed)' }}>
+              <i className="ti ti-photo"></i>
+            </div>
+            <h3>Media & Gallery</h3>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '14px', marginTop: '14px' }}>
+            {leader.cover_photo_urls.map((url: string, i: number) => (
+              <a key={i} href={url} target="_blank" rel="noreferrer" style={{ display: 'block', overflow: 'hidden', borderRadius: '12px', border: '1.5px solid var(--border)' }}>
+                <img
+                  src={url}
+                  alt={`Media item ${i + 1}`}
+                  style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block', transition: 'transform 0.2s ease' }}
+                  onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+                  onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -292,44 +507,6 @@ function AboutPane({
           <div className="pastor-chips">
             {languageTags.map((t) => (
               <span key={t.id} className="pastor-chip amber">{t.label}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {leader.song_url && (
-        <div className="pastor-card">
-          <div className="pastor-card-h">
-            <div className="ic" style={{background: "linear-gradient(135deg,#2dd4bf,#0891b2)"}}><i className="ti ti-headphones"></i></div>
-            <h3>Featured Song</h3>
-          </div>
-          <div style={{ marginTop: '10px' }}>
-            <audio controls style={{ width: '100%', outline: 'none' }} src={leader.song_url} />
-          </div>
-        </div>
-      )}
-
-      {leader.video_url && (
-        <div className="pastor-card">
-          <div className="pastor-card-h">
-            <div className="ic" style={{background: "linear-gradient(135deg,#f43f5e,#db2777)"}}><i className="ti ti-video"></i></div>
-            <h3>Featured Video</h3>
-          </div>
-          <div style={{ marginTop: '10px', borderRadius: '12px', overflow: 'hidden' }}>
-            <video controls style={{ width: '100%', display: 'block' }} src={leader.video_url} />
-          </div>
-        </div>
-      )}
-
-      {leader.cover_photo_urls && leader.cover_photo_urls.length > 0 && (
-        <div className="pastor-card">
-          <div className="pastor-card-h">
-            <div className="ic" style={{background: "linear-gradient(135deg,#a855f7,#7c3aed)"}}><i className="ti ti-photo"></i></div>
-            <h3>Gallery</h3>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px', marginTop: '10px' }}>
-            {leader.cover_photo_urls.map((url: string, i: number) => (
-              <img key={i} src={url} alt="Gallery item" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '10px' }} />
             ))}
           </div>
         </div>
