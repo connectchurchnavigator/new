@@ -34,6 +34,7 @@ export default function StepPage() {
         denomination: "Pentecostal",
         country: "United Kingdom",
         address: "124 Westminster Bridge Road, London, SE1 7XW",
+        addressDetails: "Suite 4B, Opposite Waterloo Station",
         phone: "+44 20 7946 0912",
         email: "info@gracecathedral.org.uk",
         website: "https://gracecathedral.org.uk",

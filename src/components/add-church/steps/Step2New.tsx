@@ -8,12 +8,25 @@ function parseTimeString(v: string) {
   if (/^midnight$/i.test(v)) return { h: 12, m: "00", ampm: "AM", ambiguous: false };
   
   let rawStr = v;
-  const noColonMatch = v.match(/^(\d{3,4})\s*(am|pm|a\.m\.|p\.m\.)?$/i);
-  if (noColonMatch) {
-    const digits = noColonMatch[1];
-    let hStr = digits.length === 3 ? digits.substring(0, 1) : digits.substring(0, 2);
-    let mStr = digits.length === 3 ? digits.substring(1) : digits.substring(2);
-    rawStr = `${hStr}:${mStr}${noColonMatch[2] || ''}`;
+  // Match pure digits or digits with am/pm: e.g. "111", "1111", "111am"
+  const digitsMatch = v.match(/^(\d{1,4})\s*(am|pm|a\.m\.|p\.m\.)?$/i);
+  if (digitsMatch) {
+    const digits = digitsMatch[1];
+    const modifier = digitsMatch[2] || '';
+    if (digits.length === 1 || digits.length === 2) {
+      // "1" -> "1:00", "11" -> "11:00"
+      rawStr = `${digits}:00${modifier}`;
+    } else if (digits.length === 3) {
+      // e.g. "111" -> "1:11"
+      const hStr = digits.substring(0, 1);
+      const mStr = digits.substring(1);
+      rawStr = `${hStr}:${mStr}${modifier}`;
+    } else if (digits.length === 4) {
+      // e.g. "1111" -> "11:11"
+      const hStr = digits.substring(0, 2);
+      const mStr = digits.substring(2);
+      rawStr = `${hStr}:${mStr}${modifier}`;
+    }
   }
 
   const match = rawStr.match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?$/i);
@@ -83,17 +96,19 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
     setParsedTime(parsed);
 
     if (!parsed) {
+      // Invalid format
       setError(true);
       setIsOpen(true);
       onChange("");
     } else if (!parsed.ambiguous) {
+      // Unambiguous (e.g. user typed "1:11am" or picked an option)
       setError(false);
       const formatted = formatTime(parsed);
       onChange(formatted);
       setIsOpen(false);
     } else {
-      // Ambiguous (e.g. "1111" where am/pm is not yet confirmed/selected)
-      // Do not mark as valid green — user must pick AM or PM
+      // Ambiguous (e.g. "111", "1111", "10") -> show dropdown with AM/PM options,
+      // but keep field in error/unselected state (red) until user actually clicks/picks AM or PM!
       setError(true);
       setIsOpen(true);
       onChange("");
@@ -156,44 +171,42 @@ function TimeInput({ value, onChange, placeholder }: TimeInputProps) {
       />
       {isOpen && (
         <div className="autocomplete-dropdown" style={{ display: "block", minWidth: "190px" }}>
-          {error ? (
+          {parsedTime && parsedTime.ambiguous ? (
+            <div>
+              <div
+                onMouseDown={() => selectOption(formatTime({ ...parsedTime, ampm: "AM" }))}
+                onMouseEnter={() => setHighlightedIndex(0)}
+                className="autocomplete-item"
+                style={{ alignItems: "center", background: highlightedIndex === 0 ? "#f5f3ff" : "#fff", whiteSpace: "nowrap" }}
+              >
+                <i className="ti ti-clock" style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)" }}>
+                  {formatTime({ ...parsedTime, ampm: "AM" })}
+                </span>
+                <span style={{ marginLeft: "auto", fontSize: "11px", color: "var(--cn-gray)" }}>Morning</span>
+              </div>
+              <div
+                onMouseDown={() => selectOption(formatTime({ ...parsedTime, ampm: "PM" }))}
+                onMouseEnter={() => setHighlightedIndex(1)}
+                className="autocomplete-item"
+                style={{ alignItems: "center", background: highlightedIndex === 1 ? "#f5f3ff" : "#fff", whiteSpace: "nowrap" }}
+              >
+                <i className="ti ti-clock" style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)" }}>
+                  {formatTime({ ...parsedTime, ampm: "PM" })}
+                </span>
+                <span style={{ marginLeft: "auto", fontSize: "11px", color: "var(--cn-gray)" }}>Evening</span>
+              </div>
+            </div>
+          ) : parsedTime && !parsedTime.ambiguous ? (
+            <div style={{ padding: "9px 12px", fontSize: "12px", color: "var(--cn-purple-dark)", fontWeight: 600, textAlign: "left" }}>
+              → {formatTime(parsedTime)}
+            </div>
+          ) : error ? (
             <div style={{ padding: "10px 14px", fontSize: "12px", color: "var(--cn-gray)" }}>
               Invalid time format <br />
               <span style={{ color: "#6b7280", fontSize: "11px", fontWeight: 400 }}>— try 10am or 10:30am</span>
             </div>
-          ) : parsedTime ? (
-            parsedTime.ambiguous ? (
-              <div>
-                <div
-                  onMouseDown={() => selectOption(formatTime({ ...parsedTime, ampm: "AM" }))}
-                  onMouseEnter={() => setHighlightedIndex(0)}
-                  className="autocomplete-item"
-                  style={{ alignItems: "center", background: highlightedIndex === 0 ? "#f5f3ff" : "#fff", whiteSpace: "nowrap" }}
-                >
-                  <i className="ti ti-clock" style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i>
-                  <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)" }}>
-                    {formatTime({ ...parsedTime, ampm: "AM" })}
-                  </span>
-                  <span style={{ marginLeft: "auto", fontSize: "11px", color: "var(--cn-gray)" }}>Morning</span>
-                </div>
-                <div
-                  onMouseDown={() => selectOption(formatTime({ ...parsedTime, ampm: "PM" }))}
-                  onMouseEnter={() => setHighlightedIndex(1)}
-                  className="autocomplete-item"
-                  style={{ alignItems: "center", background: highlightedIndex === 1 ? "#f5f3ff" : "#fff", whiteSpace: "nowrap" }}
-                >
-                  <i className="ti ti-clock" style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i>
-                  <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)" }}>
-                    {formatTime({ ...parsedTime, ampm: "PM" })}
-                  </span>
-                  <span style={{ marginLeft: "auto", fontSize: "11px", color: "var(--cn-gray)" }}>Evening</span>
-                </div>
-              </div>
-            ) : (
-              <div style={{ padding: "9px 12px", fontSize: "12px", color: "var(--cn-purple-dark)", fontWeight: 600, textAlign: "left" }}>
-                → {formatTime(parsedTime)}
-              </div>
-            )
           ) : null}
         </div>
       )}

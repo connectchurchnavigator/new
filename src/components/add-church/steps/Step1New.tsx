@@ -149,7 +149,8 @@ export default function Step1New({ onNext }: Step1NewProps) {
     const newErrors: { [key: string]: string } = {};
     if (!formData.name?.trim()) newErrors.name = "Church name is required";
     if (!formData.country?.trim()) newErrors.country = "Country is required";
-    if (!formData.address?.trim()) newErrors.address = "Address is required";
+    if (!formData.address?.trim()) newErrors.address = "Please pin point your address on the map";
+    if (!formData.addressDetails?.trim()) newErrors.addressDetails = "Full address is required";
 
     if (!formData.email?.trim()) {
       newErrors.email = "Email is required";
@@ -244,6 +245,7 @@ export default function Step1New({ onNext }: Step1NewProps) {
           idPrefix="main"
           country={formData.country || ""}
           address={formData.address || ""}
+          addressDetails={formData.addressDetails || ""}
           latitude={formData.latitude}
           longitude={formData.longitude}
           onUpdateCountry={(val) => {
@@ -253,6 +255,10 @@ export default function Step1New({ onNext }: Step1NewProps) {
           onUpdateAddress={(val) => {
             updateFormData({ address: val });
             if (errors.address) setErrors({ ...errors, address: "" });
+          }}
+          onUpdateAddressDetails={(val) => {
+            updateFormData({ addressDetails: val });
+            if (errors.addressDetails) setErrors({ ...errors, addressDetails: "" });
           }}
           onUpdateCity={(val) => {
             updateFormData({ city: val });

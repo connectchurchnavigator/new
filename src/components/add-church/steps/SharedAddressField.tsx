@@ -3,13 +3,15 @@ import React, { useState, useRef, useEffect } from "react";
 interface SharedAddressFieldProps {
   country: string;
   address: string;
+  addressDetails?: string;
   latitude?: number;
   longitude?: number;
   onUpdateCountry: (val: string) => void;
   onUpdateAddress: (val: string) => void;
+  onUpdateAddressDetails?: (val: string) => void;
   onUpdateCity?: (val: string) => void;
   onUpdateCoordinates: (lat: number | undefined, lng: number | undefined) => void;
-  errors?: { country?: string, address?: string };
+  errors?: { country?: string, address?: string, addressDetails?: string };
   idPrefix: string;
   hideAddress?: boolean;
 }
@@ -161,7 +163,7 @@ function flagEmoji(code: string) {
   return [...code.toUpperCase()].map(c => String.fromCodePoint(127397 + c.charCodeAt(0))).join('');
 }
 
-export default function SharedAddressField({ country, address, latitude, longitude, onUpdateCountry, onUpdateAddress, onUpdateCity, onUpdateCoordinates, errors, idPrefix, hideAddress }: SharedAddressFieldProps) {
+export default function SharedAddressField({ country, address, addressDetails, latitude, longitude, onUpdateCountry, onUpdateAddress, onUpdateAddressDetails, onUpdateCity, onUpdateCoordinates, errors, idPrefix, hideAddress }: SharedAddressFieldProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [trigger, setTrigger] = useState(0);
 
@@ -288,7 +290,7 @@ export default function SharedAddressField({ country, address, latitude, longitu
 
       {!hideAddress && (
         <>
-          <label>Find your address <span className="req-badge">REQUIRED</span></label>
+          <label>Pin point your address (Map) <span className="req-badge">REQUIRED</span></label>
           {!latitude ? (
             <div id={`f-address-${idPrefix}`} style={{ position: "relative", marginBottom: "6px" }} ref={addressRef}>
               <i className="ti ti-search" style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "var(--cn-gray-light)", zIndex: 2 }}></i>
@@ -444,6 +446,62 @@ export default function SharedAddressField({ country, address, latitude, longitu
               Just type your street and number — we validate it and store the rest for you.
             </div>
           ) : null}
+
+          {/* Full Address Details (Flat / Unit / Plot / Landmark) */}
+          {onUpdateAddressDetails && (
+            <div style={{ marginTop: "16px", marginBottom: "14px" }}>
+              <label>Full Address <span className="req-badge">REQUIRED</span></label>
+              <div id={`f-${idPrefix}-addressDetails`} style={{ position: "relative" }}>
+                <input
+                  id={`f-${idPrefix}-address-details-input`}
+                  placeholder="e.g. Flat 4B, Opposite Railway Station, Plot 42, St. Peter's Hall"
+                  value={addressDetails || ""}
+                  onChange={(e) => onUpdateAddressDetails(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "11px 14px 11px 38px",
+                    borderRadius: "10px",
+                    border: errors?.addressDetails ? "1.5px solid red" : "1.5px solid var(--cn-border)",
+                    backgroundColor: errors?.addressDetails ? "#fef2f2" : "#fff",
+                    fontSize: "13.5px",
+                    color: "var(--cn-ink)",
+                    transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+                  }}
+                  onFocus={(e) => {
+                    if (!errors?.addressDetails) {
+                      e.currentTarget.style.borderColor = "var(--cn-purple)";
+                      e.currentTarget.style.boxShadow = "0 0 0 3px rgba(124, 58, 237, 0.1)";
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (!errors?.addressDetails) {
+                      e.currentTarget.style.borderColor = "var(--cn-border)";
+                      e.currentTarget.style.boxShadow = "none";
+                    }
+                  }}
+                />
+                <i
+                  className="ti ti-building-community"
+                  style={{
+                    position: "absolute",
+                    left: "12px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    fontSize: "16px",
+                    color: errors?.addressDetails ? "red" : "var(--cn-gray-light)",
+                    pointerEvents: "none",
+                  }}
+                ></i>
+              </div>
+              {errors?.addressDetails ? (
+                <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{errors.addressDetails}</div>
+              ) : (
+                <div style={{ fontSize: "11px", color: "var(--cn-gray-light)", marginTop: "4px" }}>
+                  Enter complete building, flat/unit, plot number, or landmark details.
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </>

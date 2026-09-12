@@ -106,10 +106,12 @@ export default function ChurchProfileClient({
         coverUrls={church.cover_url ? (church.cover_url.includes('|||') ? church.cover_url.split('|||') : [church.cover_url]) : []}
       />
 
-      {/* Visitor Banner directly below Hero Cover */}
-      <div className="wrap" style={{ marginTop: '20px' }}>
-        <VisitorBanner churchId={church.id} services={church.church_services || []} />
-      </div>
+      {/* Visitor Banner directly below Hero Cover — only visible to owner */}
+      {isEditing && (
+        <div className="wrap" style={{ marginTop: '20px' }}>
+          <VisitorBanner churchId={church.id} services={church.church_services || []} />
+        </div>
+      )}
 
       {/* Stats bar — live */}
       <div className="wrap" id="tour-stats-bar">

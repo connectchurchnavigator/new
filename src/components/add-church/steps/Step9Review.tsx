@@ -137,7 +137,7 @@ export default function Step9Review() {
                   )}
                 </div>
                 <div style={{ fontSize: "12.5px", color: "var(--cn-gray)", marginTop: "5px", display: "flex", alignItems: "center", gap: "5px" }}>
-                  <i className="ti ti-map-pin" style={{ fontSize: "14px" }}></i> {formData.address ? `${formData.address}${formData.country ? `, ${formData.country}` : ''}` : "123 Example Street"}
+                  <i className="ti ti-map-pin" style={{ fontSize: "14px" }}></i> {formData.address ? `${formData.addressDetails ? `${formData.addressDetails}, ` : ''}${formData.address}${formData.country ? `, ${formData.country}` : ''}` : "123 Example Street"}
                 </div>
               </div>
             </div>

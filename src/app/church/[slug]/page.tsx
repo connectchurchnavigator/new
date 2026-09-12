@@ -8,7 +8,6 @@ import EditCoverModal from '@/components/church-profile/EditCoverModal';
 import ShareButton from '@/components/church-profile/ShareButton';
 import HeroCarousel from '@/components/church-profile/HeroCarousel';
 import ChurchProfileClient from '@/components/church-profile/ChurchProfileClient';
-import VisitorBanner from '@/components/church-profile/VisitorBanner';
 import ContactSection from '@/components/church-profile/ContactSection';
 import NearbySection from '@/components/church-profile/NearbySection';
 import ViewTracker from '@/components/church-profile/ViewTracker';

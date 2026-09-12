@@ -63,7 +63,8 @@ export default function Step1Profile({ onNext }: Step1ProfileProps) {
     const newErrors: { [key: string]: string } = {};
     if (!formData.name?.trim()) newErrors.name = "Church name is required";
     if (!formData.country?.trim()) newErrors.country = "Country is required";
-    if (!formData.address?.trim()) newErrors.address = "Address is required";
+    if (!formData.address?.trim()) newErrors.address = "Please pin point your address on the map";
+    if (!formData.addressDetails?.trim()) newErrors.addressDetails = "Full address is required";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -136,6 +137,7 @@ export default function Step1Profile({ onNext }: Step1ProfileProps) {
           idPrefix="main"
           country={formData.country || ""}
           address={formData.address || ""}
+          addressDetails={formData.addressDetails || ""}
           latitude={formData.latitude}
           longitude={formData.longitude}
           onUpdateCountry={(val) => {
@@ -145,6 +147,10 @@ export default function Step1Profile({ onNext }: Step1ProfileProps) {
           onUpdateAddress={(val) => {
             updateFormData({ address: val });
             if (errors.address) setErrors({ ...errors, address: "" });
+          }}
+          onUpdateAddressDetails={(val) => {
+            updateFormData({ addressDetails: val });
+            if (errors.addressDetails) setErrors({ ...errors, addressDetails: "" });
           }}
           onUpdateCoordinates={(lat, lng) => {
             updateFormData({ latitude: lat, longitude: lng });

@@ -124,7 +124,7 @@ export async function POST(req: Request) {
         slug: uniqueSlug,
         denomination: (data.denomination || '') + (data.establishedYear ? `|||est:${data.establishedYear}` : ''),
         about: data.description || null,
-        address_line: data.address || null,
+        address_line: [data.addressDetails?.trim(), data.address?.trim()].filter(Boolean).join(', ') || null,
         city: data.city || null,
         country: data.country || null,
         latitude: lat,

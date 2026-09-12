@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import type { Church, ChurchService } from "@/lib/types";
 import TopNav from "@/components/layout/TopNav";
@@ -21,6 +21,293 @@ interface ExploreClientProps {
   initialDenom?: string;
 }
 
+interface MultiSelectSearchFilterProps {
+  label: string;
+  placeholder?: string;
+  options: string[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+}
+
+function MultiSelectSearchFilter({
+  label,
+  placeholder,
+  options,
+  selected,
+  onChange,
+}: MultiSelectSearchFilterProps) {
+  const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredOptions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((opt) => opt.toLowerCase().includes(q));
+  }, [options, query]);
+
+  const toggleOption = (opt: string) => {
+    const exists = selected.some((s) => s.toLowerCase() === opt.toLowerCase());
+    if (exists) {
+      onChange(selected.filter((s) => s.toLowerCase() !== opt.toLowerCase()));
+    } else {
+      onChange([...selected, opt]);
+    }
+  };
+
+  const removeOption = (opt: string) => {
+    onChange(selected.filter((s) => s.toLowerCase() !== opt.toLowerCase()));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (filteredOptions.length > 0) {
+        toggleOption(filteredOptions[0]);
+        setQuery("");
+        setIsOpen(false);
+      } else if (query.trim()) {
+        toggleOption(query.trim());
+        setQuery("");
+        setIsOpen(false);
+      }
+    } else if (e.key === "Escape") {
+      setIsOpen(false);
+    }
+  };
+
+  return (
+    <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }} ref={containerRef}>
+      {/* Label and Clear action */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+        <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#64748b", letterSpacing: "0.05em" }}>
+          {label} {selected.length > 0 && <span style={{ color: "#7c3aed" }}>({selected.length})</span>}
+        </label>
+        {selected.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            style={{ fontSize: "11px", fontWeight: 600, color: "#94a3b8", background: "none", border: "none", cursor: "pointer", padding: "0 2px" }}
+            title={`Clear ${label}`}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Selected Pills / Chips */}
+      {selected.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
+          {selected.map((item) => (
+            <span
+              key={item}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                background: "#f5f3ff",
+                color: "#6b21a8",
+                border: "1px solid #ddd6fe",
+                borderRadius: "16px",
+                padding: "3px 9px",
+                fontSize: "12px",
+                fontWeight: 600,
+                lineHeight: 1.3,
+              }}
+            >
+              <span style={{ maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {item}
+              </span>
+              <button
+                type="button"
+                onClick={() => removeOption(item)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  color: "#9333ea",
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "13px",
+                  lineHeight: 1,
+                }}
+                aria-label={`Remove ${item}`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Input box with inline search */}
+      <div style={{ position: "relative" }}>
+        <i
+          className="ti ti-search"
+          style={{
+            position: "absolute",
+            left: "10px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: "#94a3b8",
+            fontSize: "14px",
+            pointerEvents: "none",
+          }}
+        ></i>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (!isOpen) setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder || `Search & select ${label.toLowerCase()}...`}
+          style={{
+            width: "100%",
+            height: "36px",
+            paddingLeft: "32px",
+            paddingRight: query ? "28px" : "10px",
+            borderRadius: "8px",
+            border: isOpen ? "1.5px solid #7c3aed" : "1.5px solid #e2e8f0",
+            background: isOpen ? "#ffffff" : "#f8fafc",
+            fontSize: "12.5px",
+            color: "#1e293b",
+            outline: "none",
+            transition: "all 0.15s ease",
+          }}
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            style={{
+              position: "absolute",
+              right: "8px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "#94a3b8",
+              fontSize: "13px",
+              padding: "2px",
+            }}
+          >
+            ✕
+          </button>
+        )}
+
+        {/* Dropdown Suggestions List */}
+        {isOpen && (
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 4px)",
+              left: 0,
+              right: 0,
+              maxHeight: "220px",
+              overflowY: "auto",
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "10px",
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)",
+              zIndex: 100,
+              padding: "4px",
+            }}
+          >
+            {filteredOptions.length === 0 ? (
+              <div>
+                <div style={{ padding: "8px 10px", fontSize: "12px", color: "#64748b" }}>
+                  No preset match for "{query}"
+                </div>
+                {query.trim() && (
+                  <div
+                    onClick={() => {
+                      toggleOption(query.trim());
+                      setQuery("");
+                      setIsOpen(false);
+                    }}
+                    style={{
+                      padding: "8px 10px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "#7c3aed",
+                      cursor: "pointer",
+                      borderRadius: "6px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      background: "#faf5ff",
+                    }}
+                  >
+                    <i className="ti ti-plus" style={{ fontSize: "13px" }}></i>
+                    Add "{query.trim()}"
+                  </div>
+                )}
+              </div>
+            ) : (
+              filteredOptions.map((opt) => {
+                const isSelected = selected.some((s) => s.toLowerCase() === opt.toLowerCase());
+                return (
+                  <div
+                    key={opt}
+                    onClick={() => {
+                      toggleOption(opt);
+                      setQuery("");
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "7px 10px",
+                      borderRadius: "6px",
+                      fontSize: "12.5px",
+                      cursor: "pointer",
+                      background: isSelected ? "#f5f3ff" : "transparent",
+                      color: isSelected ? "#7c3aed" : "#334155",
+                      fontWeight: isSelected ? 700 : 500,
+                      transition: "background 0.1s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) e.currentTarget.style.background = "#f1f5f9";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {opt}
+                    </span>
+                    {isSelected ? (
+                      <i className="ti ti-check" style={{ fontSize: "14px", color: "#7c3aed" }}></i>
+                    ) : (
+                      <span style={{ fontSize: "11px", color: "#94a3b8" }}>+</span>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ExploreClient({
   initialChurches,
   initialPastors = [],
@@ -37,27 +324,30 @@ export default function ExploreClient({
   const [openingStatus, setOpeningStatus] = useState<"all" | "open_now" | "custom">("all");
   const [customDay, setCustomDay] = useState<string>("Sun");
   const [customTime, setCustomTime] = useState<string>("all");
-  const [selectedDenom, setSelectedDenom] = useState(initialDenom || "all");
-  const [selectedLanguage, setSelectedLanguage] = useState("all");
-  const [selectedWorshipStyle, setSelectedWorshipStyle] = useState("all");
-  const [selectedMinistry, setSelectedMinistry] = useState("all");
-  const [selectedCity, setSelectedCity] = useState(initialCity || "all");
+  const [selectedDenoms, setSelectedDenoms] = useState<string[]>(initialDenom ? [initialDenom] : []);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [selectedWorshipStyles, setSelectedWorshipStyles] = useState<string[]>([]);
+  const [selectedMinistries, setSelectedMinistries] = useState<string[]>([]);
+  const [selectedCities, setSelectedCities] = useState<string[]>(initialCity ? [initialCity] : []);
   const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "nearby" | "latest">("latest");
 
   // Event specific filters
-  const [selectedEventType, setSelectedEventType] = useState("all");
+  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
   const [selectedEventPrice, setSelectedEventPrice] = useState<"all" | "free" | "paid">("all");
   const [selectedEventTime, setSelectedEventTime] = useState<"all" | "upcoming" | "past">("upcoming");
 
-  // Pastor specific filters
-  const [selectedPastorAvailability, setSelectedPastorAvailability] = useState("all");
-  const [selectedPastorSpecialism, setSelectedPastorSpecialism] = useState("all");
+  // Pastor specific filters (Name, City [universal], Denomination, Ministries, Education, Languages)
+  const [selectedPastorNames, setSelectedPastorNames] = useState<string[]>([]);
+  const [selectedPastorDenoms, setSelectedPastorDenoms] = useState<string[]>([]);
+  const [selectedPastorMinistries, setSelectedPastorMinistries] = useState<string[]>([]);
+  const [selectedPastorEducations, setSelectedPastorEducations] = useState<string[]>([]);
+  const [selectedPastorLanguages, setSelectedPastorLanguages] = useState<string[]>([]);
 
   // Worship Leader specific filters
-  const [selectedWlStyle, setSelectedWlStyle] = useState("all");
-  const [selectedWlInstrument, setSelectedWlInstrument] = useState("all");
-  const [selectedWlLanguage, setSelectedWlLanguage] = useState("all");
-  const [selectedWlAvailability, setSelectedWlAvailability] = useState("all");
+  const [selectedWlStyles, setSelectedWlStyles] = useState<string[]>([]);
+  const [selectedWlInstruments, setSelectedWlInstruments] = useState<string[]>([]);
+  const [selectedWlLanguages, setSelectedWlLanguages] = useState<string[]>([]);
+  const [selectedWlAvailabilities, setSelectedWlAvailabilities] = useState<string[]>([]);
 
   // Selection & Hover State
   const [selectedChurchId, setSelectedChurchId] = useState<string | null>(null);
@@ -65,12 +355,12 @@ export default function ExploreClient({
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
 
-  // Extract distinct filter values
+  // Extract distinct filter values (without "all" prefix since multi-select allows empty selection)
   const denominations = useMemo(() => {
     const list = initialChurches
       .map((c) => c.denomination?.split("|||")[0].trim())
       .filter(Boolean) as string[];
-    return ["all", ...Array.from(new Set(list)).sort()];
+    return Array.from(new Set(list)).sort();
   }, [initialChurches]);
 
   const languages = useMemo(() => {
@@ -80,7 +370,7 @@ export default function ExploreClient({
         c.languages.forEach((l) => { if (l) list.push(l.trim()); });
       }
     });
-    return ["all", ...Array.from(new Set(list)).sort()];
+    return Array.from(new Set(list)).sort();
   }, [initialChurches]);
 
   const worshipStyles = useMemo(() => {
@@ -93,7 +383,7 @@ export default function ExploreClient({
         styles.split(",").forEach((s) => { if (s) list.push(s.trim()); });
       }
     });
-    return ["all", ...Array.from(new Set(list)).sort()];
+    return Array.from(new Set(list)).sort();
   }, [initialChurches]);
 
   const ministries = useMemo(() => {
@@ -103,7 +393,7 @@ export default function ExploreClient({
         c.ministries.forEach((m) => { if (m) list.push(m.trim()); });
       }
     });
-    return ["all", ...Array.from(new Set(list)).sort()];
+    return Array.from(new Set(list)).sort();
   }, [initialChurches]);
 
   const cities = useMemo(() => {
@@ -118,27 +408,84 @@ export default function ExploreClient({
       rawList = initialWorshipLeaders.map((w) => w.city);
     }
     const list = rawList.map((c) => c?.trim()).filter(Boolean) as string[];
-    return ["all", ...Array.from(new Set(list)).sort()];
+    return Array.from(new Set(list)).sort();
   }, [initialChurches, initialPastors, initialEvents, initialWorshipLeaders, exploreType]);
 
   // Event filter lists
   const eventTypes = useMemo(() => {
     const list = initialEvents.map((e) => e.type?.trim()).filter(Boolean) as string[];
-    return ["all", ...Array.from(new Set(list)).sort()];
+    return Array.from(new Set(list)).sort();
   }, [initialEvents]);
 
-  // Pastor filter lists
-  const pastorSpecialisms = useMemo(() => {
+  // Pastor filter lists (Name, City [from cities], Denomination, Ministries, Education, Languages)
+  const pastorNames = useMemo(() => {
+    const list = initialPastors
+      .map((p) => p.full_name?.trim())
+      .filter(Boolean) as string[];
+    return Array.from(new Set(list)).sort();
+  }, [initialPastors]);
+
+  const pastorDenominations = useMemo(() => {
     const list: string[] = [];
     initialPastors.forEach((p) => {
+      const denom = p.church?.denomination || p.denomination;
+      if (denom) {
+        list.push(denom.split("|||")[0].trim());
+      }
+    });
+    // Also merge church denominations so pastors can be matched against known denominations
+    denominations.forEach((d) => list.push(d));
+    return Array.from(new Set(list.filter(Boolean))).sort();
+  }, [initialPastors, denominations]);
+
+  const pastorMinistries = useMemo(() => {
+    const list: string[] = [];
+    initialPastors.forEach((p) => {
+      // Tags in ministry_area or general tags
       if (Array.isArray(p.tags)) {
         p.tags.forEach((t: any) => {
           if (t?.label) list.push(t.label.trim());
         });
       }
+      // Also check associated church ministries
+      if (Array.isArray(p.church?.ministries)) {
+        p.church.ministries.forEach((m: string) => {
+          if (m) list.push(m.trim());
+        });
+      }
     });
-    return ["all", ...Array.from(new Set(list)).sort()];
+    // Merge known ministries
+    ministries.forEach((m) => list.push(m));
+    return Array.from(new Set(list.filter(Boolean))).sort();
+  }, [initialPastors, ministries]);
+
+  const pastorEducations = useMemo(() => {
+    const list: string[] = [];
+    initialPastors.forEach((p) => {
+      if (Array.isArray(p.education)) {
+        p.education.forEach((edu: any) => {
+          if (edu?.degree) list.push(edu.degree.trim());
+          if (edu?.institution) list.push(edu.institution.trim());
+        });
+      }
+    });
+    return Array.from(new Set(list.filter(Boolean))).sort();
   }, [initialPastors]);
+
+  const pastorLanguages = useMemo(() => {
+    const list: string[] = [];
+    initialPastors.forEach((p) => {
+      if (Array.isArray(p.languages)) {
+        p.languages.forEach((l: any) => {
+          const lang = typeof l === "string" ? l : l?.language;
+          if (lang) list.push(lang.trim());
+        });
+      }
+    });
+    // Merge church languages for convenience
+    languages.forEach((l) => list.push(l));
+    return Array.from(new Set(list.filter(Boolean))).sort();
+  }, [initialPastors, languages]);
 
   // Worship Leader filter lists
   const wlStyles = useMemo(() => {
@@ -150,7 +497,7 @@ export default function ExploreClient({
         });
       }
     });
-    return ["all", ...Array.from(new Set(list)).sort()];
+    return Array.from(new Set(list)).sort();
   }, [initialWorshipLeaders]);
 
   const wlInstruments = useMemo(() => {
@@ -162,7 +509,7 @@ export default function ExploreClient({
         });
       }
     });
-    return ["all", ...Array.from(new Set(list)).sort()];
+    return Array.from(new Set(list)).sort();
   }, [initialWorshipLeaders]);
 
   const wlLanguages = useMemo(() => {
@@ -174,7 +521,7 @@ export default function ExploreClient({
         });
       }
     });
-    return ["all", ...Array.from(new Set(list)).sort()];
+    return Array.from(new Set(list)).sort();
   }, [initialWorshipLeaders]);
 
   const wlAvailabilities = useMemo(() => {
@@ -186,7 +533,7 @@ export default function ExploreClient({
         });
       }
     });
-    return ["all", ...Array.from(new Set(list)).sort()];
+    return Array.from(new Set(list)).sort();
   }, [initialWorshipLeaders]);
 
   // Haversine distance in km
@@ -275,6 +622,9 @@ export default function ExploreClient({
           church.name?.toLowerCase().includes(q) ||
           church.city?.toLowerCase().includes(q) ||
           church.address_line?.toLowerCase().includes(q) ||
+          church.formatted_address?.toLowerCase().includes(q) ||
+          church.country?.toLowerCase().includes(q) ||
+          church.about?.toLowerCase().includes(q) ||
           church.postcode?.toLowerCase().replace(/\s+/g, "").includes(q.replace(/\s+/g, "")) ||
           church.denomination?.toLowerCase().includes(q);
 
@@ -288,40 +638,43 @@ export default function ExploreClient({
 
         // 3. Denomination
         const matchesDenom =
-          selectedDenom === "all" ||
-          church.denomination?.toLowerCase().includes(selectedDenom.toLowerCase());
+          selectedDenoms.length === 0 ||
+          selectedDenoms.some((d) => church.denomination?.toLowerCase().includes(d.toLowerCase()));
 
         // 4. Languages
         const matchesLanguage =
-          selectedLanguage === "all" ||
-          (Array.isArray(church.languages) &&
-            church.languages.some((l) => l.toLowerCase() === selectedLanguage.toLowerCase()));
+          selectedLanguages.length === 0 ||
+          selectedLanguages.some((l) =>
+            Array.isArray(church.languages) &&
+            church.languages.some((cl) => cl.toLowerCase() === l.toLowerCase())
+          );
 
         // 5. Worship Styles
         const churchWorship = church.worship_style || church.worship_styles;
         let matchesWorship = true;
-        if (selectedWorshipStyle !== "all") {
-          if (Array.isArray(churchWorship)) {
-            matchesWorship = churchWorship.some(
-              (w) => w.toLowerCase() === selectedWorshipStyle.toLowerCase()
-            );
-          } else if (typeof churchWorship === "string") {
-            matchesWorship = churchWorship
-              .toLowerCase()
-              .includes(selectedWorshipStyle.toLowerCase());
-          } else {
-            matchesWorship = false;
-          }
+        if (selectedWorshipStyles.length > 0) {
+          matchesWorship = selectedWorshipStyles.some((style) => {
+            if (Array.isArray(churchWorship)) {
+              return churchWorship.some((w) => w.toLowerCase() === style.toLowerCase());
+            } else if (typeof churchWorship === "string") {
+              return churchWorship.toLowerCase().includes(style.toLowerCase());
+            }
+            return false;
+          });
         }
 
         // 6. Ministries
         const matchesMinistry =
-          selectedMinistry === "all" ||
-          (Array.isArray(church.ministries) &&
-            church.ministries.some((m) => m.toLowerCase() === selectedMinistry.toLowerCase()));
+          selectedMinistries.length === 0 ||
+          selectedMinistries.some((m) =>
+            Array.isArray(church.ministries) &&
+            church.ministries.some((cm) => cm.toLowerCase() === m.toLowerCase())
+          );
 
         // 7. City
-        const matchesCity = selectedCity === "all" || church.city === selectedCity;
+        const matchesCity =
+          selectedCities.length === 0 ||
+          selectedCities.some((c) => church.city?.toLowerCase() === c.toLowerCase());
 
         return (
           matchesQuery &&
@@ -373,11 +726,11 @@ export default function ExploreClient({
     openingStatus,
     customDay,
     customTime,
-    selectedDenom,
-    selectedLanguage,
-    selectedWorshipStyle,
-    selectedMinistry,
-    selectedCity,
+    selectedDenoms,
+    selectedLanguages,
+    selectedWorshipStyles,
+    selectedMinistries,
+    selectedCities,
     sortBy,
     userLocation,
   ]);
@@ -395,18 +748,84 @@ export default function ExploreClient({
           pastor.church?.name?.toLowerCase().includes(q) ||
           pastor.city?.toLowerCase().includes(q);
 
-        const matchesCity = selectedCity === "all" || pastor.city === selectedCity || pastor.church?.city === selectedCity;
+        // Name filter
+        const matchesName =
+          selectedPastorNames.length === 0 ||
+          selectedPastorNames.some(
+            (n) => pastor.full_name?.toLowerCase().includes(n.toLowerCase())
+          );
 
-        const matchesAvailability =
-          selectedPastorAvailability === "all" ||
-          pastor.availability_status === selectedPastorAvailability;
+        // City filter (pastor city or affiliated church city)
+        const matchesCity =
+          selectedCities.length === 0 ||
+          selectedCities.some(
+            (c) =>
+              pastor.city?.toLowerCase() === c.toLowerCase() ||
+              pastor.church?.city?.toLowerCase() === c.toLowerCase()
+          );
 
-        const matchesSpecialism =
-          selectedPastorSpecialism === "all" ||
-          (Array.isArray(pastor.tags) &&
-            pastor.tags.some((t: any) => t?.label?.toLowerCase() === selectedPastorSpecialism.toLowerCase()));
+        // Denomination filter (church denomination or pastor denomination)
+        const matchesDenom =
+          selectedPastorDenoms.length === 0 ||
+          selectedPastorDenoms.some((d) => {
+            const denom = pastor.church?.denomination || pastor.denomination || "";
+            return denom.toLowerCase().includes(d.toLowerCase());
+          });
 
-        return matchesQuery && matchesCity && matchesAvailability && matchesSpecialism;
+        // Ministries filter (tags or church ministries)
+        const matchesMinistries =
+          selectedPastorMinistries.length === 0 ||
+          selectedPastorMinistries.some((m) => {
+            const tagMatch =
+              Array.isArray(pastor.tags) &&
+              pastor.tags.some((t: any) => t?.label?.toLowerCase().includes(m.toLowerCase()));
+            const churchMinMatch =
+              Array.isArray(pastor.church?.ministries) &&
+              pastor.church.ministries.some((cm: string) => cm.toLowerCase().includes(m.toLowerCase()));
+            return tagMatch || churchMinMatch;
+          });
+
+        // Education filter (degree or institution)
+        const matchesEducation =
+          selectedPastorEducations.length === 0 ||
+          selectedPastorEducations.some((eduFilter) => {
+            return (
+              Array.isArray(pastor.education) &&
+              pastor.education.some((e: any) => {
+                const deg = e?.degree?.toLowerCase() || "";
+                const inst = e?.institution?.toLowerCase() || "";
+                const filter = eduFilter.toLowerCase();
+                return deg.includes(filter) || inst.includes(filter);
+              })
+            );
+          });
+
+        // Languages filter
+        const matchesLanguages =
+          selectedPastorLanguages.length === 0 ||
+          selectedPastorLanguages.some((langFilter) => {
+            const lFilter = langFilter.toLowerCase();
+            const pastorLangMatch =
+              Array.isArray(pastor.languages) &&
+              pastor.languages.some((l: any) => {
+                const langStr = typeof l === "string" ? l : l?.language || "";
+                return langStr.toLowerCase() === lFilter;
+              });
+            const churchLangMatch =
+              Array.isArray(pastor.church?.languages) &&
+              pastor.church.languages.some((cl: string) => cl.toLowerCase() === lFilter);
+            return pastorLangMatch || churchLangMatch;
+          });
+
+        return (
+          matchesQuery &&
+          matchesName &&
+          matchesCity &&
+          matchesDenom &&
+          matchesMinistries &&
+          matchesEducation &&
+          matchesLanguages
+        );
       })
       .map((pastor) => {
         let distance: number | null = null;
@@ -434,7 +853,18 @@ export default function ExploreClient({
         }
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
-  }, [initialPastors, searchQuery, selectedCity, selectedPastorAvailability, selectedPastorSpecialism, sortBy, userLocation]);
+  }, [
+    initialPastors,
+    searchQuery,
+    selectedPastorNames,
+    selectedCities,
+    selectedPastorDenoms,
+    selectedPastorMinistries,
+    selectedPastorEducations,
+    selectedPastorLanguages,
+    sortBy,
+    userLocation,
+  ]);
 
   const filteredEvents = useMemo(() => {
     const now = new Date().getTime();
@@ -449,11 +879,13 @@ export default function ExploreClient({
           event.city?.toLowerCase().includes(q) ||
           event.host_church?.name?.toLowerCase().includes(q);
 
-        const matchesCity = selectedCity === "all" || event.city === selectedCity;
+        const matchesCity =
+          selectedCities.length === 0 ||
+          selectedCities.some((c) => event.city?.toLowerCase() === c.toLowerCase());
 
         const matchesType =
-          selectedEventType === "all" ||
-          (event.type && event.type.toLowerCase() === selectedEventType.toLowerCase());
+          selectedEventTypes.length === 0 ||
+          selectedEventTypes.some((t) => event.type && event.type.toLowerCase() === t.toLowerCase());
 
         const matchesPrice =
           selectedEventPrice === "all" ||
@@ -493,7 +925,7 @@ export default function ExploreClient({
         }
         return new Date(b.starts_at || b.created_at || 0).getTime() - new Date(a.starts_at || a.created_at || 0).getTime();
       });
-  }, [initialEvents, searchQuery, selectedCity, selectedEventType, selectedEventPrice, selectedEventTime, sortBy, userLocation]);
+  }, [initialEvents, searchQuery, selectedCities, selectedEventTypes, selectedEventPrice, selectedEventTime, sortBy, userLocation]);
 
   const filteredWorshipLeaders = useMemo(() => {
     return initialWorshipLeaders
@@ -505,43 +937,53 @@ export default function ExploreClient({
           leader.tagline?.toLowerCase().includes(q) ||
           leader.city?.toLowerCase().includes(q);
 
-        const matchesCity = selectedCity === "all" || leader.city === selectedCity;
+        const matchesCity =
+          selectedCities.length === 0 ||
+          selectedCities.some((c) => leader.city?.toLowerCase() === c.toLowerCase());
 
         const matchesStyle =
-          selectedWlStyle === "all" ||
-          (Array.isArray(leader.tags) &&
+          selectedWlStyles.length === 0 ||
+          selectedWlStyles.some((s) =>
+            Array.isArray(leader.tags) &&
             leader.tags.some(
               (t: any) =>
                 t?.category === "style" &&
-                t?.label?.toLowerCase() === selectedWlStyle.toLowerCase()
-            ));
+                t?.label?.toLowerCase() === s.toLowerCase()
+            )
+          );
 
         const matchesInstrument =
-          selectedWlInstrument === "all" ||
-          (Array.isArray(leader.tags) &&
+          selectedWlInstruments.length === 0 ||
+          selectedWlInstruments.some((inst) =>
+            Array.isArray(leader.tags) &&
             leader.tags.some(
               (t: any) =>
                 t?.category === "instrument" &&
-                t?.label?.toLowerCase() === selectedWlInstrument.toLowerCase()
-            ));
+                t?.label?.toLowerCase() === inst.toLowerCase()
+            )
+          );
 
         const matchesLanguage =
-          selectedWlLanguage === "all" ||
-          (Array.isArray(leader.tags) &&
+          selectedWlLanguages.length === 0 ||
+          selectedWlLanguages.some((l) =>
+            Array.isArray(leader.tags) &&
             leader.tags.some(
               (t: any) =>
                 t?.category === "language" &&
-                t?.label?.toLowerCase() === selectedWlLanguage.toLowerCase()
-            ));
+                t?.label?.toLowerCase() === l.toLowerCase()
+            )
+          );
 
         const matchesAvailability =
-          selectedWlAvailability === "all" ||
-          (Array.isArray(leader.tags) &&
+          selectedWlAvailabilities.length === 0 ||
+          selectedWlAvailabilities.some((a) =>
+            Array.isArray(leader.tags) &&
             leader.tags.some(
               (t: any) =>
                 t?.category === "available_for" &&
-                t?.label?.toLowerCase() === selectedWlAvailability.toLowerCase()
-            ));
+                t?.label?.toLowerCase() === a.toLowerCase()
+            )
+          );
 
         return (
           matchesQuery &&
@@ -558,7 +1000,7 @@ export default function ExploreClient({
         if (sortBy === "name_desc") return b.display_name.localeCompare(a.display_name);
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
-  }, [initialWorshipLeaders, searchQuery, selectedCity, selectedWlStyle, selectedWlInstrument, selectedWlLanguage, selectedWlAvailability, sortBy]);
+  }, [initialWorshipLeaders, searchQuery, selectedCities, selectedWlStyles, selectedWlInstruments, selectedWlLanguages, selectedWlAvailabilities, sortBy]);
 
   const currentList = useMemo(() => {
     if (exploreType === "pastors") return filteredPastors;
@@ -598,52 +1040,58 @@ export default function ExploreClient({
 
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
-    selectedCity !== "all" ||
+    selectedCities.length > 0 ||
     (exploreType === "churches" && (
-      selectedDenom !== "all" ||
-      selectedLanguage !== "all" ||
-      selectedWorshipStyle !== "all" ||
-      selectedMinistry !== "all" ||
+      selectedDenoms.length > 0 ||
+      selectedLanguages.length > 0 ||
+      selectedWorshipStyles.length > 0 ||
+      selectedMinistries.length > 0 ||
       openingStatus !== "all"
     )) ||
     (exploreType === "events" && (
-      selectedEventType !== "all" ||
+      selectedEventTypes.length > 0 ||
       selectedEventPrice !== "all" ||
       selectedEventTime !== "all"
     )) ||
     (exploreType === "pastors" && (
-      selectedPastorAvailability !== "all" ||
-      selectedPastorSpecialism !== "all"
+      selectedPastorNames.length > 0 ||
+      selectedPastorDenoms.length > 0 ||
+      selectedPastorMinistries.length > 0 ||
+      selectedPastorEducations.length > 0 ||
+      selectedPastorLanguages.length > 0
     )) ||
     (exploreType === "worship_leaders" && (
-      selectedWlStyle !== "all" ||
-      selectedWlInstrument !== "all" ||
-      selectedWlLanguage !== "all" ||
-      selectedWlAvailability !== "all"
+      selectedWlStyles.length > 0 ||
+      selectedWlInstruments.length > 0 ||
+      selectedWlLanguages.length > 0 ||
+      selectedWlAvailabilities.length > 0
     ));
 
   const clearAllFilters = () => {
     setSearchQuery("");
-    setSelectedCity("all");
+    setSelectedCities([]);
     setSortBy("latest");
     // Church filters
     setOpeningStatus("all");
-    setSelectedDenom("all");
-    setSelectedLanguage("all");
-    setSelectedWorshipStyle("all");
-    setSelectedMinistry("all");
+    setSelectedDenoms([]);
+    setSelectedLanguages([]);
+    setSelectedWorshipStyles([]);
+    setSelectedMinistries([]);
     // Event filters
-    setSelectedEventType("all");
+    setSelectedEventTypes([]);
     setSelectedEventPrice("all");
     setSelectedEventTime("all");
     // Pastor filters
-    setSelectedPastorAvailability("all");
-    setSelectedPastorSpecialism("all");
+    setSelectedPastorNames([]);
+    setSelectedPastorDenoms([]);
+    setSelectedPastorMinistries([]);
+    setSelectedPastorEducations([]);
+    setSelectedPastorLanguages([]);
     // Worship Leader filters
-    setSelectedWlStyle("all");
-    setSelectedWlInstrument("all");
-    setSelectedWlLanguage("all");
-    setSelectedWlAvailability("all");
+    setSelectedWlStyles([]);
+    setSelectedWlInstruments([]);
+    setSelectedWlLanguages([]);
+    setSelectedWlAvailabilities([]);
   };
 
   return (
@@ -827,7 +1275,7 @@ export default function ExploreClient({
           <button
             onClick={() => {
               setExploreType("churches");
-              setSelectedCity("all");
+              setSelectedCities([]);
               setSelectedChurchId(null);
             }}
             className={`explore-tab ${exploreType === "churches" ? "active" : ""}`}
@@ -837,7 +1285,7 @@ export default function ExploreClient({
           <button
             onClick={() => {
               setExploreType("pastors");
-              setSelectedCity("all");
+              setSelectedCities([]);
               setSelectedChurchId(null);
             }}
             className={`explore-tab ${exploreType === "pastors" ? "active" : ""}`}
@@ -847,7 +1295,7 @@ export default function ExploreClient({
           <button
             onClick={() => {
               setExploreType("events");
-              setSelectedCity("all");
+              setSelectedCities([]);
               setSelectedChurchId(null);
             }}
             className={`explore-tab ${exploreType === "events" ? "active" : ""}`}
@@ -857,7 +1305,7 @@ export default function ExploreClient({
           <button
             onClick={() => {
               setExploreType("worship_leaders");
-              setSelectedCity("all");
+              setSelectedCities([]);
               setSelectedChurchId(null);
             }}
             className={`explore-tab ${exploreType === "worship_leaders" ? "active" : ""}`}
@@ -941,23 +1389,15 @@ export default function ExploreClient({
                 </button>
               </div>
 
-              {/* City Filter (Available for all tabs) */}
-              {cities.length > 2 && (
-                <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
-                  <div style={{ position: "relative", width: "100%" }}>
-                    <select
-                      value={selectedCity}
-                      onChange={(e) => setSelectedCity(e.target.value)}
-                      style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedCity === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
-                    >
-                      <option value="all">All Cities</option>
-                      {cities.filter((c: string) => c !== "all").map((c: string) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                    <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
-                  </div>
-                </div>
+              {/* City Filter (Available for Churches, Events, and Worship Leaders tabs) */}
+              {exploreType !== "pastors" && (
+                <MultiSelectSearchFilter
+                  label="Cities"
+                  placeholder="Search city..."
+                  options={cities}
+                  selected={selectedCities}
+                  onChange={setSelectedCities}
+                />
               )}
 
               {/* CHURCH FILTERS */}
@@ -979,28 +1419,34 @@ export default function ExploreClient({
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                    {[ 
-                      { label: "All Denominations", value: selectedDenom, setter: setSelectedDenom, options: denominations },
-                      { label: "All Languages", value: selectedLanguage, setter: setSelectedLanguage, options: languages },
-                      { label: "All Worship Styles", value: selectedWorshipStyle, setter: setSelectedWorshipStyle, options: worshipStyles },
-                      { label: "All Ministries", value: selectedMinistry, setter: setSelectedMinistry, options: ministries }
-                    ].map((filter, i) => (
-                      <div key={i} style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
-                        <div style={{ position: "relative", width: "100%" }}>
-                          <select
-                            value={filter.value}
-                            onChange={(e) => filter.setter(e.target.value)}
-                            style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: filter.value === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
-                          >
-                            <option value="all">{filter.label}</option>
-                            {filter.options.filter((o: string) => o !== "all").map((o: string) => (
-                              <option key={o} value={o}>{o}</option>
-                            ))}
-                          </select>
-                          <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
-                        </div>
-                      </div>
-                    ))}
+                    <MultiSelectSearchFilter
+                      label="Denominations"
+                      placeholder="Search denomination..."
+                      options={denominations}
+                      selected={selectedDenoms}
+                      onChange={setSelectedDenoms}
+                    />
+                    <MultiSelectSearchFilter
+                      label="Languages"
+                      placeholder="Search language..."
+                      options={languages}
+                      selected={selectedLanguages}
+                      onChange={setSelectedLanguages}
+                    />
+                    <MultiSelectSearchFilter
+                      label="Worship Styles"
+                      placeholder="Search worship style..."
+                      options={worshipStyles}
+                      selected={selectedWorshipStyles}
+                      onChange={setSelectedWorshipStyles}
+                    />
+                    <MultiSelectSearchFilter
+                      label="Ministries"
+                      placeholder="Search ministry..."
+                      options={ministries}
+                      selected={selectedMinistries}
+                      onChange={setSelectedMinistries}
+                    />
                   </div>
                 </>
               )}
@@ -1028,22 +1474,14 @@ export default function ExploreClient({
                     </div>
                   </div>
 
-                  {/* Event Type Dropdown */}
-                  <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
-                    <div style={{ position: "relative", width: "100%" }}>
-                      <select
-                        value={selectedEventType}
-                        onChange={(e) => setSelectedEventType(e.target.value)}
-                        style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedEventType === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
-                      >
-                        <option value="all">All Event Types</option>
-                        {eventTypes.filter((t: string) => t !== "all").map((t: string) => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
-                      <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
-                    </div>
-                  </div>
+                  {/* Event Type Multi-Select */}
+                  <MultiSelectSearchFilter
+                    label="Event Types"
+                    placeholder="Search event type..."
+                    options={eventTypes}
+                    selected={selectedEventTypes}
+                    onChange={setSelectedEventTypes}
+                  />
 
                   {/* Price Filter (Free vs Ticketed) */}
                   <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
@@ -1063,44 +1501,62 @@ export default function ExploreClient({
                 </div>
               )}
 
-              {/* PASTOR FILTERS */}
+              {/* PASTOR FILTERS: Name, City, Denomination, Ministries, Education, Languages */}
               {exploreType === "pastors" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {/* Availability Status */}
-                  <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
-                    <div style={{ position: "relative", width: "100%" }}>
-                      <select
-                        value={selectedPastorAvailability}
-                        onChange={(e) => setSelectedPastorAvailability(e.target.value)}
-                        style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedPastorAvailability === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
-                      >
-                        <option value="all">All Availability</option>
-                        <option value="available">Available for Bookings</option>
-                        <option value="limited">Limited Availability</option>
-                        <option value="unavailable">Booked / Unavailable</option>
-                      </select>
-                      <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
-                    </div>
-                  </div>
+                  {/* 1. Name */}
+                  <MultiSelectSearchFilter
+                    label="Pastor Name"
+                    placeholder="Search pastor name..."
+                    options={pastorNames}
+                    selected={selectedPastorNames}
+                    onChange={setSelectedPastorNames}
+                  />
 
-                  {/* Preaching Specialism */}
-                  {pastorSpecialisms.length > 1 && (
-                    <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
-                      <div style={{ position: "relative", width: "100%" }}>
-                        <select
-                          value={selectedPastorSpecialism}
-                          onChange={(e) => setSelectedPastorSpecialism(e.target.value)}
-                          style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedPastorSpecialism === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
-                        >
-                          <option value="all">All Preaching Focus / Tags</option>
-                          {pastorSpecialisms.filter((s: string) => s !== "all").map((s: string) => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
-                        </select>
-                        <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
-                      </div>
-                    </div>
-                  )}
+                  {/* 2. City */}
+                  <MultiSelectSearchFilter
+                    label="Cities"
+                    placeholder="Search city..."
+                    options={cities}
+                    selected={selectedCities}
+                    onChange={setSelectedCities}
+                  />
+
+                  {/* 3. Denomination */}
+                  <MultiSelectSearchFilter
+                    label="Denominations"
+                    placeholder="Search denomination..."
+                    options={pastorDenominations}
+                    selected={selectedPastorDenoms}
+                    onChange={setSelectedPastorDenoms}
+                  />
+
+                  {/* 4. Ministries */}
+                  <MultiSelectSearchFilter
+                    label="Ministries & Outreach"
+                    placeholder="Search ministry..."
+                    options={pastorMinistries}
+                    selected={selectedPastorMinistries}
+                    onChange={setSelectedPastorMinistries}
+                  />
+
+                  {/* 5. Education */}
+                  <MultiSelectSearchFilter
+                    label="Education & Institution"
+                    placeholder="Search degree or institution..."
+                    options={pastorEducations}
+                    selected={selectedPastorEducations}
+                    onChange={setSelectedPastorEducations}
+                  />
+
+                  {/* 6. Languages */}
+                  <MultiSelectSearchFilter
+                    label="Languages"
+                    placeholder="Search language..."
+                    options={pastorLanguages}
+                    selected={selectedPastorLanguages}
+                    onChange={setSelectedPastorLanguages}
+                  />
                 </div>
               )}
 
@@ -1108,80 +1564,40 @@ export default function ExploreClient({
               {exploreType === "worship_leaders" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   {/* Style */}
-                  {wlStyles.length > 1 && (
-                    <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
-                      <div style={{ position: "relative", width: "100%" }}>
-                        <select
-                          value={selectedWlStyle}
-                          onChange={(e) => setSelectedWlStyle(e.target.value)}
-                          style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedWlStyle === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
-                        >
-                          <option value="all">All Worship Styles</option>
-                          {wlStyles.filter((s: string) => s !== "all").map((s: string) => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
-                        </select>
-                        <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
-                      </div>
-                    </div>
-                  )}
+                  <MultiSelectSearchFilter
+                    label="Worship Styles"
+                    placeholder="Search worship style..."
+                    options={wlStyles}
+                    selected={selectedWlStyles}
+                    onChange={setSelectedWlStyles}
+                  />
 
                   {/* Instrument */}
-                  {wlInstruments.length > 1 && (
-                    <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
-                      <div style={{ position: "relative", width: "100%" }}>
-                        <select
-                          value={selectedWlInstrument}
-                          onChange={(e) => setSelectedWlInstrument(e.target.value)}
-                          style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedWlInstrument === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
-                        >
-                          <option value="all">All Instruments</option>
-                          {wlInstruments.filter((inst: string) => inst !== "all").map((inst: string) => (
-                            <option key={inst} value={inst}>{inst}</option>
-                          ))}
-                        </select>
-                        <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
-                      </div>
-                    </div>
-                  )}
+                  <MultiSelectSearchFilter
+                    label="Instruments"
+                    placeholder="Search instrument..."
+                    options={wlInstruments}
+                    selected={selectedWlInstruments}
+                    onChange={setSelectedWlInstruments}
+                  />
 
                   {/* Language */}
-                  {wlLanguages.length > 1 && (
-                    <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
-                      <div style={{ position: "relative", width: "100%" }}>
-                        <select
-                          value={selectedWlLanguage}
-                          onChange={(e) => setSelectedWlLanguage(e.target.value)}
-                          style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedWlLanguage === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
-                        >
-                          <option value="all">All Languages</option>
-                          {wlLanguages.filter((l: string) => l !== "all").map((l: string) => (
-                            <option key={l} value={l}>{l}</option>
-                          ))}
-                        </select>
-                        <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
-                      </div>
-                    </div>
-                  )}
+                  <MultiSelectSearchFilter
+                    label="Languages"
+                    placeholder="Search language..."
+                    options={wlLanguages}
+                    selected={selectedWlLanguages}
+                    onChange={setSelectedWlLanguages}
+                  />
 
                   {/* Available For */}
-                  {wlAvailabilities.length > 1 && (
-                    <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
-                      <div style={{ position: "relative", width: "100%" }}>
-                        <select
-                          value={selectedWlAvailability}
-                          onChange={(e) => setSelectedWlAvailability(e.target.value)}
-                          style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: selectedWlAvailability === 'all' ? "#334155" : "#7c3aed", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
-                        >
-                          <option value="all">Available For (All)</option>
-                          {wlAvailabilities.filter((a: string) => a !== "all").map((a: string) => (
-                            <option key={a} value={a}>{a}</option>
-                          ))}
-                        </select>
-                        <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
-                      </div>
-                    </div>
-                  )}
+                  <MultiSelectSearchFilter
+                    label="Available For"
+                    placeholder="Search availability..."
+                    options={wlAvailabilities}
+                    selected={selectedWlAvailabilities}
+                    onChange={setSelectedWlAvailabilities}
+                  />
                 </div>
               )}
 

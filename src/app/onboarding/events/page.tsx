@@ -148,12 +148,21 @@ function parseTimeString(v: string) {
   if (/^midnight$/i.test(v)) return { h: 12, m: "00", ampm: "AM", ambiguous: false };
   
   let rawStr = v;
-  const noColonMatch = v.match(/^(\d{3,4})\s*(am|pm|a\.m\.|p\.m\.)?$/i);
-  if (noColonMatch) {
-    const digits = noColonMatch[1];
-    let hStr = digits.length === 3 ? digits.substring(0, 1) : digits.substring(0, 2);
-    let mStr = digits.length === 3 ? digits.substring(1) : digits.substring(2);
-    rawStr = `${hStr}:${mStr}${noColonMatch[2] || ''}`;
+  const digitsMatch = v.match(/^(\d{1,4})\s*(am|pm|a\.m\.|p\.m\.)?$/i);
+  if (digitsMatch) {
+    const digits = digitsMatch[1];
+    const modifier = digitsMatch[2] || '';
+    if (digits.length === 1 || digits.length === 2) {
+      rawStr = `${digits}:00${modifier}`;
+    } else if (digits.length === 3) {
+      const hStr = digits.substring(0, 1);
+      const mStr = digits.substring(1);
+      rawStr = `${hStr}:${mStr}${modifier}`;
+    } else if (digits.length === 4) {
+      const hStr = digits.substring(0, 2);
+      const mStr = digits.substring(2);
+      rawStr = `${hStr}:${mStr}${modifier}`;
+    }
   }
 
   const match = rawStr.match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?$/i);
@@ -221,17 +230,20 @@ function EventTimeInput({ value, onChange, placeholder }: EventTimeInputProps) {
 
     const parsed = parseTimeString(val);
     setParsedTime(parsed);
-    setError(!parsed);
 
-    if (parsed && !parsed.ambiguous) {
+    if (!parsed) {
+      setError(true);
+      setIsOpen(true);
+      onChange("");
+    } else if (!parsed.ambiguous) {
+      setError(false);
       const formatted = formatTime(parsed);
       onChange(formatted);
       setIsOpen(false);
-    } else if (parsed && parsed.ambiguous) {
-      setIsOpen(true);
     } else {
+      setError(true);
       setIsOpen(true);
-      onChange(val);
+      onChange("");
     }
   };
 
@@ -304,61 +316,59 @@ function EventTimeInput({ value, onChange, placeholder }: EventTimeInputProps) {
           zIndex: 50,
           overflow: "hidden"
         }}>
-          {error ? (
+          {parsedTime && parsedTime.ambiguous ? (
+            <div>
+              <div
+                onMouseDown={() => selectOption(formatTime({ ...parsedTime, ampm: "AM" }))}
+                onMouseEnter={() => setHighlightedIndex(0)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 12px",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                  borderBottom: "1px solid #f1f5f9",
+                  background: highlightedIndex === 0 ? "#f5f3ff" : "#fff",
+                  color: highlightedIndex === 0 ? "#6d28d9" : "#0f172a"
+                }}
+              >
+                <i className="ti ti-clock" style={{ fontSize: "14px", color: "#7c3aed" }}></i>
+                <span>{formatTime({ ...parsedTime, ampm: "AM" })}</span>
+                <span style={{ marginLeft: "auto", fontSize: "11px", color: "#64748b", fontWeight: 400 }}>Morning</span>
+              </div>
+              <div
+                onMouseDown={() => selectOption(formatTime({ ...parsedTime, ampm: "PM" }))}
+                onMouseEnter={() => setHighlightedIndex(1)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 12px",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                  background: highlightedIndex === 1 ? "#f5f3ff" : "#fff",
+                  color: highlightedIndex === 1 ? "#6d28d9" : "#0f172a"
+                }}
+              >
+                <i className="ti ti-clock" style={{ fontSize: "14px", color: "#7c3aed" }}></i>
+                <span>{formatTime({ ...parsedTime, ampm: "PM" })}</span>
+                <span style={{ marginLeft: "auto", fontSize: "11px", color: "#64748b", fontWeight: 400 }}>Evening</span>
+              </div>
+            </div>
+          ) : parsedTime && !parsedTime.ambiguous ? (
+            <div style={{ padding: "9px 12px", fontSize: "12px", color: "#7c3aed", fontWeight: 600 }}>
+              → {formatTime(parsedTime)}
+            </div>
+          ) : error ? (
             <div style={{ padding: "10px 12px", fontSize: "12px", color: "#64748b" }}>
               Invalid time format <br />
               <span style={{ color: "#94a3b8", fontSize: "11px" }}>e.g. 10am, 10:30am or 2pm</span>
             </div>
-          ) : parsedTime ? (
-            parsedTime.ambiguous ? (
-              <div>
-                <div
-                  onMouseDown={() => selectOption(formatTime({ ...parsedTime, ampm: "AM" }))}
-                  onMouseEnter={() => setHighlightedIndex(0)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "10px 12px",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    whiteSpace: "nowrap",
-                    borderBottom: "1px solid #f1f5f9",
-                    background: highlightedIndex === 0 ? "#f5f3ff" : "#fff",
-                    color: highlightedIndex === 0 ? "#6d28d9" : "#0f172a"
-                  }}
-                >
-                  <i className="ti ti-clock" style={{ fontSize: "14px", color: "#7c3aed" }}></i>
-                  <span>{formatTime({ ...parsedTime, ampm: "AM" })}</span>
-                  <span style={{ marginLeft: "auto", fontSize: "11px", color: "#64748b", fontWeight: 400 }}>Morning</span>
-                </div>
-                <div
-                  onMouseDown={() => selectOption(formatTime({ ...parsedTime, ampm: "PM" }))}
-                  onMouseEnter={() => setHighlightedIndex(1)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "10px 12px",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    whiteSpace: "nowrap",
-                    background: highlightedIndex === 1 ? "#f5f3ff" : "#fff",
-                    color: highlightedIndex === 1 ? "#6d28d9" : "#0f172a"
-                  }}
-                >
-                  <i className="ti ti-clock" style={{ fontSize: "14px", color: "#7c3aed" }}></i>
-                  <span>{formatTime({ ...parsedTime, ampm: "PM" })}</span>
-                  <span style={{ marginLeft: "auto", fontSize: "11px", color: "#64748b", fontWeight: 400 }}>Evening</span>
-                </div>
-              </div>
-            ) : (
-              <div style={{ padding: "9px 12px", fontSize: "12px", color: "#7c3aed", fontWeight: 600 }}>
-                → {formatTime(parsedTime)}
-              </div>
-            )
           ) : null}
         </div>
       )}
