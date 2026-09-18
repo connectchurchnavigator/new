@@ -194,9 +194,16 @@ export function EnquiryForm({ pastorSlug, pastorFirstName, trigger }: EnquiryFor
                   <button
                     type="submit"
                     disabled={status === 'submitting'}
-                    style={{ flex: 1, background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', opacity: status === 'submitting' ? 0.6 : 1 }}
+                    style={{ flex: 1, background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 700, cursor: status === 'submitting' ? 'not-allowed' : 'pointer', opacity: status === 'submitting' ? 0.75 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
-                    {status === 'submitting' ? 'Sending…' : 'Send enquiry'}
+                    {status === 'submitting' ? (
+                      <>
+                        <i className="ti ti-loader-2" style={{ fontSize: '15px', animation: 'spin 1s linear infinite' }}></i>
+                        Sending enquiry…
+                      </>
+                    ) : (
+                      'Send enquiry'
+                    )}
                   </button>
                 </div>
               </form>

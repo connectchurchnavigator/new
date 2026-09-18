@@ -165,6 +165,7 @@ function flagEmoji(code: string) {
 
 export default function SharedAddressField({ country, address, addressDetails, latitude, longitude, onUpdateCountry, onUpdateAddress, onUpdateAddressDetails, onUpdateCity, onUpdateCoordinates, errors, idPrefix, hideAddress }: SharedAddressFieldProps) {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
   const [trigger, setTrigger] = useState(0);
 
   const countryRef = useRef<HTMLDivElement>(null);
@@ -293,10 +294,14 @@ export default function SharedAddressField({ country, address, addressDetails, l
           <label>Pin point your address (Map) <span className="req-badge">REQUIRED</span></label>
           {!latitude ? (
             <div id={`f-address-${idPrefix}`} style={{ position: "relative", marginBottom: "6px" }} ref={addressRef}>
-              <i className="ti ti-search" style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "var(--cn-gray-light)", zIndex: 2 }}></i>
+              {isSearchingAddress ? (
+                <i className="ti ti-loader-2" style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "var(--cn-purple)", zIndex: 2, animation: "spin 1s linear infinite" }}></i>
+              ) : (
+                <i className="ti ti-search" style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "var(--cn-gray-light)", zIndex: 2 }}></i>
+              )}
               <input 
                 placeholder="Type your street and number…" 
-                style={{ paddingLeft: "42px", border: errors?.address ? "1.5px solid red" : "" }} 
+                style={{ paddingLeft: "42px", border: errors?.address ? "1.5px solid red" : (isSearchingAddress ? "1.5px solid var(--cn-purple)" : "") }} 
                 value={address || ""}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -306,6 +311,7 @@ export default function SharedAddressField({ country, address, addressDetails, l
                   if (to) clearTimeout(to);
                   
                   if (val.length > 3 && country) {
+                    setIsSearchingAddress(true);
                     (window as any)[`addrTimeout_${idPrefix}`] = setTimeout(async () => {
                       try {
                         const cc = COUNTRIES.find(c => c[1] === country)?.[0] || "";
@@ -318,13 +324,16 @@ export default function SharedAddressField({ country, address, addressDetails, l
                           (window as any)[`predictions_${idPrefix}`] = [];
                           (window as any)[`hasNoPredictions_${idPrefix}`] = true;
                         }
+                        setIsSearchingAddress(false);
                         setTrigger(Math.random());
                       } catch (err) {
                         (window as any)[`hasNoPredictions_${idPrefix}`] = true;
+                        setIsSearchingAddress(false);
                         setTrigger(Math.random());
                       }
-                    }, 500);
+                    }, 400);
                   } else {
+                    setIsSearchingAddress(false);
                     (window as any)[`predictions_${idPrefix}`] = [];
                     (window as any)[`hasNoPredictions_${idPrefix}`] = false;
                     setTrigger(Math.random());

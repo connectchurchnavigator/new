@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: "Search and explore churches near you on the interactive map with real-time location and filters.",
 };
 
-export const revalidate = 0; // Dynamic SSR
+export const revalidate = 30; // Cache for 30s so repeat visits load instantly without hitting database
 
 interface ExplorePageProps {
   searchParams: Promise<{
@@ -26,40 +26,18 @@ export default async function ExplorePage(props: ExplorePageProps) {
 
   const supabase = createAdminClient();
 
-  // Fetch all published churches
+  // Fetch only published churches with only the columns explore actually renders
   const { data: churches } = await supabase
     .from("churches")
-    .select("*, church_services(*)")
+    .select(
+      "id, slug, name, city, latitude, longitude, cover_url, logo_url, denomination, is_verified, created_at, address_line, formatted_address, postcode, country, about, languages, worship_styles, ministries, church_services(day, start_time, end_time)"
+    )
     .eq("status", "published")
     .order("created_at", { ascending: false });
-
-  // Fetch all published pastors
-  const { data: pastors } = await supabase
-    .from("pastors")
-    .select("*, church:churches(name, slug, latitude, longitude, city, denomination), tags:pastor_tags(*), languages:pastor_languages(language), education:pastor_education(*)")
-    .eq("is_published", true)
-    .order("is_verified", { ascending: false });
-
-  // Fetch all published events
-  const { data: events } = await supabase
-    .from("events")
-    .select("*, host_church:churches(name, slug)")
-    .eq("status", "published")
-    .order("starts_at", { ascending: true });
-
-  // Fetch all published worship leaders
-  const { data: worshipLeaders } = await supabase
-    .from("worship_leaders")
-    .select("*, tags:worship_leader_tags(*)")
-    .eq("is_published", true)
-    .order("is_verified", { ascending: false });
 
   return (
     <ExploreClient
       initialChurches={churches || []}
-      initialPastors={pastors || []}
-      initialEvents={events || []}
-      initialWorshipLeaders={worshipLeaders || []}
       initialSearchQuery={initialQ}
       initialCity={initialCity}
       initialDenom={initialDenomination}

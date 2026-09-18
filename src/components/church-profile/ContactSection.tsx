@@ -84,9 +84,12 @@ export default function ContactSection({ churchName, email, phone, address, soci
               </div>
             )}
             
-            <button type="submit" className={`send ${sent ? 'sent' : ''}`} disabled={sending}>
+            <button type="submit" className={`send ${sent ? 'sent' : ''}`} disabled={sending} style={{ cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? 0.75 : 1 }}>
               {sending ? (
-                'Sending...'
+                <>
+                  <i className="ti ti-loader-2" style={{ fontSize: "16px", animation: "spin 1s linear infinite" }}></i>
+                  Sending message...
+                </>
               ) : sent ? (
                 <>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>

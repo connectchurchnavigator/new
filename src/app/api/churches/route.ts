@@ -101,17 +101,25 @@ export async function POST(req: Request) {
     if ((!lat || !lng || (lat === 0.0001 && lng === 0.0001)) && (data.city || data.address)) {
       try {
         const query = [data.address, data.city, data.country].filter(Boolean).join(', ');
+        // 2.5s timeout on geocoding to never block the submission if OSM is sluggish
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+
         const geoRes = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
-          { headers: { 'User-Agent': 'ChurchNavigator/1.0' } }
+          { 
+            headers: { 'User-Agent': 'ChurchNavigator/1.0' },
+            signal: controller.signal
+          }
         );
+        clearTimeout(timeoutId);
         const geoData = await geoRes.json();
         if (geoData && geoData[0]) {
           lat = parseFloat(geoData[0].lat);
           lng = parseFloat(geoData[0].lon);
         }
       } catch (geoErr) {
-        console.warn('Geocoding fallback failed:', geoErr);
+        console.warn('Geocoding fallback failed or timed out:', geoErr);
       }
     }
 
@@ -148,7 +156,7 @@ export async function POST(req: Request) {
       .select().single();
     if (chErr) throw chErr;
 
-    // 4. Upload images (logo, cover, and gallery are data URLs or HTTP links)
+    // 4. Upload images concurrently in parallel (logo, cover, and gallery)
     const uploadBase64 = async (dataUrl: string, type: string) => {
       if (!dataUrl) return null;
       if (dataUrl.startsWith('http://') || dataUrl.startsWith('https://')) {
@@ -174,29 +182,28 @@ export async function POST(req: Request) {
       return pubData.publicUrl;
     };
 
-    let logoUrl = null;
-    let coverUrls: string[] = [];
-    let uploadedGallery: string[] = [];
+    // Prepare all upload tasks simultaneously
+    const logoPromise = data.logo ? uploadBase64(data.logo, 'logo') : Promise.resolve(null);
 
-    if (data.logo) logoUrl = await uploadBase64(data.logo, 'logo');
-    if (data.cover) {
-      const cUrl = await uploadBase64(data.cover, 'cover');
-      if (cUrl) coverUrls.push(cUrl);
-    }
+    const coverItems: string[] = [];
+    if (data.cover) coverItems.push(data.cover);
     if (data.coverBanners && Array.isArray(data.coverBanners)) {
-      for (const b64 of data.coverBanners) {
-        const cUrl = await uploadBase64(b64, 'cover');
-        if (cUrl) coverUrls.push(cUrl);
-      }
+      coverItems.push(...data.coverBanners);
     }
+    const coverPromises = coverItems.map(item => uploadBase64(item, 'cover'));
 
     const rawGallery = data.galleryImages || data.gallery || [];
-    if (Array.isArray(rawGallery) && rawGallery.length > 0) {
-      for (const item of rawGallery) {
-        const gUrl = await uploadBase64(item, 'gallery');
-        if (gUrl) uploadedGallery.push(gUrl);
-      }
-    }
+    const galleryPromises = (Array.isArray(rawGallery) ? rawGallery : []).map((item: string) => uploadBase64(item, 'gallery'));
+
+    // Await all media uploads in a single concurrent operation
+    const [logoUrl, uploadedCovers, uploadedGalleryRaw] = await Promise.all([
+      logoPromise,
+      Promise.all(coverPromises),
+      Promise.all(galleryPromises),
+    ]);
+
+    const coverUrls = (uploadedCovers || []).filter(Boolean) as string[];
+    const uploadedGallery = (uploadedGalleryRaw || []).filter(Boolean) as string[];
 
     const updates: any = {};
     if (logoUrl) updates.logo_url = logoUrl;

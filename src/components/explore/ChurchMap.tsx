@@ -4,12 +4,14 @@ import React, { useEffect, useRef } from "react";
 import type { Church } from "@/lib/types";
 
 interface ChurchMapProps {
-  churches: Church[];
+  churches: any[];
   selectedChurchId: string | null;
   hoveredChurchId: string | null;
-  onSelectChurch: (church: Church) => void;
+  onSelectChurch: (church: any) => void;
   center?: [number, number];
   zoom?: number;
+  userLocation?: { lat: number; lng: number } | null;
+  maxDistance?: number;
 }
 
 export default function ChurchMap({
@@ -19,6 +21,8 @@ export default function ChurchMap({
   onSelectChurch,
   center,
   zoom = 12,
+  userLocation,
+  maxDistance,
 }: ChurchMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -43,12 +47,13 @@ export default function ChurchMap({
         (c) => typeof c.latitude === "number" && typeof c.longitude === "number" && !isNaN(c.latitude) && !isNaN(c.longitude)
       );
 
-      const defaultLat = center ? center[0] : validChurch?.latitude ?? 51.5074;
-      const defaultLng = center ? center[1] : validChurch?.longitude ?? -0.1278;
+      const defaultLat = userLocation ? userLocation.lat : center ? center[0] : validChurch?.latitude ?? 51.5074;
+      const defaultLng = userLocation ? userLocation.lng : center ? center[1] : validChurch?.longitude ?? -0.1278;
+      const initialZoom = userLocation ? 13 : zoom;
 
       const map = L.map(mapContainerRef.current, {
         zoomControl: false,
-      }).setView([defaultLat, defaultLng], zoom);
+      }).setView([defaultLat, defaultLng], initialZoom);
 
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
@@ -150,7 +155,43 @@ export default function ChurchMap({
         bounds.push([church.latitude, church.longitude]);
       });
 
-      if (bounds.length > 0) {
+      // Render User Location Pulse Marker & Radius Circle if available
+      if (userLocation) {
+        const userIconHtml = `
+          <div style="position: relative; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+            <div style="position: absolute; width: 24px; height: 24px; border-radius: 50%; background: rgba(59, 130, 246, 0.4); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+            <div style="width: 14px; height: 14px; border-radius: 50%; background: #2563eb; border: 3px solid #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.35);"></div>
+          </div>
+        `;
+        const userIcon = L.divIcon({
+          className: "custom-user-location-pin",
+          html: userIconHtml,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
+        });
+        const userMarker = L.marker([userLocation.lat, userLocation.lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+        userMarker.bindPopup(`<div style="font-weight:700; font-size:12px; color:#1e3a8a; padding: 2px;">📍 You are here</div>`);
+        markersRef.current["__user_location__"] = userMarker;
+
+        // Visual radius circle matching maxDistance
+        if (typeof maxDistance === "number" && maxDistance > 0) {
+          const radiusCircle = L.circle([userLocation.lat, userLocation.lng], {
+            radius: maxDistance * 1000,
+            color: "#7c3aed",
+            fillColor: "#a855f7",
+            fillOpacity: 0.08,
+            weight: 1.5,
+            dashArray: "4, 6",
+          }).addTo(map);
+          markersRef.current["__radius_circle__"] = radiusCircle;
+
+          // Fit map to the exact radius boundary
+          const circleBounds = radiusCircle.getBounds();
+          map.fitBounds(circleBounds, { padding: [30, 30] });
+        } else {
+          map.setView([userLocation.lat, userLocation.lng], 13);
+        }
+      } else if (bounds.length > 0) {
         if (bounds.length === 1) {
           map.setView(bounds[0], 14);
         } else {
@@ -200,7 +241,7 @@ export default function ChurchMap({
         mapInstanceRef.current = null;
       }
     };
-  }, [churches]);
+  }, [churches, userLocation, maxDistance, center, zoom]);
 
   // Center on marker when selected
   useEffect(() => {

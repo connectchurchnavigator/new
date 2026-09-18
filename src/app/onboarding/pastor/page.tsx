@@ -108,6 +108,7 @@ export default function PastorOnboardingPage() {
   const [visited, setVisited] = useState<Set<number>>(new Set([1]));
   const [form, setForm] = useState<FormState>(initialState);
   const [submitting, setSubmitting] = useState(false);
+  const [currentPublishStep, setCurrentPublishStep] = useState(0);
   const [submitError, setSubmitError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [verified, setVerified] = useState<Record<string, boolean>>({});
@@ -311,6 +312,11 @@ export default function PastorOnboardingPage() {
   async function handleSubmit() {
     setSubmitting(true);
     setSubmitError('');
+    setCurrentPublishStep(0);
+
+    const stepInterval = setInterval(() => {
+      setCurrentPublishStep((prev) => (prev < 4 ? prev + 1 : prev));
+    }, 1100);
 
     const payload = {
       ...form,
@@ -328,6 +334,7 @@ export default function PastorOnboardingPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        clearInterval(stepInterval);
         if (data.issues?.fieldErrors) {
           const errors = Object.entries(data.issues.fieldErrors)
             .map(([field, msgs]: any) => `${field.replace('_', ' ')}: ${msgs.join(', ')}`)
@@ -337,8 +344,11 @@ export default function PastorOnboardingPage() {
         throw new Error(data.error || 'Something went wrong submitting your profile.');
       }
 
+      setCurrentPublishStep(4);
+      clearInterval(stepInterval);
       router.push(`/pastor/${data.slug}`);
     } catch (err) {
+      clearInterval(stepInterval);
       setSubmitError(err instanceof Error ? err.message : 'Something went wrong.');
       setSubmitting(false);
     }
@@ -1081,7 +1091,7 @@ export default function PastorOnboardingPage() {
         {/* Nav buttons */}
         <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "24px" }}>
           {step > 1 && (
-            <button onClick={() => goToStep(step - 1)} className="btn-secondary">
+            <button onClick={() => goToStep(step - 1)} className="btn-secondary" disabled={submitting}>
               <i className="ti ti-arrow-left" style={{ fontSize: "16px" }}></i> Back
             </button>
           )}
@@ -1090,11 +1100,65 @@ export default function PastorOnboardingPage() {
               Next <i className="ti ti-arrow-right" style={{ fontSize: "16px" }}></i>
             </button>
           ) : (
-            <button onClick={handleSubmit} disabled={submitting} className="btn-primary" style={{ opacity: submitting ? 0.7 : 1 }}>
-              {submitting ? 'Publishing…' : 'Publish profile'} <i className="ti ti-check" style={{ fontSize: "16px" }}></i>
+            <button onClick={handleSubmit} disabled={submitting} className="btn-primary" style={{ opacity: submitting ? 0.7 : 1, cursor: submitting ? "not-allowed" : "pointer" }}>
+              {submitting ? (
+                <>
+                  <i className="ti ti-loader-2" style={{ fontSize: "16px", animation: "spin 1s linear infinite" }}></i>
+                  Processing Profile…
+                </>
+              ) : (
+                <>
+                  Publish profile <i className="ti ti-check" style={{ fontSize: "16px" }}></i>
+                </>
+              )}
             </button>
           )}
         </div>
+
+        {/* Publishing Modal Overlay */}
+        {submitting && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 99999, background: "rgba(15,23,42,0.8)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+            <div style={{ background: "white", borderRadius: "24px", padding: "36px 32px", maxWidth: "480px", width: "100%", textAlign: "center", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.35)", animation: "slideUp 0.3s ease" }}>
+              
+              {/* Animated Header Icon */}
+              <div style={{ width: "64px", height: "64px", margin: "0 auto 20px", borderRadius: "50%", background: "linear-gradient(135deg, #7c3aed, #a855f7)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 25px -5px rgba(124,58,237,0.4)" }}>
+                <i className="ti ti-loader-2" style={{ fontSize: "30px", color: "#fff", animation: "spin 1.2s linear infinite" }}></i>
+              </div>
+
+              <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a", marginBottom: "6px" }}>Processing Your Pastor Profile...</h3>
+              <p style={{ fontSize: "13.5px", color: "#64748b", margin: "0 0 24px" }}>Please keep this page open. We are validating your information and setting up your public profile.</p>
+
+              {/* Step Checklist */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", textAlign: "left", background: "#f8fafc", padding: "18px", borderRadius: "16px", border: "1px solid #e2e8f0" }}>
+                {[
+                  { title: "Verifying credentials & contact info", icon: "ti-user-check" },
+                  { title: "Saving bio, ministry tags & languages", icon: "ti-heart-handshake" },
+                  { title: "Processing sermons, education & awards", icon: "ti-certificate" },
+                  { title: "Optimizing profile & gallery media", icon: "ti-photo" },
+                  { title: "Finalizing public pastor profile...", icon: "ti-sparkles" },
+                ].map((sItem, idx) => {
+                  const isDone = currentPublishStep > idx;
+                  const isCurrent = currentPublishStep === idx;
+                  return (
+                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "13px", fontWeight: isCurrent || isDone ? 700 : 500, color: isDone ? "#15803d" : isCurrent ? "#7c3aed" : "#94a3b8", transition: "all 0.3s" }}>
+                      <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: isDone ? "#dcfce7" : isCurrent ? "#f3e8ff" : "#f1f5f9", border: `1.5px solid ${isDone ? "#86efac" : isCurrent ? "#c084fc" : "#cbd5e1"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {isDone ? (
+                          <i className="ti ti-check" style={{ fontSize: "13px", color: "#16a34a" }}></i>
+                        ) : isCurrent ? (
+                          <i className="ti ti-loader-2" style={{ fontSize: "13px", color: "#7c3aed", animation: "spin 1s linear infinite" }}></i>
+                        ) : (
+                          <span style={{ fontSize: "11px", color: "#94a3b8" }}>{idx + 1}</span>
+                        )}
+                      </div>
+                      <span>{sItem.title}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

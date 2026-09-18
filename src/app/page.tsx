@@ -2,45 +2,67 @@ import React from "react";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase-admin";
 import TopNav from "@/components/layout/TopNav";
+import HomeChurchesSection from "@/components/home/HomeChurchesSection";
 import HomeSearchBar from "@/components/home/HomeSearchBar";
-
 import Image from "next/image";
+
+import { getFeaturedConfig } from "@/lib/featured";
 
 export const revalidate = 0; // Dynamic SSR
 
 export default async function Home() {
   const supabase = createAdminClient();
 
-  // 1. Fetch featured verified & published churches with services and branding
-  const { data: churches } = await supabase
+  // Load featured items selected from /admin
+  const featuredConfig = await getFeaturedConfig();
+
+  // 1. Fetch published churches with services and branding
+  const { data: rawChurches } = await supabase
     .from("churches")
     .select("id, slug, name, city, postcode, denomination, is_verified, cover_url, logo_url, created_at, address_line, church_services(*)")
     .eq("status", "published")
-    .order("created_at", { ascending: false })
-    .limit(6);
+    .order("created_at", { ascending: false });
 
-  // 2. Fetch featured pastors
-  const { data: pastors } = await supabase
+  // Filter churches: Show ONLY admin-featured churches if configured, else top verified/curated (max 6)
+  const allChurches = rawChurches || [];
+  const featuredChurches = featuredConfig.churchIds.length > 0
+    ? allChurches.filter((c) => featuredConfig.churchIds.includes(c.id))
+    : allChurches.filter((c) => c.is_verified).slice(0, 6);
+
+  // 2. Fetch pastors
+  const { data: rawPastors } = await supabase
     .from("pastors")
     .select("id, slug, full_name, title, avatar_url, cover_photo_urls, city, country, is_verified, years_in_ministry, church_name_cache, church:churches(name, slug)")
     .eq("is_published", true)
-    .order("is_verified", { ascending: false })
-    .limit(4);
+    .order("is_verified", { ascending: false });
 
-  // 3. Fetch featured worship leaders
-  const { data: worshipLeaders } = await supabase
+  const allPastors = rawPastors || [];
+  const pastors = featuredConfig.pastorIds.length > 0
+    ? allPastors.filter((p) => featuredConfig.pastorIds.includes(p.id))
+    : allPastors.filter((p) => p.is_verified).slice(0, 4);
+
+  // 3. Fetch worship leaders
+  const { data: rawWorshipLeaders } = await supabase
     .from("worship_leaders")
     .select("id, slug, display_name, full_name, stage_name, title, avatar_url, cover_photo_urls, city, country, is_verified, tagline, primary_church_name")
     .eq("is_published", true)
-    .order("is_verified", { ascending: false })
-    .limit(4);
+    .order("is_verified", { ascending: false });
+
+  const allWorshipLeaders = rawWorshipLeaders || [];
+  const worshipLeaders = featuredConfig.worshipLeaderIds.length > 0
+    ? allWorshipLeaders.filter((w) => featuredConfig.worshipLeaderIds.includes(w.id))
+    : allWorshipLeaders.slice(0, 4);
 
   // 4. Fetch upcoming events
-  const { data: events } = await supabase
+  const { data: rawEvents } = await supabase
     .from("events")
     .select("id, slug, title, type, venue_name, city, starts_at, ends_at, price_label, is_free, cover_url, host_church:churches(name, slug)")
-    .order("starts_at", { ascending: true })
-    .limit(4);
+    .order("starts_at", { ascending: true });
+
+  const allEvents = rawEvents || [];
+  const events = featuredConfig.eventIds.length > 0
+    ? allEvents.filter((e) => featuredConfig.eventIds.includes(e.id))
+    : allEvents.slice(0, 4);
 
   return (
     <div style={{ background: "#ffffff", minHeight: "100vh", color: "#0f172a", fontFamily: "inherit" }}>
@@ -137,157 +159,13 @@ export default async function Home() {
             Explore verified churches, connect with pastors and worship leaders, and attend upcoming gatherings & conferences.
           </p>
 
-          {/* Search Bar */}
+          {/* Hero Search Bar */}
           <HomeSearchBar />
         </div>
       </section>
 
-
-      {/* ── SECTION 1: CHURCHES ─────────────────────────────────────────────────── */}
-      <section id="churches-section" style={{ maxWidth: "1200px", margin: "0 auto", padding: "50px 24px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "28px" }}>
-          <div>
-            <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--cn-purple, #7c3aed)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "4px" }}>
-              Verified Communities
-            </div>
-            <h2 style={{ fontSize: "28px", fontWeight: 900, color: "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>
-              Churches
-            </h2>
-          </div>
-          <Link href="/explore" style={{ fontSize: "14px", fontWeight: 700, color: "#7c3aed", textDecoration: "none" }}>
-            View all on map &rarr;
-          </Link>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px" }}>
-          {(churches || []).map((church) => {
-            const coverImage = church.cover_url ? church.cover_url.split("|||")[0] : null;
-            const logoImage = church.logo_url ? church.logo_url.split("|||")[0] : null;
-
-            // Check if church has services scheduled today
-            const now = new Date();
-            const daysShort = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-            const currentDay = daysShort[now.getDay()];
-            const isOpenToday = Array.isArray(church.church_services) && church.church_services.some((srv: any) => {
-              if (!srv.day) return false;
-              const d = srv.day.toLowerCase().trim();
-              return d.startsWith(currentDay) || currentDay.startsWith(d);
-            });
-
-            return (
-              <Link
-                key={church.id}
-                href={`/church/${church.slug}`}
-                style={{
-                  background: "#ffffff",
-                  borderRadius: "20px",
-                  overflow: "hidden",
-                  border: "1.5px solid #e2e8f0",
-                  textDecoration: "none",
-                  color: "inherit",
-                  transition: "all 0.2s",
-                  display: "flex",
-                  flexDirection: "column",
-                  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.04)",
-                  position: "relative",
-                }}
-              >
-                {/* 1. Cover Photo */}
-                <div style={{
-                  height: "150px",
-                  background: coverImage ? `url('${coverImage}') center/cover` : "linear-gradient(135deg, #7c3aed, #ec4899)",
-                  position: "relative",
-                }}>
-                  {/* Top Right: Open Now / Closed Now Badge */}
-                  <span style={{
-                    position: "absolute",
-                    top: "12px",
-                    right: "12px",
-                    background: isOpenToday ? "rgba(22, 163, 74, 0.95)" : "rgba(15, 23, 42, 0.85)",
-                    color: "#ffffff",
-                    fontSize: "11px",
-                    fontWeight: 800,
-                    padding: "4px 10px",
-                    borderRadius: "12px",
-                    backdropFilter: "blur(6px)",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "5px",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                  }}>
-                    <span style={{
-                      width: "6px",
-                      height: "6px",
-                      borderRadius: "50%",
-                      background: isOpenToday ? "#4ade80" : "#94a3b8",
-                    }} />
-                    {isOpenToday ? "Open Now" : "Closed Now"}
-                  </span>
-                </div>
-
-                {/* 2. Content Info with DP / Logo */}
-                <div style={{ padding: "0 18px 18px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", position: "relative" }}>
-                  
-                  {/* Church DP / Avatar (Overlapping Cover) */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "-26px", marginBottom: "10px" }}>
-                    <div style={{
-                      width: "52px",
-                      height: "52px",
-                      borderRadius: "14px",
-                      background: logoImage ? `url('${logoImage}') center/cover` : "linear-gradient(135deg, #7c3aed, #6366f1)",
-                      border: "3px solid #ffffff",
-                      boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#ffffff",
-                      fontWeight: 900,
-                      fontSize: "18px",
-                      overflow: "hidden",
-                    }}>
-                      {!logoImage && (church.name ? church.name.slice(0, 2).toUpperCase() : "CH")}
-                    </div>
-
-                    {church.is_verified && (
-                      <span style={{ fontSize: "11px", fontWeight: 800, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "2px 8px", borderRadius: "8px" }}>
-                        ✓ Verified
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Church Name */}
-                  <div style={{ marginBottom: "12px" }}>
-                    <h3 style={{ fontSize: "17.5px", fontWeight: 900, color: "#0f172a", margin: "0 0 5px 0", lineHeight: 1.3 }}>
-                      {church.name}
-                    </h3>
-                    
-                    {/* Location */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "13px", color: "#64748b" }}>
-                      <i className="ti ti-map-pin" style={{ color: "#e11d48", fontSize: "15px" }}></i>
-                      <span>{church.city || church.address_line || "Location registered"}</span>
-                      {church.postcode && <span style={{ color: "#94a3b8", fontSize: "12px" }}>({church.postcode})</span>}
-                    </div>
-                  </div>
-
-                  {/* Footer Row: Denomination & Profile link */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "12px", borderTop: "1px solid #f1f5f9" }}>
-                    {church.denomination ? (
-                      <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#475569", background: "#f1f5f9", padding: "3px 9px", borderRadius: "8px" }}>
-                        {church.denomination.split("|||")[0]}
-                      </span>
-                    ) : <span />}
-                    
-                    <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#7c3aed" }}>
-                      Profile &rarr;
-                    </span>
-                  </div>
-
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
+      {/* ── SECTION 1: CHURCHES DIRECTORY (Live Search & Filter Component) ── */}
+      <HomeChurchesSection initialChurches={featuredChurches || []} />
 
 
       {/* ── SECTION 2: PASTORS & LEADERS ───────────────────────────────────────── */}

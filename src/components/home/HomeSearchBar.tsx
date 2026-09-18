@@ -3,14 +3,38 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function HomeSearchBar() {
+interface HomeSearchBarProps {
+  keyword?: string;
+  setKeyword?: (val: string) => void;
+  city?: string;
+  setCity?: (val: string) => void;
+  denomination?: string;
+  setDenomination?: (val: string) => void;
+  onSearch?: () => void;
+}
+
+export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
   const router = useRouter();
-  const [keyword, setKeyword] = useState("");
-  const [city, setCity] = useState("");
-  const [denomination, setDenomination] = useState("all");
+  const [internalKeyword, setInternalKeyword] = useState("");
+  const [internalCity, setInternalCity] = useState("");
+  const [internalDenom, setInternalDenom] = useState("all");
+  const [isSearching, setIsSearching] = useState(false);
+
+  const keyword = props.keyword !== undefined ? props.keyword : internalKeyword;
+  const setKeyword = props.setKeyword || setInternalKeyword;
+
+  const city = props.city !== undefined ? props.city : internalCity;
+  const setCity = props.setCity || setInternalCity;
+
+  const denomination = props.denomination !== undefined ? props.denomination : internalDenom;
+  const setDenomination = props.setDenomination || setInternalDenom;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    if (props.onSearch) {
+      props.onSearch();
+    }
+    setIsSearching(true);
     const params = new URLSearchParams();
     if (keyword.trim()) params.set("q", keyword.trim());
     if (city.trim()) params.set("city", city.trim());
@@ -111,6 +135,7 @@ export default function HomeSearchBar() {
       {/* Submit Button */}
       <button
         type="submit"
+        disabled={isSearching}
         style={{
           background: "linear-gradient(135deg, #e11d48 0%, #7c3aed 100%)",
           color: "#ffffff",
@@ -119,18 +144,105 @@ export default function HomeSearchBar() {
           padding: "12px 26px",
           fontSize: "14.5px",
           fontWeight: 800,
-          cursor: "pointer",
+          cursor: isSearching ? "not-allowed" : "pointer",
           display: "inline-flex",
           alignItems: "center",
           gap: "8px",
           transition: "all 0.2s",
           boxShadow: "0 4px 14px rgba(124, 58, 237, 0.3)",
           whiteSpace: "nowrap",
+          opacity: isSearching ? 0.85 : 1,
         }}
       >
-        <i className="ti ti-map-2" style={{ fontSize: "17px" }}></i>
-        Find on Map
+        {isSearching ? (
+          <>
+            <i className="ti ti-loader-2" style={{ fontSize: "17px", animation: "spin 1s linear infinite" }}></i>
+            Opening Map...
+          </>
+        ) : (
+          <>
+            <i className="ti ti-map-2" style={{ fontSize: "17px" }}></i>
+            Find on Map
+          </>
+        )}
       </button>
+
+      {/* Immediate Full-Screen Search Transition Overlay */}
+      {isSearching && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 999999,
+            background: "rgba(13, 6, 34, 0.85)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            animation: "slideUp 0.25s ease",
+          }}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "24px",
+              padding: "36px 32px",
+              maxWidth: "420px",
+              width: "100%",
+              textAlign: "center",
+              boxShadow: "0 25px 60px -15px rgba(0,0,0,0.5)",
+              border: "1px solid #ede9fe",
+            }}
+          >
+            {/* Animated Pin and Ripple */}
+            <div
+              style={{
+                width: "68px",
+                height: "68px",
+                margin: "0 auto 20px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #f43f5e, #7c3aed)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 10px 25px -5px rgba(124, 58, 237, 0.45)",
+                position: "relative",
+              }}
+            >
+              <i className="ti ti-map-2" style={{ fontSize: "32px", color: "#ffffff" }}></i>
+            </div>
+
+            <h3 style={{ fontSize: "20px", fontWeight: 900, color: "#0f172a", marginBottom: "8px" }}>
+              Locating Churches On Map...
+            </h3>
+            <p style={{ fontSize: "13.5px", color: "#64748b", margin: "0 0 20px", lineHeight: 1.5 }}>
+              {city.trim() || keyword.trim()
+                ? `Searching ${[keyword.trim(), city.trim()].filter(Boolean).join(" in ")} across interactive map & directory.`
+                : "Loading interactive map, verified churches, and active service times..."}
+            </p>
+
+            {/* Spinner Pill */}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "#f5f3ff",
+                border: "1px solid #ddd6fe",
+                padding: "8px 18px",
+                borderRadius: "30px",
+                color: "#7c3aed",
+                fontSize: "13px",
+                fontWeight: 700,
+              }}
+            >
+              <i className="ti ti-loader-2" style={{ fontSize: "16px", animation: "spin 1s linear infinite" }}></i>
+              <span>Opening Map View...</span>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

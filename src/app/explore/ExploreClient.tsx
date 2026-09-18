@@ -3,13 +3,67 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import type { Church, ChurchService } from "@/lib/types";
+import dynamic from "next/dynamic";
 import TopNav from "@/components/layout/TopNav";
-import ChurchMap from "@/components/explore/ChurchMap";
 
-interface ExploreChurch extends Church {
-  church_services?: ChurchService[];
+const ChurchMap = dynamic(() => import("@/components/explore/ChurchMap"), {
+  ssr: false,
+  loading: () => (
+    <div style={{
+      width: "100%",
+      height: "100%",
+      minHeight: "100%",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "#eef2f6",
+      gap: "12px",
+      padding: "20px",
+      textAlign: "center"
+    }}>
+      <div style={{
+        width: "48px",
+        height: "48px",
+        borderRadius: "50%",
+        background: "linear-gradient(135deg, #7c3aed, #e11d48)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 8px 18px rgba(124, 58, 237, 0.25)"
+      }}>
+        <i className="ti ti-map-pin" style={{ color: "#fff", fontSize: "22px" }}></i>
+      </div>
+      <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b" }}>Loading Interactive Map...</div>
+      <div style={{ fontSize: "12px", color: "#64748b" }}>You can already browse, search and filter the churches on the left.</div>
+    </div>
+  ),
+});
+
+export type ExploreChurch = Partial<Church> & {
+  id: string;
+  slug: string;
+  name: string;
+  city?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  cover_url?: string | null;
+  logo_url?: string | null;
+  denomination?: string | null;
+  is_verified?: boolean;
+  created_at?: string;
+  address_line?: string | null;
+  formatted_address?: string | null;
+  postcode?: string | null;
+  country?: string | null;
+  about?: string | null;
+  languages?: string[] | null;
+  worship_style?: string | string[] | null;
+  worship_styles?: string | string[] | null;
+  ministries?: string[] | null;
+  church_services?: any[];
   distance?: number | null;
-}
+};
 
 interface ExploreClientProps {
   initialChurches: ExploreChurch[];
@@ -21,12 +75,18 @@ interface ExploreClientProps {
   initialDenom?: string;
 }
 
+interface FilterOptionItem {
+  label: string;
+  count?: number;
+}
+
 interface MultiSelectSearchFilterProps {
   label: string;
   placeholder?: string;
-  options: string[];
+  options: (string | FilterOptionItem)[];
   selected: string[];
   onChange: (selected: string[]) => void;
+  openOnlyOnSearch?: boolean;
 }
 
 function MultiSelectSearchFilter({
@@ -35,10 +95,21 @@ function MultiSelectSearchFilter({
   options,
   selected,
   onChange,
+  openOnlyOnSearch = false,
 }: MultiSelectSearchFilterProps) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Normalize options to { label, count }
+  const normalizedOptions: FilterOptionItem[] = useMemo(() => {
+    return options.map((opt) => {
+      if (typeof opt === "string") {
+        return { label: opt, count: undefined };
+      }
+      return opt;
+    });
+  }, [options]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -53,32 +124,28 @@ function MultiSelectSearchFilter({
 
   const filteredOptions = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return options;
-    return options.filter((opt) => opt.toLowerCase().includes(q));
-  }, [options, query]);
+    if (!q) return normalizedOptions;
+    return normalizedOptions.filter((opt) => opt.label.toLowerCase().includes(q));
+  }, [normalizedOptions, query]);
 
-  const toggleOption = (opt: string) => {
-    const exists = selected.some((s) => s.toLowerCase() === opt.toLowerCase());
+  const toggleOption = (optLabel: string) => {
+    const exists = selected.some((s) => s.toLowerCase() === optLabel.toLowerCase());
     if (exists) {
-      onChange(selected.filter((s) => s.toLowerCase() !== opt.toLowerCase()));
+      onChange(selected.filter((s) => s.toLowerCase() !== optLabel.toLowerCase()));
     } else {
-      onChange([...selected, opt]);
+      onChange([...selected, optLabel]);
     }
   };
 
-  const removeOption = (opt: string) => {
-    onChange(selected.filter((s) => s.toLowerCase() !== opt.toLowerCase()));
+  const removeOption = (optLabel: string) => {
+    onChange(selected.filter((s) => s.toLowerCase() !== optLabel.toLowerCase()));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
       if (filteredOptions.length > 0) {
-        toggleOption(filteredOptions[0]);
-        setQuery("");
-        setIsOpen(false);
-      } else if (query.trim()) {
-        toggleOption(query.trim());
+        toggleOption(filteredOptions[0].label);
         setQuery("");
         setIsOpen(false);
       }
@@ -88,7 +155,7 @@ function MultiSelectSearchFilter({
   };
 
   return (
-    <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }} ref={containerRef}>
+    <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
       {/* Label and Clear action */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
         <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#64748b", letterSpacing: "0.05em" }}>
@@ -152,158 +219,167 @@ function MultiSelectSearchFilter({
         </div>
       )}
 
-      {/* Input box with inline search */}
-      <div style={{ position: "relative" }}>
-        <i
-          className="ti ti-search"
-          style={{
-            position: "absolute",
-            left: "10px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            color: "#94a3b8",
-            fontSize: "14px",
-            pointerEvents: "none",
-          }}
-        ></i>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            if (!isOpen) setIsOpen(true);
-          }}
-          onFocus={() => setIsOpen(true)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder || `Search & select ${label.toLowerCase()}...`}
-          style={{
-            width: "100%",
-            height: "36px",
-            paddingLeft: "32px",
-            paddingRight: query ? "28px" : "10px",
-            borderRadius: "8px",
-            border: isOpen ? "1.5px solid #7c3aed" : "1.5px solid #e2e8f0",
-            background: isOpen ? "#ffffff" : "#f8fafc",
-            fontSize: "12.5px",
-            color: "#1e293b",
-            outline: "none",
-            transition: "all 0.15s ease",
-          }}
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={() => setQuery("")}
+      {/* Input box with search icon and dropdown toggle */}
+      <div style={{ position: "relative" }} ref={containerRef}>
+          <i
+            className="ti ti-search"
             style={{
               position: "absolute",
-              right: "8px",
+              left: "10px",
               top: "50%",
               transform: "translateY(-50%)",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
               color: "#94a3b8",
-              fontSize: "13px",
-              padding: "2px",
+              fontSize: "14px",
+              pointerEvents: "none",
             }}
-          >
-            ✕
-          </button>
-        )}
-
-        {/* Dropdown Suggestions List */}
-        {isOpen && (
-          <div
+          ></i>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              if (!isOpen) setIsOpen(true);
+            }}
+            onFocus={() => setIsOpen(true)}
+            onClick={() => setIsOpen(true)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder || `Select ${label.toLowerCase()}...`}
             style={{
-              position: "absolute",
-              top: "calc(100% + 4px)",
-              left: 0,
-              right: 0,
-              maxHeight: "220px",
-              overflowY: "auto",
-              background: "#ffffff",
-              border: "1px solid #e2e8f0",
-              borderRadius: "10px",
-              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)",
-              zIndex: 100,
-              padding: "4px",
+              width: "100%",
+              height: "36px",
+              paddingLeft: "32px",
+              paddingRight: "52px",
+              borderRadius: "8px",
+              border: isOpen ? "1.5px solid #7c3aed" : "1.5px solid #e2e8f0",
+              background: isOpen ? "#ffffff" : "#f8fafc",
+              fontSize: "12.5px",
+              color: "#1e293b",
+              outline: "none",
+              transition: "all 0.15s ease",
             }}
-          >
-            {filteredOptions.length === 0 ? (
-              <div>
-                <div style={{ padding: "8px 10px", fontSize: "12px", color: "#64748b" }}>
-                  No preset match for "{query}"
-                </div>
-                {query.trim() && (
-                  <div
-                    onClick={() => {
-                      toggleOption(query.trim());
-                      setQuery("");
-                      setIsOpen(false);
-                    }}
-                    style={{
-                      padding: "8px 10px",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      color: "#7c3aed",
-                      cursor: "pointer",
-                      borderRadius: "6px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      background: "#faf5ff",
-                    }}
-                  >
-                    <i className="ti ti-plus" style={{ fontSize: "13px" }}></i>
-                    Add "{query.trim()}"
-                  </div>
-                )}
-              </div>
-            ) : (
-              filteredOptions.map((opt) => {
-                const isSelected = selected.some((s) => s.toLowerCase() === opt.toLowerCase());
-                return (
-                  <div
-                    key={opt}
-                    onClick={() => {
-                      toggleOption(opt);
-                      setQuery("");
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "7px 10px",
-                      borderRadius: "6px",
-                      fontSize: "12.5px",
-                      cursor: "pointer",
-                      background: isSelected ? "#f5f3ff" : "transparent",
-                      color: isSelected ? "#7c3aed" : "#334155",
-                      fontWeight: isSelected ? 700 : 500,
-                      transition: "background 0.1s",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected) e.currentTarget.style.background = "#f1f5f9";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) e.currentTarget.style.background = "transparent";
-                    }}
-                  >
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {opt}
-                    </span>
-                    {isSelected ? (
-                      <i className="ti ti-check" style={{ fontSize: "14px", color: "#7c3aed" }}></i>
-                    ) : (
-                      <span style={{ fontSize: "11px", color: "#94a3b8" }}>+</span>
-                    )}
-                  </div>
-                );
-              })
+          />
+
+          <div style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: "2px" }}>
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#94a3b8",
+                  fontSize: "13px",
+                  padding: "2px",
+                }}
+              >
+                ✕
+              </button>
             )}
+            <button
+              type="button"
+              onClick={() => setIsOpen(!isOpen)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#64748b",
+                padding: "2px",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <i
+                className="ti ti-chevron-down"
+                style={{
+                  fontSize: "13px",
+                  transition: "transform 0.2s",
+                  transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                }}
+              ></i>
+            </button>
           </div>
-        )}
-      </div>
+
+          {/* Dropdown List of All Items (Filtered as you search) */}
+          {isOpen && (!openOnlyOnSearch || query.trim().length > 0) && (
+            <div
+              style={{
+                position: "absolute",
+                top: "calc(100% + 4px)",
+                left: 0,
+                right: 0,
+                maxHeight: "220px",
+                overflowY: "auto",
+                background: "#ffffff",
+                border: "1.5px solid #e2e8f0",
+                borderRadius: "10px",
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.05)",
+                zIndex: 100,
+                padding: "4px",
+              }}
+            >
+              {filteredOptions.length === 0 ? (
+                <div style={{ padding: "10px 12px", fontSize: "12px", color: "#64748b", textAlign: "center" }}>
+                  No matching {label.toLowerCase()} found
+                </div>
+              ) : (
+                filteredOptions.map((opt) => {
+                  const isSelected = selected.some((s) => s.toLowerCase() === opt.label.toLowerCase());
+                  return (
+                    <div
+                      key={opt.label}
+                      onClick={() => {
+                        toggleOption(opt.label);
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 10px",
+                        borderRadius: "6px",
+                        fontSize: "12.5px",
+                        cursor: "pointer",
+                        background: isSelected ? "#f5f3ff" : "transparent",
+                        color: isSelected ? "#7c3aed" : "#334155",
+                        fontWeight: isSelected ? 700 : 500,
+                        transition: "background 0.1s",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) e.currentTarget.style.background = "#f8fafc";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) e.currentTarget.style.background = "transparent";
+                      }}
+                    >
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span>{opt.label}</span>
+                        {typeof opt.count === "number" && (
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              color: isSelected ? "#7c3aed" : "#64748b",
+                              background: isSelected ? "#ede9fe" : "#f1f5f9",
+                              padding: "1px 6px",
+                              borderRadius: "10px",
+                            }}
+                          >
+                            {opt.count}
+                          </span>
+                        )}
+                      </span>
+                      {isSelected ? (
+                        <i className="ti ti-check" style={{ fontSize: "14px", color: "#7c3aed", flexShrink: 0 }}></i>
+                      ) : (
+                        <span style={{ fontSize: "12px", color: "#cbd5e1", flexShrink: 0 }}>+</span>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
     </div>
   );
 }
@@ -319,8 +395,91 @@ export default function ExploreClient({
 }: ExploreClientProps) {
   const [exploreType, setExploreType] = useState<"churches" | "pastors" | "events" | "worship_leaders">("churches");
   const [cardVersion, setCardVersion] = useState<"v0" | "v1" | "v2" | "v3" | "v4">("v0");
+
+  // Lazy-loaded data state with in-memory cache
+  const [pastorsData, setPastorsData] = useState<any[]>(initialPastors);
+  const [eventsData, setEventsData] = useState<any[]>(initialEvents);
+  const [worshipLeadersData, setWorshipLeadersData] = useState<any[]>(initialWorshipLeaders);
+
+  const [isLoadingPastors, setIsLoadingPastors] = useState<boolean>(false);
+  const [isLoadingEvents, setIsLoadingEvents] = useState<boolean>(false);
+  const [isLoadingWorshipLeaders, setIsLoadingWorshipLeaders] = useState<boolean>(false);
+
+  // Fetch pastors on demand if not loaded yet
+  const fetchPastorsIfNeeded = async () => {
+    if (pastorsData.length > 0 || isLoadingPastors) return;
+    setIsLoadingPastors(true);
+    try {
+      const res = await fetch("/api/explore/pastors");
+      if (res.ok) {
+        const data = await res.json();
+        setPastorsData(data);
+      }
+    } catch (err) {
+      console.error("Failed to load pastors:", err);
+    } finally {
+      setIsLoadingPastors(false);
+    }
+  };
+
+  // Fetch events on demand if not loaded yet
+  const fetchEventsIfNeeded = async () => {
+    if (eventsData.length > 0 || isLoadingEvents) return;
+    setIsLoadingEvents(true);
+    try {
+      const res = await fetch("/api/explore/events");
+      if (res.ok) {
+        const data = await res.json();
+        setEventsData(data);
+      }
+    } catch (err) {
+      console.error("Failed to load events:", err);
+    } finally {
+      setIsLoadingEvents(false);
+    }
+  };
+
+  // Fetch worship leaders on demand if not loaded yet
+  const fetchWorshipLeadersIfNeeded = async () => {
+    if (worshipLeadersData.length > 0 || isLoadingWorshipLeaders) return;
+    setIsLoadingWorshipLeaders(true);
+    try {
+      const res = await fetch("/api/explore/worship-leaders");
+      if (res.ok) {
+        const data = await res.json();
+        setWorshipLeadersData(data);
+      }
+    } catch (err) {
+      console.error("Failed to load worship leaders:", err);
+    } finally {
+      setIsLoadingWorshipLeaders(false);
+    }
+  };
+
+  // Trigger on-demand fetching when user switches tab
+  useEffect(() => {
+    if (exploreType === "pastors") {
+      fetchPastorsIfNeeded();
+    } else if (exploreType === "events") {
+      fetchEventsIfNeeded();
+    } else if (exploreType === "worship_leaders") {
+      fetchWorshipLeadersIfNeeded();
+    }
+  }, [exploreType]);
+
+  // Optional background pre-fetch: after 2.5s when initial church page has rendered, quietly load the rest
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchPastorsIfNeeded();
+      fetchEventsIfNeeded();
+      fetchWorshipLeadersIfNeeded();
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Search & Filters State
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+  const [isTypingSearch, setIsTypingSearch] = useState(false);
   const [openingStatus, setOpeningStatus] = useState<"all" | "open_now" | "custom">("all");
   const [customDay, setCustomDay] = useState<string>("Sun");
   const [customTime, setCustomTime] = useState<string>("all");
@@ -353,188 +512,280 @@ export default function ExploreClient({
   const [selectedChurchId, setSelectedChurchId] = useState<string | null>(null);
   const [hoveredChurchId, setHoveredChurchId] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [maxDistance, setMaxDistance] = useState<number>(30); // in kilometers
   const [isLocating, setIsLocating] = useState(false);
 
-  // Extract distinct filter values (without "all" prefix since multi-select allows empty selection)
+  // Extract distinct filter values with counts (sorted by count desc, then name asc)
   const denominations = useMemo(() => {
-    const list = initialChurches
-      .map((c) => c.denomination?.split("|||")[0].trim())
-      .filter(Boolean) as string[];
-    return Array.from(new Set(list)).sort();
+    const counts: Record<string, number> = {};
+    initialChurches.forEach((c) => {
+      const d = c.denomination?.split("|||")[0].trim();
+      if (d) counts[d] = (counts[d] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
   }, [initialChurches]);
 
   const languages = useMemo(() => {
-    const list: string[] = [];
+    const counts: Record<string, number> = {};
     initialChurches.forEach((c) => {
       if (Array.isArray(c.languages)) {
-        c.languages.forEach((l) => { if (l) list.push(l.trim()); });
+        c.languages.forEach((l) => {
+          const lang = l?.trim();
+          if (lang) counts[lang] = (counts[lang] || 0) + 1;
+        });
       }
     });
-    return Array.from(new Set(list)).sort();
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
   }, [initialChurches]);
 
   const worshipStyles = useMemo(() => {
-    const list: string[] = [];
+    const counts: Record<string, number> = {};
     initialChurches.forEach((c) => {
       const styles = c.worship_style || c.worship_styles;
       if (Array.isArray(styles)) {
-        styles.forEach((s) => { if (s) list.push(s.trim()); });
+        styles.forEach((s) => {
+          const str = s?.trim();
+          if (str) counts[str] = (counts[str] || 0) + 1;
+        });
       } else if (typeof styles === "string") {
-        styles.split(",").forEach((s) => { if (s) list.push(s.trim()); });
+        styles.split(",").forEach((s) => {
+          const str = s?.trim();
+          if (str) counts[str] = (counts[str] || 0) + 1;
+        });
       }
     });
-    return Array.from(new Set(list)).sort();
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
   }, [initialChurches]);
 
   const ministries = useMemo(() => {
-    const list: string[] = [];
+    const counts: Record<string, number> = {};
     initialChurches.forEach((c) => {
       if (Array.isArray(c.ministries)) {
-        c.ministries.forEach((m) => { if (m) list.push(m.trim()); });
+        c.ministries.forEach((m) => {
+          const ministry = m?.trim();
+          if (ministry) counts[ministry] = (counts[ministry] || 0) + 1;
+        });
       }
     });
-    return Array.from(new Set(list)).sort();
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
   }, [initialChurches]);
 
   const cities = useMemo(() => {
-    let rawList: (string | null | undefined)[] = [];
+    const counts: Record<string, number> = {};
+    const addCity = (city: string | null | undefined) => {
+      const c = city?.trim();
+      if (c) counts[c] = (counts[c] || 0) + 1;
+    };
+
     if (exploreType === "churches") {
-      rawList = initialChurches.map((c) => c.city);
+      initialChurches.forEach((c) => addCity(c.city));
     } else if (exploreType === "pastors") {
-      rawList = initialPastors.flatMap((p) => [p.city, p.church?.city]);
+      pastorsData.forEach((p) => {
+        const c = p.city?.trim() || p.church?.city?.trim();
+        if (c) counts[c] = (counts[c] || 0) + 1;
+      });
     } else if (exploreType === "events") {
-      rawList = initialEvents.map((e) => e.city);
+      eventsData.forEach((e) => addCity(e.city));
     } else if (exploreType === "worship_leaders") {
-      rawList = initialWorshipLeaders.map((w) => w.city);
+      worshipLeadersData.forEach((w) => addCity(w.city));
     }
-    const list = rawList.map((c) => c?.trim()).filter(Boolean) as string[];
-    return Array.from(new Set(list)).sort();
-  }, [initialChurches, initialPastors, initialEvents, initialWorshipLeaders, exploreType]);
+
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  }, [initialChurches, pastorsData, eventsData, worshipLeadersData, exploreType]);
 
   // Event filter lists
   const eventTypes = useMemo(() => {
-    const list = initialEvents.map((e) => e.type?.trim()).filter(Boolean) as string[];
-    return Array.from(new Set(list)).sort();
-  }, [initialEvents]);
+    const counts: Record<string, number> = {};
+    eventsData.forEach((e) => {
+      const t = e.type?.trim();
+      if (t) counts[t] = (counts[t] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  }, [eventsData]);
 
   // Pastor filter lists (Name, City [from cities], Denomination, Ministries, Education, Languages)
   const pastorNames = useMemo(() => {
-    const list = initialPastors
-      .map((p) => p.full_name?.trim())
-      .filter(Boolean) as string[];
-    return Array.from(new Set(list)).sort();
-  }, [initialPastors]);
+    const counts: Record<string, number> = {};
+    pastorsData.forEach((p) => {
+      const name = p.full_name?.trim();
+      if (name) counts[name] = (counts[name] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  }, [pastorsData]);
 
   const pastorDenominations = useMemo(() => {
-    const list: string[] = [];
-    initialPastors.forEach((p) => {
+    const counts: Record<string, number> = {};
+    pastorsData.forEach((p) => {
       const denom = p.church?.denomination || p.denomination;
       if (denom) {
-        list.push(denom.split("|||")[0].trim());
+        const d = denom.split("|||")[0].trim();
+        if (d) counts[d] = (counts[d] || 0) + 1;
       }
     });
-    // Also merge church denominations so pastors can be matched against known denominations
-    denominations.forEach((d) => list.push(d));
-    return Array.from(new Set(list.filter(Boolean))).sort();
-  }, [initialPastors, denominations]);
+    // Ensure all known denominations appear, even if 0 pastors
+    denominations.forEach((d) => {
+      if (!counts[d.label]) {
+        counts[d.label] = 0;
+      }
+    });
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  }, [pastorsData, denominations]);
 
   const pastorMinistries = useMemo(() => {
-    const list: string[] = [];
-    initialPastors.forEach((p) => {
-      // Tags in ministry_area or general tags
+    const counts: Record<string, number> = {};
+    pastorsData.forEach((p) => {
+      const seenForPastor = new Set<string>();
       if (Array.isArray(p.tags)) {
         p.tags.forEach((t: any) => {
-          if (t?.label) list.push(t.label.trim());
+          if (t?.label) seenForPastor.add(t.label.trim());
         });
       }
-      // Also check associated church ministries
       if (Array.isArray(p.church?.ministries)) {
         p.church.ministries.forEach((m: string) => {
-          if (m) list.push(m.trim());
+          if (m) seenForPastor.add(m.trim());
         });
       }
+      seenForPastor.forEach((m) => {
+        counts[m] = (counts[m] || 0) + 1;
+      });
     });
-    // Merge known ministries
-    ministries.forEach((m) => list.push(m));
-    return Array.from(new Set(list.filter(Boolean))).sort();
-  }, [initialPastors, ministries]);
+    ministries.forEach((m) => {
+      if (!counts[m.label]) {
+        counts[m.label] = 0;
+      }
+    });
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  }, [pastorsData, ministries]);
 
   const pastorEducations = useMemo(() => {
-    const list: string[] = [];
-    initialPastors.forEach((p) => {
+    const counts: Record<string, number> = {};
+    pastorsData.forEach((p) => {
+      const seenForPastor = new Set<string>();
       if (Array.isArray(p.education)) {
         p.education.forEach((edu: any) => {
-          if (edu?.degree) list.push(edu.degree.trim());
-          if (edu?.institution) list.push(edu.institution.trim());
+          if (edu?.degree) seenForPastor.add(edu.degree.trim());
+          if (edu?.institution) seenForPastor.add(edu.institution.trim());
         });
       }
+      seenForPastor.forEach((edu) => {
+        counts[edu] = (counts[edu] || 0) + 1;
+      });
     });
-    return Array.from(new Set(list.filter(Boolean))).sort();
-  }, [initialPastors]);
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  }, [pastorsData]);
 
   const pastorLanguages = useMemo(() => {
-    const list: string[] = [];
-    initialPastors.forEach((p) => {
+    const counts: Record<string, number> = {};
+    pastorsData.forEach((p) => {
+      const seenForPastor = new Set<string>();
       if (Array.isArray(p.languages)) {
         p.languages.forEach((l: any) => {
           const lang = typeof l === "string" ? l : l?.language;
-          if (lang) list.push(lang.trim());
+          if (lang) seenForPastor.add(lang.trim());
         });
       }
+      seenForPastor.forEach((lang) => {
+        counts[lang] = (counts[lang] || 0) + 1;
+      });
     });
-    // Merge church languages for convenience
-    languages.forEach((l) => list.push(l));
-    return Array.from(new Set(list.filter(Boolean))).sort();
-  }, [initialPastors, languages]);
+    languages.forEach((l) => {
+      if (!counts[l.label]) {
+        counts[l.label] = 0;
+      }
+    });
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  }, [pastorsData, languages]);
 
   // Worship Leader filter lists
   const wlStyles = useMemo(() => {
-    const list: string[] = [];
-    initialWorshipLeaders.forEach((w) => {
+    const counts: Record<string, number> = {};
+    worshipLeadersData.forEach((w) => {
       if (Array.isArray(w.tags)) {
         w.tags.forEach((t: any) => {
-          if (t?.category === "style" && t?.label) list.push(t.label.trim());
+          if (t?.category === "style" && t?.label) {
+            const val = t.label.trim();
+            counts[val] = (counts[val] || 0) + 1;
+          }
         });
       }
     });
-    return Array.from(new Set(list)).sort();
-  }, [initialWorshipLeaders]);
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  }, [worshipLeadersData]);
 
   const wlInstruments = useMemo(() => {
-    const list: string[] = [];
-    initialWorshipLeaders.forEach((w) => {
+    const counts: Record<string, number> = {};
+    worshipLeadersData.forEach((w) => {
       if (Array.isArray(w.tags)) {
         w.tags.forEach((t: any) => {
-          if (t?.category === "instrument" && t?.label) list.push(t.label.trim());
+          if (t?.category === "instrument" && t?.label) {
+            const val = t.label.trim();
+            counts[val] = (counts[val] || 0) + 1;
+          }
         });
       }
     });
-    return Array.from(new Set(list)).sort();
-  }, [initialWorshipLeaders]);
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  }, [worshipLeadersData]);
 
   const wlLanguages = useMemo(() => {
-    const list: string[] = [];
-    initialWorshipLeaders.forEach((w) => {
+    const counts: Record<string, number> = {};
+    worshipLeadersData.forEach((w) => {
       if (Array.isArray(w.tags)) {
         w.tags.forEach((t: any) => {
-          if (t?.category === "language" && t?.label) list.push(t.label.trim());
+          if (t?.category === "language" && t?.label) {
+            const val = t.label.trim();
+            counts[val] = (counts[val] || 0) + 1;
+          }
         });
       }
     });
-    return Array.from(new Set(list)).sort();
-  }, [initialWorshipLeaders]);
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  }, [worshipLeadersData]);
 
   const wlAvailabilities = useMemo(() => {
-    const list: string[] = [];
-    initialWorshipLeaders.forEach((w) => {
+    const counts: Record<string, number> = {};
+    worshipLeadersData.forEach((w) => {
       if (Array.isArray(w.tags)) {
         w.tags.forEach((t: any) => {
-          if (t?.category === "available_for" && t?.label) list.push(t.label.trim());
+          if (t?.category === "available_for" && t?.label) {
+            const val = t.label.trim();
+            counts[val] = (counts[val] || 0) + 1;
+          }
         });
       }
     });
-    return Array.from(new Set(list)).sort();
-  }, [initialWorshipLeaders]);
+    return Object.entries(counts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  }, [worshipLeadersData]);
 
   // Haversine distance in km
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -549,6 +800,40 @@ export default function ExploreClient({
         Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
+  };
+
+  // Helper to calculate search query relevance score (higher score = more relevant)
+  const getSearchRelevance = (query: string, name?: string | null, city?: string | null, otherField?: string | null) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return 0;
+
+    const n = (name || "").trim().toLowerCase();
+    const c = (city || "").trim().toLowerCase();
+    const o = (otherField || "").trim().toLowerCase();
+
+    // 1. Exact name match (e.g. "aa" == "aa")
+    if (n === q) return 1000;
+
+    // 2. Name starts with query (e.g. "aa" at start of name)
+    if (n.startsWith(q)) return 800;
+
+    // 3. Name word starts with query (e.g. "Grace AA Church")
+    const words = n.split(/\s+/);
+    if (words.some((w) => w.startsWith(q))) return 600;
+
+    // 4. Name contains query anywhere
+    if (n.includes(q)) return 400;
+
+    // 5. City starts with query
+    if (c.startsWith(q)) return 250;
+
+    // 6. City contains query
+    if (c.includes(q)) return 200;
+
+    // 7. Other fields (denomination / address / etc) contains query
+    if (o.includes(q)) return 100;
+
+    return 10;
   };
 
   // Helper to normalize day string comparison (e.g. "Sun" matches "Sunday" / "Sun")
@@ -702,7 +987,23 @@ export default function ExploreClient({
         }
         return { ...church, distance };
       })
+      .filter((church) => {
+        // When Near Me is active, only show churches within maxDistance radius
+        if (userLocation) {
+          return typeof church.distance === "number" && church.distance <= maxDistance;
+        }
+        return true;
+      })
       .sort((a, b) => {
+        // If user typed a search query and hasn't chosen an explicit name or nearby sort, rank by search relevance first
+        if (searchQuery.trim() && sortBy === "latest") {
+          const scoreA = getSearchRelevance(searchQuery, a.name, a.city, `${a.denomination} ${a.address_line} ${a.about}`);
+          const scoreB = getSearchRelevance(searchQuery, b.name, b.city, `${b.denomination} ${b.address_line} ${b.about}`);
+          if (scoreA !== scoreB) {
+            return scoreB - scoreA; // Higher score first
+          }
+        }
+
         if (sortBy === "name_asc") {
           return a.name.localeCompare(b.name);
         }
@@ -717,7 +1018,7 @@ export default function ExploreClient({
           if (b.distance !== null) return 1;
           return 0;
         }
-        // latest (default)
+        // latest (default fallback)
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
   }, [
@@ -733,10 +1034,11 @@ export default function ExploreClient({
     selectedCities,
     sortBy,
     userLocation,
+    maxDistance,
   ]);
 
   const filteredPastors = useMemo(() => {
-    return initialPastors
+    return pastorsData
       .filter((pastor) => {
         const q = searchQuery.toLowerCase().trim();
         const matchesQuery =
@@ -843,7 +1145,18 @@ export default function ExploreClient({
           type: "pastor",
         };
       })
+      .filter((pastor) => {
+        if (userLocation) {
+          return typeof pastor.distance === "number" && pastor.distance <= maxDistance;
+        }
+        return true;
+      })
       .sort((a, b) => {
+        if (searchQuery.trim() && sortBy === "latest") {
+          const scoreA = getSearchRelevance(searchQuery, a.full_name, a.city, `${a.title} ${a.church_name_cache} ${a.bio}`);
+          const scoreB = getSearchRelevance(searchQuery, b.full_name, b.city, `${b.title} ${b.church_name_cache} ${b.bio}`);
+          if (scoreA !== scoreB) return scoreB - scoreA;
+        }
         if (sortBy === "name_asc") return a.full_name.localeCompare(b.full_name);
         if (sortBy === "name_desc") return b.full_name.localeCompare(a.full_name);
         if (sortBy === "nearby") {
@@ -854,7 +1167,7 @@ export default function ExploreClient({
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
   }, [
-    initialPastors,
+    pastorsData,
     searchQuery,
     selectedPastorNames,
     selectedCities,
@@ -864,11 +1177,12 @@ export default function ExploreClient({
     selectedPastorLanguages,
     sortBy,
     userLocation,
+    maxDistance,
   ]);
 
   const filteredEvents = useMemo(() => {
     const now = new Date().getTime();
-    return initialEvents
+    return eventsData
       .filter((event) => {
         const q = searchQuery.toLowerCase().trim();
         const matchesQuery =
@@ -915,7 +1229,18 @@ export default function ExploreClient({
           type: "event",
         };
       })
+      .filter((event) => {
+        if (userLocation) {
+          return typeof event.distance === "number" && event.distance <= maxDistance;
+        }
+        return true;
+      })
       .sort((a, b) => {
+        if (searchQuery.trim() && sortBy === "latest") {
+          const scoreA = getSearchRelevance(searchQuery, a.title, a.city, `${a.venue_name} ${a.description}`);
+          const scoreB = getSearchRelevance(searchQuery, b.title, b.city, `${b.venue_name} ${b.description}`);
+          if (scoreA !== scoreB) return scoreB - scoreA;
+        }
         if (sortBy === "name_asc") return a.title.localeCompare(b.title);
         if (sortBy === "name_desc") return b.title.localeCompare(a.title);
         if (sortBy === "nearby") {
@@ -925,10 +1250,10 @@ export default function ExploreClient({
         }
         return new Date(b.starts_at || b.created_at || 0).getTime() - new Date(a.starts_at || a.created_at || 0).getTime();
       });
-  }, [initialEvents, searchQuery, selectedCities, selectedEventTypes, selectedEventPrice, selectedEventTime, sortBy, userLocation]);
+  }, [eventsData, searchQuery, selectedCities, selectedEventTypes, selectedEventPrice, selectedEventTime, sortBy, userLocation, maxDistance]);
 
   const filteredWorshipLeaders = useMemo(() => {
-    return initialWorshipLeaders
+    return worshipLeadersData
       .filter((leader) => {
         const q = searchQuery.toLowerCase().trim();
         const matchesQuery =
@@ -996,11 +1321,16 @@ export default function ExploreClient({
       })
       .map((leader) => ({ ...leader, type: "worship_leader" }))
       .sort((a, b) => {
-        if (sortBy === "name_asc") return a.display_name.localeCompare(b.display_name);
-        if (sortBy === "name_desc") return b.display_name.localeCompare(a.display_name);
+        if (searchQuery.trim() && sortBy === "latest") {
+          const scoreA = getSearchRelevance(searchQuery, a.display_name, a.city, a.tagline);
+          const scoreB = getSearchRelevance(searchQuery, b.display_name, b.city, b.tagline);
+          if (scoreA !== scoreB) return scoreB - scoreA;
+        }
+        if (sortBy === "name_asc") return (a.display_name || "").localeCompare(b.display_name || "");
+        if (sortBy === "name_desc") return (b.display_name || "").localeCompare(a.display_name || "");
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
-  }, [initialWorshipLeaders, searchQuery, selectedCities, selectedWlStyles, selectedWlInstruments, selectedWlLanguages, selectedWlAvailabilities, sortBy]);
+  }, [worshipLeadersData, searchQuery, selectedCities, selectedWlStyles, selectedWlInstruments, selectedWlLanguages, selectedWlAvailabilities, sortBy]);
 
   const currentList = useMemo(() => {
     if (exploreType === "pastors") return filteredPastors;
@@ -1016,9 +1346,9 @@ export default function ExploreClient({
   }, [exploreType, filteredChurches, filteredPastors, filteredEvents]);
 
   // Request browser geolocation
-  const handleUseMyLocation = () => {
+  const handleUseMyLocation = (silent = false) => {
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser.");
+      if (!silent) alert("Geolocation is not supported by your browser.");
       return;
     }
     setIsLocating(true);
@@ -1033,14 +1363,26 @@ export default function ExploreClient({
       },
       (err) => {
         setIsLocating(false);
-        alert("Could not access your location. Please check your browser permissions.");
-      }
+        if (!silent) {
+          alert("Could not access your location. Please check your browser permissions.");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 }
     );
   };
+
+  // Google Maps experience: Auto-detect location on initial page load if not already set
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.geolocation && !userLocation && !initialCity && !initialSearchQuery) {
+      handleUseMyLocation(true);
+    }
+  }, []);
+
 
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
     selectedCities.length > 0 ||
+    userLocation !== null ||
     (exploreType === "churches" && (
       selectedDenoms.length > 0 ||
       selectedLanguages.length > 0 ||
@@ -1070,6 +1412,7 @@ export default function ExploreClient({
   const clearAllFilters = () => {
     setSearchQuery("");
     setSelectedCities([]);
+    setUserLocation(null);
     setSortBy("latest");
     // Church filters
     setOpeningStatus("all");
@@ -1341,7 +1684,11 @@ export default function ExploreClient({
           <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "24px" }}>
               {/* Search */}
               <div style={{ position: "relative" }}>
-                <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: "16px" }}></i>
+                {isTypingSearch ? (
+                  <i className="ti ti-loader-2" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#7c3aed", fontSize: "16px", animation: "spin 1s linear infinite" }}></i>
+                ) : (
+                  <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: "16px" }}></i>
+                )}
                 <input
                   type="text"
                   placeholder={
@@ -1354,8 +1701,13 @@ export default function ExploreClient({
                       : "Search worship leader name, city..."
                   }
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ width: "100%", height: "44px", paddingLeft: "40px", paddingRight: "30px", borderRadius: "8px", border: "1.5px solid #e2e8f0", fontSize: "13.5px" }}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setIsTypingSearch(true);
+                    setSearchQuery(val);
+                    setTimeout(() => setIsTypingSearch(false), 280);
+                  }}
+                  style={{ width: "100%", height: "44px", paddingLeft: "40px", paddingRight: "30px", borderRadius: "8px", border: isTypingSearch ? "1.5px solid #7c3aed" : "1.5px solid #e2e8f0", fontSize: "13.5px", transition: "all 0.15s" }}
                 />
                 {searchQuery && (
                   <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: "14px" }}>✕</button>
@@ -1363,9 +1715,16 @@ export default function ExploreClient({
               </div>
 
               {/* Location (Near Me) */}
-              <div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 <button
-                  onClick={handleUseMyLocation}
+                  onClick={() => {
+                    if (userLocation) {
+                      setUserLocation(null);
+                      if (sortBy === "nearby") setSortBy("latest");
+                    } else {
+                      handleUseMyLocation();
+                    }
+                  }}
                   disabled={isLocating}
                   style={{
                     width: "100%",
@@ -1385,8 +1744,54 @@ export default function ExploreClient({
                   }}
                 >
                   <i className="ti ti-current-location"></i>
-                  {isLocating ? "Locating..." : userLocation ? "Using Your Location" : "Near Me"}
+                  {isLocating ? "Locating..." : userLocation ? `Near Me (within ${maxDistance} km) ✕` : "Near Me"}
                 </button>
+
+                {/* Distance Slider Bar */}
+                {userLocation && (
+                  <div
+                    style={{
+                      background: "#faf5ff",
+                      border: "1px solid #e9d5ff",
+                      borderRadius: "10px",
+                      padding: "12px 14px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: "11px", fontWeight: 800, color: "#6b21a8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        Distance Radius
+                      </span>
+                      <span style={{ fontSize: "12.5px", fontWeight: 800, color: "#7c3aed", background: "#ffffff", padding: "2px 8px", borderRadius: "12px", border: "1px solid #ddd6fe" }}>
+                        {maxDistance} km
+                      </span>
+                    </div>
+
+                    <input
+                      type="range"
+                      min="5"
+                      max="30"
+                      step="5"
+                      value={maxDistance}
+                      onChange={(e) => setMaxDistance(Number(e.target.value))}
+                      style={{
+                        width: "100%",
+                        accentColor: "#7c3aed",
+                        cursor: "pointer",
+                        height: "5px",
+                      }}
+                    />
+
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#9333ea", fontWeight: 600 }}>
+                      <span>5 km</span>
+                      <span>10 km</span>
+                      <span>20 km</span>
+                      <span>30 km</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* City Filter (Available for Churches, Events, and Worship Leaders tabs) */}
@@ -1397,6 +1802,7 @@ export default function ExploreClient({
                   options={cities}
                   selected={selectedCities}
                   onChange={setSelectedCities}
+                  openOnlyOnSearch={true}
                 />
               )}
 
@@ -1520,6 +1926,7 @@ export default function ExploreClient({
                     options={cities}
                     selected={selectedCities}
                     onChange={setSelectedCities}
+                    openOnlyOnSearch={true}
                   />
 
                   {/* 3. Denomination */}
@@ -1634,15 +2041,27 @@ export default function ExploreClient({
            {/* List Header */}
            <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9" }}>
              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                <span style={{ color: "#7c3aed", fontSize: "16px" }}>•</span>
-                SHOWING {exploreType === "churches" ? filteredChurches.length : exploreType === "pastors" ? filteredPastors.length : exploreType === "events" ? filteredEvents.length : filteredWorshipLeaders.length} OF {exploreType === "churches" ? initialChurches.length : exploreType === "pastors" ? initialPastors.length : exploreType === "events" ? initialEvents.length : initialWorshipLeaders.length} {exploreType === "worship_leaders" ? "WORSHIP LEADERS" : exploreType.toUpperCase()}
+                <span style={{ color: isTypingSearch ? "#f59e0b" : "#7c3aed", fontSize: "16px" }}>•</span>
+                {isTypingSearch ? (
+                  <span style={{ color: "#7c3aed", display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                    <i className="ti ti-loader-2" style={{ animation: "spin 1s linear infinite" }}></i> UPDATING RESULTS...
+                  </span>
+                ) : (
+                  <>SHOWING {exploreType === "churches" ? filteredChurches.length : exploreType === "pastors" ? filteredPastors.length : exploreType === "events" ? filteredEvents.length : filteredWorshipLeaders.length} OF {exploreType === "churches" ? initialChurches.length : exploreType === "pastors" ? pastorsData.length : exploreType === "events" ? eventsData.length : worshipLeadersData.length} {exploreType === "worship_leaders" ? "WORSHIP LEADERS" : exploreType.toUpperCase()}</>
+                )}
              </div>
            </div>
 
            {/* Cards Container */}
            <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px", background: "#f8fafc" }}>
             {exploreType === "worship_leaders" && (
-              filteredWorshipLeaders.length === 0 ? (
+              isLoadingWorshipLeaders && worshipLeadersData.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "64px 20px", color: "#64748b" }}>
+                  <i className="ti ti-loader-2" style={{ fontSize: "36px", color: "#7c3aed", animation: "spin 1s linear infinite", marginBottom: "12px", display: "inline-block" }}></i>
+                  <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#1e293b", margin: "0 0 4px 0" }}>Loading Worship Leaders...</h3>
+                  <p style={{ fontSize: "12.5px", color: "#94a3b8" }}>Fetching verified worship leaders near you</p>
+                </div>
+              ) : filteredWorshipLeaders.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "48px 20px", color: "#64748b" }}>
                   <i className="ti ti-microphone-2" style={{ fontSize: "40px", color: "#cbd5e1", marginBottom: "12px", display: "block" }}></i>
                   <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" }}>No worship leaders match your search</h3>
@@ -1685,9 +2104,43 @@ export default function ExploreClient({
               filteredChurches.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "48px 20px", color: "#64748b" }}>
                   <i className="ti ti-church-off" style={{ fontSize: "40px", color: "#cbd5e1", marginBottom: "12px", display: "block" }}></i>
-                  <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" }}>No churches match your filters</h3>
-                  <p style={{ fontSize: "13px" }}>Try clearing some filters or searching with a broader keyword.</p>
-                  <button onClick={clearAllFilters} style={{ marginTop: "12px", fontSize: "13px", fontWeight: 700, color: "#7c3aed", background: "#f5f3ff", border: "1px solid #d8b4fe", padding: "8px 16px", borderRadius: "10px", cursor: "pointer" }}>Reset All Filters</button>
+                  {userLocation ? (
+                    <>
+                      <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" }}>
+                        No churches within {maxDistance} km of your location
+                      </h3>
+                      <p style={{ fontSize: "13px", maxWidth: "280px", margin: "0 auto 16px auto", lineHeight: 1.4 }}>
+                        We centered the map on your city. Try widening your radius or explore churches globally.
+                      </p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxWidth: "220px", margin: "0 auto" }}>
+                        <button
+                          onClick={() => {
+                            setUserLocation(null);
+                            if (sortBy === "nearby") setSortBy("latest");
+                          }}
+                          style={{
+                            fontSize: "12.5px",
+                            fontWeight: 700,
+                            color: "#ffffff",
+                            background: "#7c3aed",
+                            border: "none",
+                            padding: "9px 16px",
+                            borderRadius: "10px",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 8px rgba(124, 58, 237, 0.25)",
+                          }}
+                        >
+                          Explore Worldwide
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" }}>No churches match your filters</h3>
+                      <p style={{ fontSize: "13px" }}>Try clearing some filters or searching with a broader keyword.</p>
+                      <button onClick={clearAllFilters} style={{ marginTop: "12px", fontSize: "13px", fontWeight: 700, color: "#7c3aed", background: "#f5f3ff", border: "1px solid #d8b4fe", padding: "8px 16px", borderRadius: "10px", cursor: "pointer" }}>Reset All Filters</button>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -1783,7 +2236,13 @@ export default function ExploreClient({
             )}
 
             {exploreType === "pastors" && (
-              filteredPastors.length === 0 ? (
+              isLoadingPastors && pastorsData.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "64px 20px", color: "#64748b" }}>
+                  <i className="ti ti-loader-2" style={{ fontSize: "36px", color: "#7c3aed", animation: "spin 1s linear infinite", marginBottom: "12px", display: "inline-block" }}></i>
+                  <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#1e293b", margin: "0 0 4px 0" }}>Loading Pastors...</h3>
+                  <p style={{ fontSize: "12.5px", color: "#94a3b8" }}>Fetching verified pastors & leaders</p>
+                </div>
+              ) : filteredPastors.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "48px 20px", color: "#64748b" }}>
                   <i className="ti ti-user-off" style={{ fontSize: "40px", color: "#cbd5e1", marginBottom: "12px", display: "block" }}></i>
                   <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" }}>No pastors match your search</h3>
@@ -1828,7 +2287,13 @@ export default function ExploreClient({
             )}
 
             {exploreType === "events" && (
-              filteredEvents.length === 0 ? (
+              isLoadingEvents && eventsData.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "64px 20px", color: "#64748b" }}>
+                  <i className="ti ti-loader-2" style={{ fontSize: "36px", color: "#7c3aed", animation: "spin 1s linear infinite", marginBottom: "12px", display: "inline-block" }}></i>
+                  <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#1e293b", margin: "0 0 4px 0" }}>Loading Events...</h3>
+                  <p style={{ fontSize: "12.5px", color: "#94a3b8" }}>Fetching upcoming church events & conferences</p>
+                </div>
+              ) : filteredEvents.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "48px 20px", color: "#64748b" }}>
                   <i className="ti ti-calendar-off" style={{ fontSize: "40px", color: "#cbd5e1", marginBottom: "12px", display: "block" }}></i>
                   <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" }}>No events match your search</h3>
@@ -1880,6 +2345,8 @@ export default function ExploreClient({
               selectedChurchId={selectedChurchId}
               hoveredChurchId={hoveredChurchId}
               onSelectChurch={(c) => setSelectedChurchId(c.id)}
+              userLocation={userLocation}
+              maxDistance={maxDistance}
             />
           </div>
         )}

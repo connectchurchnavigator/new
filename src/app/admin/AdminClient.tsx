@@ -9,8 +9,10 @@ import BulkUploadModal from "@/components/admin/BulkUploadModal";
 interface AdminClientProps {
   initialChurches: any[];
   initialPastors: any[];
+  initialWorshipLeaders?: any[];
   initialEvents: any[];
   initialUsers: any[];
+  initialFeatured?: { churchIds: string[]; pastorIds: string[]; worshipLeaderIds: string[]; eventIds: string[] };
   metrics: {
     totalChurches: number;
     verifiedChurches: number;
@@ -24,12 +26,14 @@ interface AdminClientProps {
 export default function AdminClient({
   initialChurches,
   initialPastors,
+  initialWorshipLeaders = [],
   initialEvents,
   initialUsers,
+  initialFeatured = { churchIds: [], pastorIds: [], worshipLeaderIds: [], eventIds: [] },
   metrics,
 }: AdminClientProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"overview" | "churches" | "pastors" | "events" | "taxonomies" | "users">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "churches" | "pastors" | "worship_leaders" | "events" | "taxonomies" | "users">("overview");
 
   // Bulk upload modal state
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
@@ -37,8 +41,11 @@ export default function AdminClient({
   // Data lists
   const [churches, setChurches] = useState<any[]>(initialChurches);
   const [pastors, setPastors] = useState<any[]>(initialPastors);
+  const [worshipLeaders, setWorshipLeaders] = useState<any[]>(initialWorshipLeaders);
   const [events, setEvents] = useState<any[]>(initialEvents);
   const [usersList, setUsersList] = useState<any[]>(initialUsers);
+  const [featured, setFeatured] = useState<{ churchIds: string[]; pastorIds: string[]; worshipLeaderIds: string[]; eventIds: string[] }>(initialFeatured);
+  const [togglingFeaturedId, setTogglingFeaturedId] = useState<string | null>(null);
 
   // User Role update handler
   const handleUserRoleChange = async (userId: string, newRole: "super_admin" | "listing_manager" | "visitor") => {
@@ -146,6 +153,47 @@ export default function AdminClient({
       }
     } catch (err) {
       alert("Failed to delete church");
+    }
+  };
+
+  // Toggle Featured Status
+  const handleToggleFeatured = async (type: "church" | "pastor" | "worship_leader" | "event", id: string) => {
+    const keyMap = {
+      church: "churchIds",
+      pastor: "pastorIds",
+      worship_leader: "worshipLeaderIds",
+      event: "eventIds",
+    } as const;
+    const targetKey = keyMap[type];
+    const isCurrentlyFeatured = (featured[targetKey] || []).includes(id);
+    const nextFeatured = !isCurrentlyFeatured;
+
+    setTogglingFeaturedId(id);
+    try {
+      const res = await fetch("/api/admin/featured", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, id, isFeatured: nextFeatured }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.featured) {
+          setFeatured(data.featured);
+        } else {
+          setFeatured((prev) => ({
+            ...prev,
+            [targetKey]: nextFeatured
+              ? [...(prev[targetKey] || []), id]
+              : (prev[targetKey] || []).filter((item) => item !== id),
+          }));
+        }
+      } else {
+        alert("Failed to update featured status.");
+      }
+    } catch (err) {
+      alert("Error updating featured status.");
+    } finally {
+      setTogglingFeaturedId(null);
     }
   };
 
@@ -356,6 +404,30 @@ export default function AdminClient({
                 Pastors & Leaders
               </div>
               <span style={{ fontSize: "11px", background: "#1e293b", padding: "2px 8px", borderRadius: "10px", color: "#cbd5e1" }}>{metrics.totalPastors}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("worship_leaders")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 14px",
+                borderRadius: "12px",
+                fontSize: "13.5px",
+                fontWeight: 700,
+                border: "none",
+                background: activeTab === "worship_leaders" ? "rgba(124, 58, 237, 0.25)" : "transparent",
+                color: activeTab === "worship_leaders" ? "#c084fc" : "#94a3b8",
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <i className="ti ti-microphone" style={{ fontSize: "18px" }}></i>
+                Worship Leaders
+              </div>
+              <span style={{ fontSize: "11px", background: "#1e293b", padding: "2px 8px", borderRadius: "10px", color: "#cbd5e1" }}>{worshipLeaders.length}</span>
             </button>
 
             <button
@@ -663,6 +735,7 @@ export default function AdminClient({
                     <th style={{ padding: "12px 14px" }}>Location</th>
                     <th style={{ padding: "12px 14px" }}>Denomination</th>
                     <th style={{ padding: "12px 14px" }}>Verification Badge</th>
+                    <th style={{ padding: "12px 14px" }}>Featured</th>
                     <th style={{ padding: "12px 14px" }}>Visibility</th>
                     <th style={{ padding: "12px 14px", textAlign: "right" }}>Actions</th>
                   </tr>
@@ -701,6 +774,31 @@ export default function AdminClient({
                           }}
                         >
                           {c.is_verified ? "✓ Verified" : "+ Not Verified"}
+                        </button>
+                      </td>
+                      <td style={{ padding: "14px" }}>
+                        <button
+                          type="button"
+                          disabled={togglingFeaturedId === c.id}
+                          onClick={() => handleToggleFeatured("church", c.id)}
+                          style={{
+                            border: "none",
+                            borderRadius: "10px",
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            background: featured.churchIds?.includes(c.id) ? "#fef3c7" : "#f8fafc",
+                            color: featured.churchIds?.includes(c.id) ? "#b45309" : "#64748b",
+                            borderWidth: "1px",
+                            borderStyle: "solid",
+                            borderColor: featured.churchIds?.includes(c.id) ? "#fde68a" : "#e2e8f0",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                          }}
+                        >
+                          ⭐ {featured.churchIds?.includes(c.id) ? "Featured" : "Feature"}
                         </button>
                       </td>
                       <td style={{ padding: "14px" }}>
@@ -785,6 +883,7 @@ export default function AdminClient({
                     <th style={{ padding: "12px 14px" }}>Title & Role</th>
                     <th style={{ padding: "12px 14px" }}>Location</th>
                     <th style={{ padding: "12px 14px" }}>Verification</th>
+                    <th style={{ padding: "12px 14px" }}>Featured</th>
                     <th style={{ padding: "12px 14px", textAlign: "right" }}>Actions</th>
                   </tr>
                 </thead>
@@ -829,6 +928,31 @@ export default function AdminClient({
                           {p.is_verified ? "✓ Verified" : "+ Not Verified"}
                         </button>
                       </td>
+                      <td style={{ padding: "14px" }}>
+                        <button
+                          type="button"
+                          disabled={togglingFeaturedId === p.id}
+                          onClick={() => handleToggleFeatured("pastor", p.id)}
+                          style={{
+                            border: "none",
+                            borderRadius: "10px",
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            background: featured.pastorIds?.includes(p.id) ? "#fef3c7" : "#f8fafc",
+                            color: featured.pastorIds?.includes(p.id) ? "#b45309" : "#64748b",
+                            borderWidth: "1px",
+                            borderStyle: "solid",
+                            borderColor: featured.pastorIds?.includes(p.id) ? "#fde68a" : "#e2e8f0",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                          }}
+                        >
+                          ⭐ {featured.pastorIds?.includes(p.id) ? "Featured" : "Feature"}
+                        </button>
+                      </td>
                       <td style={{ padding: "14px", textAlign: "right" }}>
                         <Link href={`/pastor/${p.slug}`} target="_blank" style={{ fontSize: "13px", color: "#7c3aed", fontWeight: 700, textDecoration: "none" }}>
                           View Profile &rarr;
@@ -842,6 +966,90 @@ export default function AdminClient({
           </div>
         )}
 
+
+        {/* ── WORSHIP LEADERS TAB ────────────────────────────────────────── */
+        activeTab === "worship_leaders" && (
+          <div style={{ background: "#ffffff", borderRadius: "20px", border: "1.5px solid #e2e8f0", padding: "24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                Worship Leaders ({worshipLeaders.length})
+              </h3>
+            </div>
+
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13.5px" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1.5px solid #e2e8f0", textAlign: "left", color: "#64748b", fontWeight: 800 }}>
+                    <th style={{ padding: "12px 14px" }}>Worship Leader</th>
+                    <th style={{ padding: "12px 14px" }}>Title & Tagline</th>
+                    <th style={{ padding: "12px 14px" }}>Location</th>
+                    <th style={{ padding: "12px 14px" }}>Verification</th>
+                    <th style={{ padding: "12px 14px" }}>Featured</th>
+                    <th style={{ padding: "12px 14px", textAlign: "right" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {worshipLeaders.map((w) => (
+                    <tr key={w.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          {w.avatar_url ? (
+                            <img src={w.avatar_url} alt={w.display_name} style={{ width: "36px", height: "36px", borderRadius: "10px", objectFit: "cover" }} />
+                          ) : (
+                            <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "linear-gradient(135deg, #e11d48, #f43f5e)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>
+                              {w.display_name?.slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <div style={{ fontWeight: 800, color: "#0f172a" }}>{w.display_name}</div>
+                            <div style={{ fontSize: "12px", color: "#94a3b8" }}>slug: /{w.slug}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: "14px", color: "#e11d48", fontWeight: 700 }}>{w.title || "Artist"}</td>
+                      <td style={{ padding: "14px", color: "#475569" }}>{w.city || w.country || "—"}</td>
+                      <td style={{ padding: "14px" }}>
+                        <span style={{ fontSize: "11px", fontWeight: 800, padding: "4px 8px", borderRadius: "6px", background: w.is_verified ? "#f0fdf4" : "#f1f5f9", color: w.is_verified ? "#16a34a" : "#64748b" }}>
+                          {w.is_verified ? "✓ Verified" : "Not Verified"}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px" }}>
+                        <button
+                          type="button"
+                          disabled={togglingFeaturedId === w.id}
+                          onClick={() => handleToggleFeatured("worship_leader", w.id)}
+                          style={{
+                            border: "none",
+                            borderRadius: "10px",
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            background: featured.worshipLeaderIds?.includes(w.id) ? "#fef3c7" : "#f8fafc",
+                            color: featured.worshipLeaderIds?.includes(w.id) ? "#b45309" : "#64748b",
+                            borderWidth: "1px",
+                            borderStyle: "solid",
+                            borderColor: featured.worshipLeaderIds?.includes(w.id) ? "#fde68a" : "#e2e8f0",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                          }}
+                        >
+                          ⭐ {featured.worshipLeaderIds?.includes(w.id) ? "Featured" : "Feature"}
+                        </button>
+                      </td>
+                      <td style={{ padding: "14px", textAlign: "right" }}>
+                        <Link href={`/worship-leader/${w.slug}`} target="_blank" style={{ fontSize: "13px", color: "#e11d48", fontWeight: 700, textDecoration: "none" }}>
+                          View Profile &rarr;
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* ── 4. EVENTS TAB ────────────────────────────────────────────────── */}
         {activeTab === "events" && (
@@ -878,6 +1086,7 @@ export default function AdminClient({
                     <th style={{ padding: "12px 14px" }}>Date & Time</th>
                     <th style={{ padding: "12px 14px" }}>Location / Venue</th>
                     <th style={{ padding: "12px 14px" }}>Price</th>
+                    <th style={{ padding: "12px 14px" }}>Featured</th>
                     <th style={{ padding: "12px 14px", textAlign: "right" }}>Actions</th>
                   </tr>
                 </thead>
@@ -893,6 +1102,31 @@ export default function AdminClient({
                         <span style={{ fontSize: "11.5px", fontWeight: 800, background: "#f5f3ff", color: "#7c3aed", padding: "3px 8px", borderRadius: "6px" }}>
                           {ev.price_label || "Free"}
                         </span>
+                      </td>
+                      <td style={{ padding: "14px" }}>
+                        <button
+                          type="button"
+                          disabled={togglingFeaturedId === ev.id}
+                          onClick={() => handleToggleFeatured("event", ev.id)}
+                          style={{
+                            border: "none",
+                            borderRadius: "10px",
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            background: featured.eventIds?.includes(ev.id) ? "#fef3c7" : "#f8fafc",
+                            color: featured.eventIds?.includes(ev.id) ? "#b45309" : "#64748b",
+                            borderWidth: "1px",
+                            borderStyle: "solid",
+                            borderColor: featured.eventIds?.includes(ev.id) ? "#fde68a" : "#e2e8f0",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                          }}
+                        >
+                          ⭐ {featured.eventIds?.includes(ev.id) ? "Featured" : "Feature"}
+                        </button>
                       </td>
                       <td style={{ padding: "14px", textAlign: "right" }}>
                         <Link href={`/events/${ev.slug}`} target="_blank" style={{ fontSize: "13px", color: "#7c3aed", fontWeight: 700, textDecoration: "none" }}>

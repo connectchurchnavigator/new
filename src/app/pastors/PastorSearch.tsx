@@ -13,8 +13,10 @@ export default function PastorSearch({
   const router = useRouter();
   const [q, setQ] = useState(initialQ);
   const [city, setCity] = useState(initialCity);
+  const [isSearching, setIsSearching] = useState(false);
 
   function search() {
+    setIsSearching(true);
     const p = new URLSearchParams();
     if (q.trim()) p.set('q', q.trim());
     if (city.trim()) p.set('city', city.trim());
@@ -43,8 +45,20 @@ export default function PastorSearch({
           className="flex-1 outline-none text-ink text-sm bg-transparent w-full"
         />
       </div>
-      <button onClick={search} className="bg-ink text-white font-bold rounded-xl px-6 py-3 text-sm">
-        Search
+      <button 
+        onClick={search} 
+        disabled={isSearching} 
+        className="bg-ink text-white font-bold rounded-xl px-6 py-3 text-sm flex items-center justify-center gap-2"
+        style={{ minWidth: '110px', opacity: isSearching ? 0.75 : 1, cursor: isSearching ? 'not-allowed' : 'pointer' }}
+      >
+        {isSearching ? (
+          <>
+            <i className="ti ti-loader-2" style={{ animation: 'spin 1s linear infinite' }} />
+            Searching…
+          </>
+        ) : (
+          'Search'
+        )}
       </button>
     </div>
   );

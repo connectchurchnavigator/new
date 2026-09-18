@@ -277,11 +277,20 @@ export default function Step9Review() {
       )}
 
       <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "28px" }}>
-        <button onClick={() => router.push("/add-church/3")} className="btn-secondary">
+        <button onClick={() => router.push("/add-church/3")} className="btn-secondary" disabled={isSubmitting}>
           <i className="ti ti-pencil" style={{ fontSize: "14px" }}></i> Keep editing
         </button>
-        <button onClick={handleSubmit} className="btn-primary" disabled={isSubmitting} style={{ opacity: isSubmitting ? 0.7 : 1 }}>
-          {isSubmitting ? "Publishing..." : <><i className="ti ti-check" style={{ fontSize: "15px" }}></i> Publish listing</>}
+        <button onClick={handleSubmit} className="btn-primary" disabled={isSubmitting} style={{ opacity: isSubmitting ? 0.75 : 1, cursor: isSubmitting ? "not-allowed" : "pointer" }}>
+          {isSubmitting ? (
+            <>
+              <i className="ti ti-loader-2" style={{ fontSize: "16px", animation: "spin 1s linear infinite" }}></i>
+              Publishing listing...
+            </>
+          ) : (
+            <>
+              <i className="ti ti-check" style={{ fontSize: "15px" }}></i> Publish listing
+            </>
+          )}
         </button>
       </div>
 
