@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import TopNav from "@/components/layout/TopNav";
 import StepBarWL from "@/components/onboarding/worship-leader/StepBarWL";
 import SharedAddressField from "@/components/add-church/steps/SharedAddressField";
+import { TagInput } from "@/components/TagInput";
 
 const ALL_LANGUAGES = [
   'English','Spanish','French','Portuguese','German','Italian','Dutch','Polish','Romanian','Hungarian',
@@ -81,6 +82,20 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
   const [travelRange, setTravelRange] = useState("UK-wide");
   const [leadTime, setLeadTime] = useState("2 weeks preferred");
 
+  // Direct Contact & Digital Presence (matching pastor step 3)
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [facebookUrl, setFacebookUrl] = useState("");
+  const [instagramUrl, setInstagramUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [twitterUrl, setTwitterUrl] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [tiktokUrl, setTiktokUrl] = useState("");
+
+  const [contactErrors, setContactErrors] = useState<{ [key: string]: string }>({});
+  const [contactVerified, setContactVerified] = useState<{ [key: string]: boolean }>({});
+
   // Options & Custom entries
   const [styleOptions, setStyleOptions] = useState<string[]>([
     "Contemporary", "Gospel", "Afro-Gospel", "Hymns", "Acoustic", "Prophetic", "Spontaneous"
@@ -143,6 +158,56 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
         if (leader.cover_photo_urls && leader.cover_photo_urls[0]) {
           setCoverPreview(leader.cover_photo_urls[0]);
         }
+        if (leader.cover_photo_urls && leader.cover_photo_urls.length > 1) {
+          setExistingPhotos(leader.cover_photo_urls.slice(1));
+        }
+
+        // Location & address details
+        let parsedFromLoc = false;
+        if (leader.website_url) {
+          const locMatch = leader.website_url.match(/(?:^|\n)loc:([^\n]+)/);
+          if (locMatch && locMatch[1]) {
+            try {
+              const locData = JSON.parse(decodeURIComponent(locMatch[1]));
+              if (locData.address) setAddress(locData.address);
+              if (locData.addressDetails) setAddressDetails(locData.addressDetails);
+              if (locData.area) setArea(locData.area);
+              if (locData.postcode) setPostcode(locData.postcode);
+              if (locData.latitude) setLatitude(locData.latitude);
+              if (locData.longitude) setLongitude(locData.longitude);
+              if (locData.country) setCountry(locData.country);
+              parsedFromLoc = true;
+            } catch (e) {
+              console.error("Failed to parse loc metadata:", e);
+            }
+          }
+        }
+
+        if (!parsedFromLoc) {
+          if (leader.postcode) {
+            setPostcode(leader.postcode);
+          } else if (leader.city || leader.address) {
+            // Extract UK postcode if embedded in city or address string
+            const combined = `${leader.city || ""} ${leader.address || ""}`;
+            const match = combined.match(/[A-Z]{1,2}[0-9][A-Z0-9]?\s?[0-9][A-Z]{2}/i);
+            if (match) {
+              setPostcode(match[0].toUpperCase());
+            }
+          }
+          if (leader.address) {
+            setAddress(leader.address);
+          } else if (leader.city) {
+            setAddress(leader.city);
+          }
+          if (leader.area) setArea(leader.area);
+          if (leader.address_details) setAddressDetails(leader.address_details);
+          if (leader.latitude) setLatitude(leader.latitude);
+          if (leader.longitude) setLongitude(leader.longitude);
+        }
+
+        // Audio and Video urls
+        if (leader.song_url) setExistingSongUrl(leader.song_url);
+        if (leader.video_url) setExistingVideoUrl(leader.video_url);
 
         // Step 2 tags & availability
         const tags: any[] = leader.tags || [];
@@ -160,17 +225,81 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
         if (leader.travel_range) setTravelRange(leader.travel_range);
         if (leader.lead_time) setLeadTime(leader.lead_time);
 
-        // Step 3 links
-        const loadedLinks: string[] = [];
-        if (leader.spotify_url) loadedLinks.push(leader.spotify_url);
-        if (leader.youtube_url) loadedLinks.push(leader.youtube_url);
-        if (leader.instagram_url) loadedLinks.push(leader.instagram_url);
-        if (leader.website_url) {
-          const splitWeb = leader.website_url.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean);
-          loadedLinks.push(...splitWeb);
+        // Direct contact & links
+        if (leader.email) {
+          setEmail(leader.email);
+          setContactVerified(prev => ({ ...prev, email: true }));
         }
-        if (loadedLinks.length > 0) {
-          setLinks(loadedLinks);
+        if (leader.phone) {
+          setPhone(leader.phone);
+          setContactVerified(prev => ({ ...prev, phone: true }));
+        }
+        if (leader.facebook_url) {
+          setFacebookUrl(leader.facebook_url);
+          setContactVerified(prev => ({ ...prev, facebook_url: true }));
+        }
+        if (leader.twitter_url) {
+          setTwitterUrl(leader.twitter_url);
+          setContactVerified(prev => ({ ...prev, twitter_url: true }));
+        }
+        if (leader.linkedin_url) {
+          setLinkedinUrl(leader.linkedin_url);
+        }
+        if (leader.tiktok_url) {
+          setTiktokUrl(leader.tiktok_url);
+        }
+
+        if (leader.youtube_url) setYoutubeUrl(leader.youtube_url);
+        if (leader.spotify_url) setSpotifyUrl(leader.spotify_url);
+        if (leader.instagram_url) setInstagramUrl(leader.instagram_url);
+        if (leader.website_url) {
+          const rawLines = leader.website_url.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean);
+          const customWebs: string[] = [];
+          const loadedYoutube: string[] = [];
+          const loadedSpotify: string[] = [];
+          for (const l of rawLines) {
+            if (l.startsWith("loc:")) {
+              continue; // Internal location metadata
+            } else if (l.startsWith("mailto:")) {
+              setEmail(l.replace(/^mailto:/i, ""));
+              setContactVerified(prev => ({ ...prev, email: true }));
+            } else if (l.startsWith("tel:")) {
+              setPhone(l.replace(/^tel:/i, ""));
+              setContactVerified(prev => ({ ...prev, phone: true }));
+            } else if (l.includes("facebook.com") || l.includes("fb.com")) {
+              setFacebookUrl(l);
+              setContactVerified(prev => ({ ...prev, facebook_url: true }));
+            } else if (l.includes("twitter.com") || l.includes("x.com")) {
+              setTwitterUrl(l);
+              setContactVerified(prev => ({ ...prev, twitter_url: true }));
+            } else if (l.includes("linkedin.com")) {
+              setLinkedinUrl(l);
+            } else if (l.includes("tiktok.com")) {
+              setTiktokUrl(l);
+            } else if (l.includes("instagram.com")) {
+              setInstagramUrl(l);
+            } else if (l.includes("youtube.com") || l.includes("youtu.be")) {
+              if (!leader.youtube_url) {
+                setYoutubeUrl(l);
+              } else if (l !== leader.youtube_url && !loadedYoutube.includes(l)) {
+                loadedYoutube.push(l);
+              }
+            } else if (l.includes("spotify.com")) {
+              if (!leader.spotify_url) {
+                setSpotifyUrl(l);
+              } else if (l !== leader.spotify_url && !loadedSpotify.includes(l)) {
+                loadedSpotify.push(l);
+              }
+            } else {
+              customWebs.push(l);
+            }
+          }
+          if (loadedYoutube.length > 0) setYoutubeUrls(loadedYoutube);
+          if (loadedSpotify.length > 0) setExtraSpotifyUrls(loadedSpotify);
+          if (customWebs.length > 0) {
+            setWebsiteUrl(customWebs[0]);
+            setLinks(customWebs);
+          }
         }
       } catch (e: any) {
         console.error("Error loading worship leader for edit:", e);
@@ -186,10 +315,16 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
     };
   }, [initialEditSlug]);
 
-  // ---------------- STEP 3: MEDIA & LINKS ----------------
+  // ---------------- STEP 3: MEDIA & SAMPLE RECORDINGS ----------------
   const [songFiles, setSongFiles] = useState<{ file: File; name: string }[]>([]);
   const [videoFiles, setVideoFiles] = useState<{ file: File; name: string }[]>([]);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
+  const [existingSongUrl, setExistingSongUrl] = useState<string>("");
+  const [existingVideoUrl, setExistingVideoUrl] = useState<string>("");
+  const [spotifyUrl, setSpotifyUrl] = useState<string>("");
+  const [extraSpotifyUrls, setExtraSpotifyUrls] = useState<string[]>([]);
+  const [youtubeUrls, setYoutubeUrls] = useState<string[]>([]);
   const [links, setLinks] = useState<string[]>([""]);
 
   const toggleChip = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
@@ -236,6 +371,57 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
     }
   };
 
+  const SOCIAL_RULES: { [key: string]: { rx: RegExp, others: RegExp, name: string, ex: string } } = {
+    facebook_url: { rx: /^(https?:\/\/)?(www\.)?(facebook\.com|fb\.com|fb\.me)\/[A-Za-z0-9._\-\/?=&%]+$/i, others: /(instagram\.com|linkedin\.com|youtube\.com|youtu\.be|twitter\.com|x\.com|tiktok\.com|t\.me)/i, name: 'Facebook', ex: 'facebook.com/yourprofile' },
+    instagram_url: { rx: /(^@[A-Za-z0-9._]{2,30}$)|^(https?:\/\/)?(www\.)?instagram\.com\/[A-Za-z0-9._\-\/?=&%]+$/i, others: /(facebook\.com|linkedin\.com|youtube\.com|youtu\.be|twitter\.com|x\.com|tiktok\.com|t\.me)/i, name: 'Instagram', ex: 'instagram.com/yourprofile or @handle' },
+    youtube_url: { rx: /^(https?:\/\/)?(www\.)?(youtube\.com\/[A-Za-z0-9@._\-\/?=&%]+|youtu\.be\/[A-Za-z0-9\-]+)$/i, others: /(facebook\.com|instagram\.com|linkedin\.com|twitter\.com|x\.com|tiktok\.com|t\.me)/i, name: 'YouTube', ex: 'youtube.com/@yourchannel' },
+    twitter_url: { rx: /(^@[A-Za-z0-9_]{1,15}$)|^(https?:\/\/)?(www\.)?(twitter\.com|x\.com)\/[A-Za-z0-9_]{1,15}\/?$/i, others: /(facebook\.com|instagram\.com|linkedin\.com|youtube\.com|youtu\.be|tiktok\.com|t\.me)/i, name: 'X / Twitter', ex: 'twitter.com/yourhandle or @handle' },
+    website_url: { rx: /^(https?:\/\/)?(www\.)?[A-Za-z0-9.\-]+\.[a-z]{2,}(\/.*)?$/i, others: /^$/i, name: 'Website', ex: 'https://yourwebsite.com' }
+  };
+
+  const validateSocialField = (field: string, value: string) => {
+    let errorMsg = "";
+    let isVerified = false;
+    const v = value.trim();
+
+    if (field === "email") {
+      if (!v) {
+        errorMsg = "Email is required";
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
+        errorMsg = "Please enter a valid email address";
+      } else {
+        isVerified = true;
+      }
+    } else if (field === "phone") {
+      if (v && v.replace(/[^0-9]/g, '').length < 9) {
+        errorMsg = "Phone number must be at least 9 digits";
+      } else if (v) {
+        isVerified = true;
+      }
+    } else if (SOCIAL_RULES[field]) {
+      if (v) {
+        const R = SOCIAL_RULES[field];
+        const wrong = R.others.exec(v);
+        if (wrong) {
+          errorMsg = `That looks like a different platform link — please put your ${R.name} link here.`;
+        } else if (!R.rx.test(v)) {
+          errorMsg = `Enter a valid ${R.name} link (e.g. ${R.ex}).`;
+        } else {
+          isVerified = true;
+        }
+      }
+    }
+
+    setContactErrors(prev => ({ ...prev, [field]: errorMsg }));
+    setContactVerified(prev => ({ ...prev, [field]: isVerified }));
+  };
+
+  const getContactInputStyle = (field: string) => {
+    if (contactErrors[field]) return { border: "1.5px solid red", backgroundColor: "#fef2f2" };
+    if (contactVerified[field]) return { border: "1.5px solid #16a34a", backgroundColor: "#f0fdf4" };
+    return {};
+  };
+
   // Helper for adding custom items to any category
   const addCustomItem = (
     val: string,
@@ -255,6 +441,49 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
       setSelectedList(prev => [...prev, trimmed]);
     }
     setVal("");
+  };
+
+  const getYouTubeEmbedUrl = (url?: string | null): string | null => {
+    if (!url) return null;
+    try {
+      const trimmed = url.trim();
+      if (trimmed.includes('youtube.com/watch')) {
+        const v = new URL(trimmed).searchParams.get('v');
+        return v ? `https://www.youtube.com/embed/${v}` : null;
+      }
+      if (trimmed.includes('youtu.be/')) {
+        const id = trimmed.split('youtu.be/')[1]?.split('?')[0];
+        return id ? `https://www.youtube.com/embed/${id}` : null;
+      }
+      if (trimmed.includes('youtube.com/embed/')) {
+        return trimmed;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  };
+
+  const getSpotifyEmbedUrl = (url?: string | null): string | null => {
+    if (!url) return null;
+    try {
+      const trimmed = url.trim();
+      if (trimmed.includes('spotify.com/embed/')) {
+        return trimmed;
+      }
+      if (trimmed.includes('open.spotify.com/')) {
+        const path = trimmed.split('open.spotify.com/')[1]?.split('?')[0];
+        if (path && (path.startsWith('track/') || path.startsWith('album/') || path.startsWith('playlist/') || path.startsWith('artist/'))) {
+          return `https://open.spotify.com/embed/${path}`;
+        }
+      }
+      if (trimmed.includes('spotify.com/')) {
+        return trimmed.replace('spotify.com/', 'spotify.com/embed/');
+      }
+    } catch {
+      return null;
+    }
+    return null;
   };
 
   const getFilteredLanguages = () => {
@@ -310,14 +539,32 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
       setFeeModel(["Fixed fee", "Love offering"]);
       setTravelRange("UK-wide");
       setLeadTime("2 weeks preferred");
-      setToastMsg("✨ Sample sound & availability loaded for Step 2!");
+      setEmail("david.okonkwo@worshipministry.co.uk");
+      setPhone("07700 900123");
+      setWebsiteUrl("https://davidokonkwoministries.org");
+      setFacebookUrl("https://facebook.com/davidokonkwoworship");
+      setInstagramUrl("https://instagram.com/davidokonkwo_live");
+      setYoutubeUrl("https://youtube.com/@davidokonkwo_worship");
+      setTwitterUrl("https://x.com/davidokonkwo");
+      setLinkedinUrl("https://linkedin.com/in/davidokonkwo");
+      setTiktokUrl("https://tiktok.com/@davidokonkwolive");
+      setContactErrors({});
+      setContactVerified({
+        email: true,
+        phone: true,
+        website_url: true,
+        facebook_url: true,
+        instagram_url: true,
+        youtube_url: true,
+        twitter_url: true,
+        linkedin_url: true,
+        tiktok_url: true,
+      });
+      setToastMsg("✨ Sample sound, availability & direct contact loaded for Step 2!");
     } else if (currentStep === 3) {
-      setLinks([
-        "https://open.spotify.com/artist/davidokonkwo",
-        "https://youtube.com/@davidokonkwo_worship",
-        "https://instagram.com/davidokonkwo_live"
-      ]);
-      setToastMsg("✨ Sample streaming & media links loaded for Step 3!");
+      setYoutubeUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+      setSpotifyUrl("https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT");
+      setToastMsg("✨ Sample live video & Spotify recordings loaded for Step 3!");
     } else {
       // Step 4 (Review): populate everything
       setDisplayName("David Okonkwo");
@@ -339,10 +586,16 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
       setFeeModel(["Fixed fee", "Love offering"]);
       setTravelRange("UK-wide");
       setLeadTime("2 weeks preferred");
-      setLinks([
-        "https://open.spotify.com/artist/davidokonkwo",
-        "https://youtube.com/@davidokonkwo_worship"
-      ]);
+      setEmail("david.okonkwo@worshipministry.co.uk");
+      setPhone("07700 900123");
+      setWebsiteUrl("https://davidokonkwoministries.org");
+      setFacebookUrl("https://facebook.com/davidokonkwoworship");
+      setInstagramUrl("https://instagram.com/davidokonkwo_live");
+      setYoutubeUrl("https://youtube.com/@davidokonkwo_worship");
+      setTwitterUrl("https://x.com/davidokonkwo");
+      setLinkedinUrl("https://linkedin.com/in/davidokonkwo");
+      setTiktokUrl("https://tiktok.com/@davidokonkwolive");
+      setSpotifyUrl("https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT");
       setToastMsg("✨ Full sample worship leader profile loaded!");
     }
 
@@ -388,12 +641,55 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
       errors.instruments = "Please select at least 1 instrument or Vocals.";
     }
 
+    // Direct Contact Validation (matching pastor step 3)
+    const newContactErrors: { [key: string]: string } = {};
+    if (!email.trim()) {
+      newContactErrors.email = "Official Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      newContactErrors.email = "Please enter a valid email address";
+    }
+
+    if (phone.trim() && phone.replace(/[^0-9]/g, '').length < 9) {
+      newContactErrors.phone = "Phone number must be at least 9 digits";
+    }
+
+    const socialCheckList: { field: string; value: string }[] = [
+      { field: "facebook_url", value: facebookUrl },
+      { field: "instagram_url", value: instagramUrl },
+      { field: "youtube_url", value: youtubeUrl },
+      { field: "twitter_url", value: twitterUrl },
+      { field: "website_url", value: websiteUrl },
+    ];
+
+    socialCheckList.forEach(({ field, value }) => {
+      const v = value.trim();
+      if (v && SOCIAL_RULES[field]) {
+        const R = SOCIAL_RULES[field];
+        const wrong = R.others.exec(v);
+        if (wrong) {
+          newContactErrors[field] = `That looks like a different platform link — please put your ${R.name} link here.`;
+        } else if (!R.rx.test(v)) {
+          newContactErrors[field] = `Enter a valid ${R.name} link (e.g. ${R.ex}).`;
+        }
+      }
+    });
+
+    if (Object.keys(newContactErrors).length > 0) {
+      setContactErrors(newContactErrors);
+      errors.contact = "Please check direct contact & social media errors.";
+    }
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
+      if (newContactErrors.email) {
+        const el = document.getElementById("field-email");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       return;
     }
 
     setFieldErrors({});
+    setContactErrors({});
     setCurrentStep(3);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -415,9 +711,9 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
     }, 900);
 
     let finalAvatarUrl = avatarPreview.startsWith("http") && !avatarPreview.startsWith("blob") ? avatarPreview : "";
-    let finalSongUrl = "";
-    let finalVideoUrl = "";
-    const finalPhotoUrls: string[] = [];
+    let finalSongUrl = existingSongUrl || "";
+    let finalVideoUrl = existingVideoUrl || "";
+    const finalPhotoUrls: string[] = [...existingPhotos];
 
     const uploadFile = async (file: File, kind: string) => {
       const formData = new FormData();
@@ -441,11 +737,11 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
     }
     for (const song of songFiles) {
       const url = await uploadFile(song.file, "song");
-      if (url && !finalSongUrl) finalSongUrl = url;
+      if (url) finalSongUrl = url;
     }
     for (const vid of videoFiles) {
       const url = await uploadFile(vid.file, "video");
-      if (url && !finalVideoUrl) finalVideoUrl = url;
+      if (url) finalVideoUrl = url;
     }
     let finalCoverUrl = coverPreview.startsWith("http") && !coverPreview.startsWith("blob") ? coverPreview : "";
     if (coverFile) {
@@ -453,7 +749,7 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
       if (uploaded) finalCoverUrl = uploaded;
     }
     if (finalCoverUrl) {
-      finalPhotoUrls.push(finalCoverUrl);
+      finalPhotoUrls.unshift(finalCoverUrl);
     }
 
     for (const photo of photoFiles) {
@@ -467,11 +763,54 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
       .filter(Boolean)
       .map(l => (l.startsWith("http://") || l.startsWith("https://") ? l : `https://${l}`));
 
-    const spotifyLink = validLinks.find(l => l.includes("spotify")) || undefined;
-    const youtubeLink = validLinks.find(l => l.includes("youtube") || l.includes("youtu.be")) || undefined;
-    const instagramLink = validLinks.find(l => l.includes("instagram")) || undefined;
+    const finalSpotify = spotifyUrl.trim() 
+      ? (spotifyUrl.trim().startsWith("http") ? spotifyUrl.trim() : `https://${spotifyUrl.trim()}`) 
+      : (validLinks.find(l => l.includes("spotify")) || undefined);
+
+    const finalYoutube = youtubeUrl.trim() 
+      ? (youtubeUrl.trim().startsWith("http") ? youtubeUrl.trim() : `https://${youtubeUrl.trim()}`) 
+      : (validLinks.find(l => l.includes("youtube") || l.includes("youtu.be")) || undefined);
+
+    const finalInstagram = instagramUrl.trim() 
+      ? (instagramUrl.trim().startsWith("http") ? instagramUrl.trim() : `https://${instagramUrl.trim()}`) 
+      : (validLinks.find(l => l.includes("instagram")) || undefined);
+
+    const validYoutubeUrls = youtubeUrls
+      .map(u => u.trim())
+      .filter(Boolean)
+      .map(u => (u.startsWith("http") ? u : `https://${u}`))
+      .filter(u => u !== finalYoutube);
+
+    const validExtraSpotifyUrls = extraSpotifyUrls
+      .map(u => u.trim())
+      .filter(Boolean)
+      .map(u => (u.startsWith("http") ? u : `https://${u}`))
+      .filter(u => u !== finalSpotify);
+
     const otherLinks = validLinks.filter(l => !l.includes("spotify") && !l.includes("youtube") && !l.includes("youtu.be") && !l.includes("instagram"));
-    const websiteLink = otherLinks.length > 0 ? otherLinks.join("\n") : undefined;
+
+    // Serialize address & map coordinates so returning to edit perfectly restores every single field
+    const locMeta = `loc:${encodeURIComponent(JSON.stringify({
+      address: address.trim(),
+      addressDetails: addressDetails.trim(),
+      area: area.trim(),
+      postcode: postcode.trim(),
+      city: city.trim(),
+      country: country.trim(),
+      latitude,
+      longitude,
+    }))}`;
+
+    const bundledSiteLinks: string[] = [];
+    if (websiteUrl.trim()) {
+      bundledSiteLinks.push(websiteUrl.trim().startsWith("http") ? websiteUrl.trim() : `https://${websiteUrl.trim()}`);
+    }
+    bundledSiteLinks.push(...validYoutubeUrls);
+    bundledSiteLinks.push(...validExtraSpotifyUrls);
+    bundledSiteLinks.push(...otherLinks);
+    bundledSiteLinks.push(locMeta);
+
+    const finalWebsite = bundledSiteLinks.length > 0 ? Array.from(new Set(bundledSiteLinks)).join("\n") : undefined;
 
     const payload = {
       display_name: displayName.trim(),
@@ -480,6 +819,8 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
       country: country.trim() || "United Kingdom",
       years_leading: parseInt(yearsLeading) || 0,
       bio: bio.trim() || undefined,
+      email: email.trim() || undefined,
+      phone: phone.trim() || undefined,
       styles,
       instruments,
       languages,
@@ -491,10 +832,14 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
       song_url: finalSongUrl || undefined,
       video_url: finalVideoUrl || undefined,
       cover_photo_urls: finalPhotoUrls,
-      spotify_url: spotifyLink,
-      youtube_url: youtubeLink,
-      instagram_url: instagramLink,
-      website_url: websiteLink,
+      spotify_url: finalSpotify,
+      youtube_url: finalYoutube,
+      instagram_url: finalInstagram,
+      facebook_url: facebookUrl.trim() || undefined,
+      twitter_url: twitterUrl.trim() || undefined,
+      linkedin_url: linkedinUrl.trim() || undefined,
+      tiktok_url: tiktokUrl.trim() || undefined,
+      website_url: finalWebsite,
     };
 
     try {
@@ -533,7 +878,16 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
     { label: "Languages", pts: 10, done: languages.length > 0 },
     { label: "Availability", pts: 5, done: availableFor.length > 0 },
     { label: "Bio / About", pts: 5, done: !!bio.trim() },
-    { label: "Audio / Video or Links", pts: 5, done: songFiles.length > 0 || videoFiles.length > 0 || links.some(l => !!l.trim()) },
+    { label: "Audio / Video or Links", pts: 5, done: Boolean(
+      songFiles.length > 0 ||
+      videoFiles.length > 0 ||
+      (spotifyUrl && spotifyUrl.trim()) ||
+      (youtubeUrl && youtubeUrl.trim()) ||
+      (websiteUrl && websiteUrl.trim()) ||
+      (existingSongUrl && existingSongUrl.trim()) ||
+      (existingVideoUrl && existingVideoUrl.trim()) ||
+      links.some(l => !!l.trim())
+    ) },
   ];
   const totalPoints = strengthFields.reduce((sum, f) => sum + f.pts, 0);
   const earnedPoints = strengthFields.filter(f => f.done).reduce((sum, f) => sum + f.pts, 0);
@@ -1058,422 +1412,319 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
 
         {/* ================= STEP 2: SOUND & AVAILABILITY ================= */}
         {currentStep === 2 && (
-          <div className="step-content slide-up">
-            {/* SOUND & STYLE CARD */}
-            <div className="scard">
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "22px" }}>
-                <div style={{ width: "38px", height: "38px", borderRadius: "11px", background: "linear-gradient(135deg, #f43f5e, #db2777)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <i className="ti ti-music" style={{ fontSize: "18px", color: "#fff" }}></i>
-                </div>
-                <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>Your Sound & Style</div>
-              </div>
-
-              {/* Musical Styles (SELECT ANY + Custom) */}
-              <div style={{ marginBottom: "24px" }}>
-                <label>
-                  Musical Styles <span className="req-badge">SELECT ANY</span>
-                </label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px", marginBottom: "10px" }}>
-                  {styleOptions.map(s => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => toggleChip(styles, setStyles, s)}
-                      className={`chip ${styles.includes(s) ? "on" : ""}`}
-                    >
-                      {styles.includes(s) && <i className="ti ti-check" style={{ fontSize: "12px" }}></i>}
-                      {s}
-                    </button>
-                  ))}
-                </div>
-                {/* Custom style input */}
-                <div style={{ display: "flex", gap: "8px", maxWidth: "440px" }}>
-                  <input
-                    placeholder="Don't see yours? Add custom style (e.g. Neo-Soul Gospel)"
-                    value={customStyle}
-                    onChange={(e) => setCustomStyle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addCustomItem(customStyle, setCustomStyle, styleOptions, setStyleOptions, styles, setStyles);
-                      }
+          <div className="step-content slide-up" style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+            
+            {/* Thematic Card 1: Your Sound & Style */}
+            <Card
+              title="Your Sound & Style"
+              subtitle="Highlight your musical genres, vocal role, and instruments played"
+              icon="ti-music"
+              iconBg="linear-gradient(135deg, #f43f5e, #db2777)"
+              badge="Sound & Style"
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                <Field label="Musical Styles" required>
+                  <TagInput
+                    value={styles}
+                    onChange={(v) => {
+                      setStyles(v);
+                      if (fieldErrors.styles) setFieldErrors(prev => ({ ...prev, styles: '' }));
                     }}
-                    style={{ fontSize: "13px" }}
+                    placeholder="Type a style (e.g. Contemporary, Afro-Gospel) and press Enter..."
+                    suggestions={styleOptions}
+                    labelPrefix="SELECTED STYLES"
                   />
-                  <button
-                    type="button"
-                    onClick={() => addCustomItem(customStyle, setCustomStyle, styleOptions, setStyleOptions, styles, setStyles)}
-                    style={{
-                      flexShrink: 0,
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      color: "#fff",
-                      background: "var(--cn-purple)",
-                      border: "none",
-                      padding: "0 16px",
-                      borderRadius: "11px",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "5px",
-                    }}
-                  >
-                    <i className="ti ti-plus" style={{ fontSize: "14px" }}></i> Add
-                  </button>
-                </div>
-                {fieldErrors.styles && (
-                  <div style={{ color: "red", fontSize: "12px", marginTop: "6px" }}>{fieldErrors.styles}</div>
-                )}
-              </div>
+                  {fieldErrors.styles && (
+                    <div style={{ color: "red", fontSize: "12px", marginTop: "6px" }}>{fieldErrors.styles}</div>
+                  )}
+                </Field>
 
-              {/* Instruments & Vocals (SELECT ANY + Custom) */}
-              <div style={{ marginBottom: "16px" }}>
-                <label>
-                  Instruments & Vocals <span className="req-badge">SELECT ANY</span>
-                </label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px", marginBottom: "10px" }}>
-                  {instrumentOptions.map(i => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => toggleChip(instruments, setInstruments, i)}
-                      className={`chip ${instruments.includes(i) ? "on" : ""}`}
-                    >
-                      {instruments.includes(i) && <i className="ti ti-check" style={{ fontSize: "12px" }}></i>}
-                      🎵 {i}
-                    </button>
-                  ))}
-                </div>
-                {/* Custom instrument input */}
-                <div style={{ display: "flex", gap: "8px", maxWidth: "440px" }}>
-                  <input
-                    placeholder="Add custom instrument (e.g. Saxophone, Violin, Percussion)"
-                    value={customInstrument}
-                    onChange={(e) => setCustomInstrument(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addCustomItem(customInstrument, setCustomInstrument, instrumentOptions, setInstrumentOptions, instruments, setInstruments);
-                      }
+                {/* Subtle Divider */}
+                <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "4px 0" }}></div>
+
+                <Field label="Instruments & Vocals" required>
+                  <TagInput
+                    value={instruments}
+                    onChange={(v) => {
+                      setInstruments(v);
+                      if (fieldErrors.instruments) setFieldErrors(prev => ({ ...prev, instruments: '' }));
                     }}
-                    style={{ fontSize: "13px" }}
+                    placeholder="Type an instrument (e.g. Vocals, Acoustic guitar, Piano) and press Enter..."
+                    suggestions={instrumentOptions}
+                    labelPrefix="SELECTED INSTRUMENTS & VOCALS"
                   />
-                  <button
-                    type="button"
-                    onClick={() => addCustomItem(customInstrument, setCustomInstrument, instrumentOptions, setInstrumentOptions, instruments, setInstruments)}
-                    style={{
-                      flexShrink: 0,
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      color: "#fff",
-                      background: "var(--cn-purple)",
-                      border: "none",
-                      padding: "0 16px",
-                      borderRadius: "11px",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "5px",
-                    }}
-                  >
-                    <i className="ti ti-plus" style={{ fontSize: "14px" }}></i> Add
-                  </button>
-                </div>
-                {fieldErrors.instruments && (
-                  <div style={{ color: "red", fontSize: "12px", marginTop: "6px" }}>{fieldErrors.instruments}</div>
-                )}
+                  {fieldErrors.instruments && (
+                    <div style={{ color: "red", fontSize: "12px", marginTop: "6px" }}>{fieldErrors.instruments}</div>
+                  )}
+                </Field>
               </div>
-            </div>
+            </Card>
 
-            {/* LANGUAGES YOU LEAD WORSHIP IN (MATCHING CHURCH ONBOARDING STEP4LANGUAGES STYLE) */}
-            <div className="scard" style={{ overflow: "visible" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-                <div style={{ width: "38px", height: "38px", borderRadius: "11px", background: "linear-gradient(135deg, #a78bfa, #7c3aed)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <i className="ti ti-language" style={{ fontSize: "18px", color: "#fff" }}></i>
-                </div>
-                <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>Languages Spoken</div>
-              </div>
-              <div style={{ fontSize: "13px", color: "var(--cn-gray)", marginBottom: "18px" }}>
-                Select languages services are held in or interpreted into
-              </div>
-
-              {/* POPULAR LANGUAGES QUICK PICKS */}
-              <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "9px" }}>
-                POPULAR LANGUAGES
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "18px" }}>
-                {quickPickLanguages.map(lang => (
-                  <div 
-                    key={lang} 
-                    className={`chip ${languages.includes(lang) ? "on" : ""}`} 
-                    onClick={() => toggleChip(languages, setLanguages, lang)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {languages.includes(lang) && <i className="ti ti-check" style={{ fontSize: "12px" }}></i>}
-                    {lang}
-                  </div>
-                ))}
-              </div>
-
-              {/* SEARCHABLE 250+ LANGUAGES INPUT */}
-              <div ref={langContainerRef} id="f-languages" style={{ position: "relative", marginBottom: "16px" }}>
-                <i className="ti ti-search" style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "var(--cn-gray-light)", zIndex: 2 }}></i>
-                <input 
-                  placeholder="Search 250+ languages (e.g. Yoruba, Swahili, Mandarin)..." 
-                  value={langSearchQuery}
-                  onChange={(e) => {
-                    setLangSearchQuery(e.target.value);
-                    setIsLangOpen(true);
+            {/* Thematic Card 2: Languages Spoken / Leading Worship */}
+            <Card
+              title="Languages Spoken"
+              subtitle="Select languages services are held in or interpreted into"
+              icon="ti-language"
+              iconBg="linear-gradient(135deg, #a78bfa, #7c3aed)"
+              badge="Languages"
+            >
+              <Field label="Languages you lead worship in">
+                <TagInput
+                  value={languages}
+                  onChange={(v) => {
+                    setLanguages(v);
+                    if (fieldErrors.languages) setFieldErrors(prev => ({ ...prev, languages: '' }));
                   }}
-                  onFocus={() => setIsLangOpen(true)}
-                  style={{ paddingLeft: "42px" }} 
-                  autoComplete="off"
+                  placeholder="Search or type 250+ languages (e.g. Yoruba, Swahili, Spanish) and press Enter..."
+                  suggestions={quickPickLanguages}
+                  labelPrefix="SELECTED LANGUAGES"
                 />
+              </Field>
+            </Card>
 
-                {isLangOpen && (
-                  <div className="autocomplete-dropdown" style={{ display: "block", maxHeight: "250px", overflowY: "auto" }}>
-                    {filteredLanguages.length === 0 ? (
-                      <div>
-                        <div style={{ padding: "10px 14px", fontSize: "12.5px", color: "var(--cn-gray)", lineHeight: 1.4 }}>
-                          No language found for "{langSearchQuery}" — you can add it as a custom language below
-                        </div>
-                        <div 
-                          className="autocomplete-item" 
-                          onClick={() => {
-                            const val = langSearchQuery.trim().replace(/(^|\s)(\w)/g, (m, p, c) => p + c.toUpperCase());
-                            if (val && !languages.includes(val)) {
-                              setLanguages(prev => [...prev, val]);
-                            }
-                            setLangSearchQuery("");
-                            setIsLangOpen(false);
-                          }}
-                          style={{ borderTop: "1px solid var(--cn-border)", fontWeight: 600, color: "var(--cn-purple)", display: "flex", alignItems: "center", gap: "8px", padding: "11px 14px" }}
-                        >
-                          <i className="ti ti-plus" style={{ fontSize: "14px" }}></i> Add "{langSearchQuery}"
-                        </div>
-                      </div>
-                    ) : (
-                      filteredLanguages.slice(0, 100).map(lang => {
-                        const isAdded = languages.includes(lang);
-                        return (
-                          <div 
-                            key={lang}
-                            onClick={() => {
-                              toggleChip(languages, setLanguages, lang);
-                              setLangSearchQuery("");
-                              setIsLangOpen(false);
-                            }}
-                            className="autocomplete-item"
-                            style={{
-                              padding: "9px 14px",
-                              cursor: "pointer",
-                              fontSize: "13px",
-                              color: isAdded ? "var(--cn-purple)" : "var(--cn-ink)",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px"
-                            }}
-                          >
-                            {isAdded ? (
-                              <i className="ti ti-check" style={{ fontSize: "13px", color: "var(--cn-purple)" }}></i>
-                            ) : (
-                              <i className="ti ti-language" style={{ fontSize: "13px", color: "var(--cn-gray-light)" }}></i>
-                            )}
-                            {lang}
-                            {isAdded && (
-                              <span style={{ marginLeft: "auto", fontSize: "10.5px", color: "var(--cn-purple)", fontWeight: 700 }}>Selected</span>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
+            {/* Thematic Card 3: Availability & Booking Details */}
+            <Card
+              title="Availability & Booking Details"
+              subtitle="Define what events you can minister at, your travel radius, and honorarium preferences"
+              icon="ti-calendar-check"
+              iconBg="linear-gradient(135deg, #2dd4bf, #0891b2)"
+              badge="Booking"
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                <Field label="Available For Engagements">
+                  <TagInput
+                    value={availableFor}
+                    onChange={(v) => setAvailableFor(v)}
+                    placeholder="Type event type (e.g. Sundays, Worship nights, Conferences) and press Enter..."
+                    suggestions={availableOptions}
+                    labelPrefix="SELECTED AVAILABLE FOR"
+                  />
+                </Field>
+
+                {/* Subtle Divider */}
+                <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "4px 0" }}></div>
+
+                {/* Travel & Notice row */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
+                  <div>
+                    <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)", marginBottom: "7px", display: "block" }}>
+                      Travel Range
+                    </label>
+                    <select value={travelRange} onChange={(e) => setTravelRange(e.target.value)}>
+                      <option>My city only</option>
+                      <option>Within 1 hour</option>
+                      <option>UK-wide</option>
+                      <option>International</option>
+                    </select>
                   </div>
-                )}
+                  <div>
+                    <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)", marginBottom: "7px", display: "block" }}>
+                      Notice / Lead Time
+                    </label>
+                    <select value={leadTime} onChange={(e) => setLeadTime(e.target.value)}>
+                      <option>Any notice</option>
+                      <option>2 weeks preferred</option>
+                      <option>1 month+</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Subtle Divider */}
+                <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "4px 0" }}></div>
+
+                {/* Fee Model using TagInput format */}
+                <Field label="Honorarium / Fee Preference">
+                  <TagInput
+                    value={feeModel}
+                    onChange={(v) => setFeeModel(v)}
+                    placeholder="Type honorarium preference (e.g. Love offering, Fixed fee) and press Enter..."
+                    suggestions={feeOptions}
+                    labelPrefix="SELECTED PREFERENCES"
+                  />
+                </Field>
               </div>
+            </Card>
 
-              {/* SELECTED LANGUAGES CHIPS WITH PURPLE PILLS & X BUTTON */}
-              {languages.length > 0 && (
-                <>
-                  <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "8px" }}>
-                    SELECTED LANGUAGES ({languages.length})
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                    {languages.map(lang => (
-                      <div 
-                        key={lang} 
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          background: "var(--cn-purple)",
-                          color: "#fff",
-                          borderRadius: "20px",
-                          padding: "6px 10px 6px 14px",
-                          fontSize: "13px",
-                          fontWeight: 600,
-                          cursor: "pointer"
+            {/* Thematic Card 4: Direct Contact & Digital Presence (Same as Pastor Step 3) */}
+            <Card
+              title="Direct Contact & Digital Presence"
+              subtitle="Provide ways for church members, guest invitation teams, and leadership to reach you"
+              icon="ti-phone"
+              badge="Direct Access"
+              onLoadSample={handleLoadSampleData}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "18px" }}>
+                  <Field label="Official Email" required>
+                    <div style={{ position: "relative" }}>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          validateSocialField('email', e.target.value);
                         }}
-                        onClick={() => toggleChip(languages, setLanguages, lang)}
-                      >
-                        {lang}
-                        <span 
-                          style={{
-                            background: "rgba(255,255,255,0.25)",
-                            borderRadius: "50%",
-                            width: "16px",
-                            height: "16px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "#fff",
-                            fontSize: "11px",
-                            lineHeight: 1
-                          }}
-                        >
-                          ×
-                        </span>
+                        style={{ ...getContactInputStyle('email'), paddingLeft: "42px" }}
+                        placeholder="pastor@church.co.uk"
+                      />
+                      <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--cn-purple)", pointerEvents: "none" }}>
+                        <i className="ti ti-mail" style={{ fontSize: "17px" }}></i>
                       </div>
-                    ))}
+                    </div>
+                    {contactErrors.email && (
+                      <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                        <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
+                        <span>{contactErrors.email}</span>
+                      </div>
+                    )}
+                  </Field>
+
+                  <Field label="Phone / WhatsApp Contact">
+                    <div style={{ position: "relative" }}>
+                      <input
+                        value={phone}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^\d\s\+\-\(\)]/g, '');
+                          setPhone(val);
+                          validateSocialField('phone', val);
+                        }}
+                        style={{ ...getContactInputStyle('phone'), paddingLeft: "42px" }}
+                        placeholder="07700 900123"
+                      />
+                      <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#16a34a", pointerEvents: "none" }}>
+                        <i className="ti ti-brand-whatsapp" style={{ fontSize: "18px" }}></i>
+                      </div>
+                    </div>
+                    {contactErrors.phone && (
+                      <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                        <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
+                        <span>{contactErrors.phone}</span>
+                      </div>
+                    )}
+                  </Field>
+                </div>
+
+                <Field label="Personal Website / Blog">
+                  <div style={{ position: "relative" }}>
+                    <input
+                      value={websiteUrl}
+                      onChange={(e) => {
+                        setWebsiteUrl(e.target.value);
+                        validateSocialField('website_url', e.target.value);
+                      }}
+                      style={{ ...getContactInputStyle('website_url'), paddingLeft: "42px" }}
+                      placeholder="https://yourwebsite.com"
+                    />
+                    <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--cn-purple)", pointerEvents: "none" }}>
+                      <i className="ti ti-world" style={{ fontSize: "17px" }}></i>
+                    </div>
                   </div>
-                </>
-              )}
-            </div>
+                  {contactErrors.website_url && (
+                    <div style={{ color: "red", fontSize: "12px", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                      <i className="ti ti-alert-triangle" style={{ fontSize: "14px" }}></i>
+                      <span>{contactErrors.website_url}</span>
+                    </div>
+                  )}
+                </Field>
 
-            {/* AVAILABILITY & BOOKING CARD */}
-            <div className="scard">
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "22px" }}>
-                <div style={{ width: "38px", height: "38px", borderRadius: "11px", background: "linear-gradient(135deg, #2dd4bf, #0891b2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <i className="ti ti-calendar-check" style={{ fontSize: "18px", color: "#fff" }}></i>
-                </div>
-                <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>Availability & Booking Details</div>
-              </div>
+                <div style={{ borderTop: "1px solid var(--cn-border)", paddingTop: "18px", marginTop: "6px" }}>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)", marginBottom: "14px", display: "block" }}>
+                    Social Media Channels
+                  </label>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+                    <div>
+                      <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--cn-gray)" }}>Facebook</label>
+                      <input
+                        value={facebookUrl}
+                        onFocus={() => { if (!facebookUrl) setFacebookUrl('https://facebook.com/'); }}
+                        onChange={(e) => {
+                          setFacebookUrl(e.target.value);
+                          validateSocialField('facebook_url', e.target.value);
+                        }}
+                        style={getContactInputStyle('facebook_url')}
+                        placeholder="facebook.com/yourprofile"
+                      />
+                      {contactErrors.facebook_url && <p style={{ color: "red", fontSize: "11.5px", marginTop: "4px" }}>{contactErrors.facebook_url}</p>}
+                    </div>
 
-              {/* Available For (SELECT ANY + Custom) */}
-              <div style={{ marginBottom: "22px" }}>
-                <label>Available For</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px", marginBottom: "10px" }}>
-                  {availableOptions.map(a => (
-                    <button
-                      key={a}
-                      type="button"
-                      onClick={() => toggleChip(availableFor, setAvailableFor, a)}
-                      className={`chip ${availableFor.includes(a) ? "on" : ""}`}
-                    >
-                      {availableFor.includes(a) && <i className="ti ti-check" style={{ fontSize: "12px" }}></i>}
-                      {a}
-                    </button>
-                  ))}
-                </div>
-                {/* Custom Available For input */}
-                <div style={{ display: "flex", gap: "8px", maxWidth: "440px" }}>
-                  <input
-                    placeholder="Add custom availability (e.g. Youth Camp, Midweek Prayer)"
-                    value={customAvailable}
-                    onChange={(e) => setCustomAvailable(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addCustomItem(customAvailable, setCustomAvailable, availableOptions, setAvailableOptions, availableFor, setAvailableFor);
-                      }
-                    }}
-                    style={{ fontSize: "13px" }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => addCustomItem(customAvailable, setCustomAvailable, availableOptions, setAvailableOptions, availableFor, setAvailableFor)}
-                    style={{
-                      flexShrink: 0,
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      color: "#fff",
-                      background: "var(--cn-purple)",
-                      border: "none",
-                      padding: "0 16px",
-                      borderRadius: "11px",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "5px",
-                    }}
-                  >
-                    <i className="ti ti-plus" style={{ fontSize: "14px" }}></i> Add
-                  </button>
-                </div>
-              </div>
+                    <div>
+                      <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--cn-gray)" }}>Instagram</label>
+                      <input
+                        value={instagramUrl}
+                        onFocus={() => { if (!instagramUrl) setInstagramUrl('https://instagram.com/'); }}
+                        onChange={(e) => {
+                          setInstagramUrl(e.target.value);
+                          validateSocialField('instagram_url', e.target.value);
+                        }}
+                        style={getContactInputStyle('instagram_url')}
+                        placeholder="instagram.com/yourhandle or @handle"
+                      />
+                      {contactErrors.instagram_url && <p style={{ color: "red", fontSize: "11.5px", marginTop: "4px" }}>{contactErrors.instagram_url}</p>}
+                    </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px", marginBottom: "22px" }}>
-                <div>
-                  <label>Travel Range</label>
-                  <select value={travelRange} onChange={(e) => setTravelRange(e.target.value)}>
-                    <option>My city only</option>
-                    <option>Within 1 hour</option>
-                    <option>UK-wide</option>
-                    <option>International</option>
-                  </select>
-                </div>
-                <div>
-                  <label>Notice / Lead Time</label>
-                  <select value={leadTime} onChange={(e) => setLeadTime(e.target.value)}>
-                    <option>Any notice</option>
-                    <option>2 weeks preferred</option>
-                    <option>1 month+</option>
-                  </select>
-                </div>
-              </div>
+                    <div>
+                      <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--cn-gray)" }}>YouTube</label>
+                      <input
+                        value={youtubeUrl}
+                        onFocus={() => { if (!youtubeUrl) setYoutubeUrl('https://youtube.com/'); }}
+                        onChange={(e) => {
+                          setYoutubeUrl(e.target.value);
+                          validateSocialField('youtube_url', e.target.value);
+                        }}
+                        style={getContactInputStyle('youtube_url')}
+                        placeholder="youtube.com/@yourchannel"
+                      />
+                      {contactErrors.youtube_url && <p style={{ color: "red", fontSize: "11.5px", marginTop: "4px" }}>{contactErrors.youtube_url}</p>}
+                    </div>
 
-              {/* Fee Model (SELECT ANY + Custom) */}
-              <div>
-                <label>Honorarium / Fee Preference</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px", marginBottom: "10px" }}>
-                  {feeOptions.map(f => (
-                    <button
-                      key={f}
-                      type="button"
-                      onClick={() => toggleChip(feeModel, setFeeModel, f)}
-                      className={`chip ${feeModel.includes(f) ? "on" : ""}`}
-                    >
-                      {feeModel.includes(f) && <i className="ti ti-check" style={{ fontSize: "12px" }}></i>}
-                      {f}
-                    </button>
-                  ))}
-                </div>
-                {/* Custom Fee Model input */}
-                <div style={{ display: "flex", gap: "8px", maxWidth: "440px" }}>
-                  <input
-                    placeholder="Add custom preference (e.g. Travel + Accommodation only)"
-                    value={customFee}
-                    onChange={(e) => setCustomFee(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addCustomItem(customFee, setCustomFee, feeOptions, setFeeOptions, feeModel, setFeeModel);
-                      }
-                    }}
-                    style={{ fontSize: "13px" }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => addCustomItem(customFee, setCustomFee, feeOptions, setFeeOptions, feeModel, setFeeModel)}
-                    style={{
-                      flexShrink: 0,
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      color: "#fff",
-                      background: "var(--cn-purple)",
-                      border: "none",
-                      padding: "0 16px",
-                      borderRadius: "11px",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "5px",
-                    }}
-                  >
-                    <i className="ti ti-plus" style={{ fontSize: "14px" }}></i> Add
-                  </button>
+                    <div>
+                      <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--cn-gray)" }}>X / Twitter</label>
+                      <input
+                        value={twitterUrl}
+                        onFocus={() => { if (!twitterUrl) setTwitterUrl('https://twitter.com/'); }}
+                        onChange={(e) => {
+                          setTwitterUrl(e.target.value);
+                          validateSocialField('twitter_url', e.target.value);
+                        }}
+                        style={getContactInputStyle('twitter_url')}
+                        placeholder="twitter.com/yourhandle or @handle"
+                      />
+                      {contactErrors.twitter_url && <p style={{ color: "red", fontSize: "11.5px", marginTop: "4px" }}>{contactErrors.twitter_url}</p>}
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--cn-gray)" }}>LinkedIn</label>
+                      <input
+                        value={linkedinUrl}
+                        onFocus={() => { if (!linkedinUrl) setLinkedinUrl('https://linkedin.com/in/'); }}
+                        onChange={(e) => {
+                          setLinkedinUrl(e.target.value);
+                          validateSocialField('linkedin_url', e.target.value);
+                        }}
+                        style={getContactInputStyle('linkedin_url')}
+                        placeholder="linkedin.com/in/yourprofile"
+                      />
+                      {contactErrors.linkedin_url && <p style={{ color: "red", fontSize: "11.5px", marginTop: "4px" }}>{contactErrors.linkedin_url}</p>}
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: "12px", fontWeight: 600, color: "var(--cn-gray)" }}>TikTok</label>
+                      <input
+                        value={tiktokUrl}
+                        onFocus={() => { if (!tiktokUrl) setTiktokUrl('https://tiktok.com/@'); }}
+                        onChange={(e) => {
+                          setTiktokUrl(e.target.value);
+                          validateSocialField('tiktok_url', e.target.value);
+                        }}
+                        style={getContactInputStyle('tiktok_url')}
+                        placeholder="tiktok.com/@yourhandle"
+                      />
+                      {contactErrors.tiktok_url && <p style={{ color: "red", fontSize: "11.5px", marginTop: "4px" }}>{contactErrors.tiktok_url}</p>}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* ACTION BUTTONS */}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "24px" }}>
@@ -1481,72 +1732,441 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
                 <i className="ti ti-arrow-left" style={{ fontSize: "14px" }}></i> Back
               </button>
               <button onClick={handleStep2Next} className="btn-primary">
-                Next — Media & Links <i className="ti ti-arrow-right" style={{ fontSize: "16px" }}></i>
+                Next — Media & Recordings <i className="ti ti-arrow-right" style={{ fontSize: "16px" }}></i>
               </button>
             </div>
           </div>
         )}
 
-        {/* ================= STEP 3: MEDIA & LINKS ================= */}
+        {/* ================= STEP 3: MEDIA & SAMPLE RECORDINGS ================= */}
         {currentStep === 3 && (
-          <div className="step-content slide-up">
-            <div className="scard">
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "22px" }}>
-                <div style={{ width: "38px", height: "38px", borderRadius: "11px", background: "linear-gradient(135deg, #f59e0b, #d97706)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <i className="ti ti-player-play" style={{ fontSize: "18px", color: "#fff" }}></i>
+          <div className="step-content slide-up" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            
+            {/* Card 1: Featured Worship Video / Stream */}
+            <Card
+              icon="ti-video"
+              iconBg="linear-gradient(135deg, #ef4444, #dc2626)"
+              title="Live Worship Video / Featured Stream"
+              subtitle="Add a YouTube video link of you leading worship live, acoustic sessions, or ministry services."
+            >
+              <Field
+                label="YouTube Video or Stream URL"
+                hint="Supports full YouTube watch URLs or youtu.be shortlinks."
+              >
+                <div style={{ position: "relative" }}>
+                  <input
+                    placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ or https://youtu.be/..."
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
+                    style={{
+                      paddingLeft: "42px",
+                      borderColor: youtubeUrl ? (getYouTubeEmbedUrl(youtubeUrl) ? "#10b981" : "#f59e0b") : "var(--cn-border)",
+                    }}
+                  />
+                  <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#ef4444", fontSize: "19px" }}>
+                    <i className="ti ti-brand-youtube"></i>
+                  </span>
+                  {youtubeUrl && (
+                    <span style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", fontSize: "16px" }}>
+                      {getYouTubeEmbedUrl(youtubeUrl) ? (
+                        <i className="ti ti-circle-check-filled" style={{ color: "#10b981" }} title="Valid YouTube video"></i>
+                      ) : (
+                        <i className="ti ti-alert-triangle" style={{ color: "#f59e0b" }} title="Please enter a valid YouTube watch/stream URL"></i>
+                      )}
+                    </span>
+                  )}
                 </div>
-                <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>Media & Sample Recordings</div>
+              </Field>
+
+              {/* YouTube Live Embed Preview */}
+              {youtubeUrl && getYouTubeEmbedUrl(youtubeUrl) && (
+                <div style={{ marginTop: "14px", background: "#f8fafc", borderRadius: "14px", padding: "12px", border: "1px solid var(--cn-border)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 700, color: "#16a34a", marginBottom: "8px" }}>
+                    <i className="ti ti-circle-check-filled"></i> Video embed preview is active
+                  </div>
+                  <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden", borderRadius: "10px", background: "#000" }}>
+                    <iframe
+                      src={getYouTubeEmbedUrl(youtubeUrl) || ""}
+                      title="YouTube Preview"
+                      style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Additional YouTube Video / Stream Links */}
+              <div style={{ marginTop: "16px", borderTop: "1px solid var(--cn-border)", paddingTop: "14px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)", margin: 0 }}>
+                    Additional YouTube Videos or Live Streams
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setYoutubeUrls(prev => [...prev, ""])}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      background: "#fef2f2",
+                      color: "#dc2626",
+                      border: "1px solid #fecaca",
+                      borderRadius: "8px",
+                      padding: "5px 12px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    <i className="ti ti-plus"></i> Add Another Video
+                  </button>
+                </div>
+
+                {youtubeUrls.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {youtubeUrls.map((yt, idx) => {
+                      const embed = getYouTubeEmbedUrl(yt);
+                      return (
+                        <div key={`extra-yt-${idx}`} style={{ display: "flex", flexDirection: "column", gap: "8px", background: "#fafafa", padding: "10px", borderRadius: "12px", border: "1px solid var(--cn-border)" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <div style={{ position: "relative", flex: 1 }}>
+                              <input
+                                placeholder="e.g. https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                                value={yt}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setYoutubeUrls(prev => {
+                                    const copy = [...prev];
+                                    copy[idx] = val;
+                                    return copy;
+                                  });
+                                }}
+                                style={{ width: "100%", paddingLeft: "36px", borderColor: yt ? (embed ? "#10b981" : "#f59e0b") : "var(--cn-border)" }}
+                              />
+                              <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#ef4444", fontSize: "16px" }}>
+                                <i className="ti ti-brand-youtube"></i>
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setYoutubeUrls(prev => prev.filter((_, i) => i !== idx))}
+                              style={{ width: "36px", height: "36px", borderRadius: "8px", border: "1px solid #fecaca", background: "#fef2f2", color: "#ef4444", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                              title="Remove video link"
+                            >
+                              <i className="ti ti-trash"></i>
+                            </button>
+                          </div>
+                          {yt && embed && (
+                            <div style={{ position: "relative", paddingBottom: "45%", height: 0, overflow: "hidden", borderRadius: "8px", background: "#000" }}>
+                              <iframe
+                                src={embed}
+                                title={`YouTube Preview ${idx + 1}`}
+                                style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "20px" }}>
-                {/* Audio Upload */}
-                <label style={{ border: "2px dashed #e2e8f0", borderRadius: "16px", padding: "20px 14px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", transition: "all 0.2s", background: "#f8fafc" }}>
+              {/* Direct Video File Upload */}
+              <div style={{ marginTop: "16px", borderTop: "1px solid var(--cn-border)", paddingTop: "14px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--cn-ink)", display: "block", marginBottom: "6px" }}>
+                  Or upload direct video clip (MP4, WebM)
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "10px", padding: "8px 14px", fontSize: "13px", fontWeight: 600, cursor: "pointer", color: "var(--cn-ink)" }}>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      multiple
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          const newFiles = Array.from(e.target.files).map(f => ({ file: f, name: f.name }));
+                          setVideoFiles(prev => [...prev, ...newFiles]);
+                        }
+                      }}
+                    />
+                    <i className="ti ti-upload" style={{ color: "#db2777" }}></i> Select Video Files
+                  </label>
+                  {videoFiles.length > 0 && (
+                    <span style={{ fontSize: "12px", fontWeight: 700, color: "#9d174d", background: "#fdf2f8", padding: "4px 10px", borderRadius: "12px", border: "1px solid #fbcfe8" }}>
+                      {videoFiles.length} video file{videoFiles.length > 1 ? "s" : ""} selected
+                    </span>
+                  )}
+                </div>
+                {videoFiles.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "10px" }}>
+                    {videoFiles.map((v, idx) => (
+                      <span key={`vid-${idx}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#fdf2f8", border: "1px solid #fbcfe8", color: "#9d174d", fontSize: "12px", fontWeight: 700, padding: "4px 10px", borderRadius: "14px" }}>
+                        <i className="ti ti-video"></i>
+                        <span style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.name}</span>
+                        <button type="button" onClick={() => setVideoFiles(prev => prev.filter((_, i) => i !== idx))} style={{ border: "none", background: "none", color: "#9d174d", cursor: "pointer", fontWeight: 800 }}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Card 2: Music & Audio Recordings (Spotify & Audio Files) */}
+            <Card
+              icon="ti-music"
+              iconBg="linear-gradient(135deg, #10b981, #059669)"
+              title="Music & Streaming Recordings"
+              subtitle="Link your Spotify tracks, EP, or albums, and upload direct audio demos so churches can hear your vocal timbre."
+            >
+              <Field
+                label="Primary Spotify Song, Album or Artist Link"
+                hint="Paste a link to your track (e.g. open.spotify.com/track/...) or artist profile for instant church playback."
+              >
+                <div style={{ position: "relative" }}>
                   <input
-                    type="file"
-                    accept="audio/*"
-                    multiple
-                    style={{ display: "none" }}
-                    onChange={(e) => {
-                      if (e.target.files) {
-                        const newFiles = Array.from(e.target.files).map(f => ({ file: f, name: f.name }));
-                        setSongFiles(prev => [...prev, ...newFiles]);
-                      }
+                    placeholder="e.g. https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT"
+                    value={spotifyUrl}
+                    onChange={(e) => setSpotifyUrl(e.target.value)}
+                    style={{
+                      paddingLeft: "42px",
+                      borderColor: spotifyUrl ? (getSpotifyEmbedUrl(spotifyUrl) ? "#10b981" : "var(--cn-border)") : "var(--cn-border)",
                     }}
                   />
-                  <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: songFiles.length > 0 ? "#10b981" : "linear-gradient(135deg, #2dd4bf, #0891b2)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "20px", marginBottom: "8px" }}>
-                    <i className={songFiles.length > 0 ? "ti ti-check" : "ti ti-music"}></i>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: "13.5px", color: "var(--cn-ink)" }}>
-                    {songFiles.length > 0 ? `${songFiles.length} song${songFiles.length > 1 ? "s" : ""} added` : "Add Audio Tracks"}
-                  </div>
-                  <div style={{ fontSize: "11.5px", color: "var(--cn-gray)", marginTop: "3px" }}>MP3, WAV, M4A</div>
-                </label>
+                  <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#10b981", fontSize: "19px" }}>
+                    <i className="ti ti-brand-spotify"></i>
+                  </span>
+                  {spotifyUrl && (
+                    <span style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", fontSize: "16px" }}>
+                      {getSpotifyEmbedUrl(spotifyUrl) ? (
+                        <i className="ti ti-circle-check-filled" style={{ color: "#10b981" }} title="Spotify player will embed"></i>
+                      ) : (
+                        <i className="ti ti-circle-check" style={{ color: "#10b981" }} title="Valid Spotify Link"></i>
+                      )}
+                    </span>
+                  )}
+                </div>
+              </Field>
 
-                {/* Video Upload */}
-                <label style={{ border: "2px dashed #e2e8f0", borderRadius: "16px", padding: "20px 14px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", transition: "all 0.2s", background: "#f8fafc" }}>
-                  <input
-                    type="file"
-                    accept="video/*"
-                    multiple
-                    style={{ display: "none" }}
-                    onChange={(e) => {
-                      if (e.target.files) {
-                        const newFiles = Array.from(e.target.files).map(f => ({ file: f, name: f.name }));
-                        setVideoFiles(prev => [...prev, ...newFiles]);
-                      }
+              {/* Spotify Live Embed Preview */}
+              {spotifyUrl && getSpotifyEmbedUrl(spotifyUrl) && (
+                <div style={{ marginTop: "14px", background: "#f8fafc", borderRadius: "14px", padding: "12px", border: "1px solid var(--cn-border)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 700, color: "#10b981", marginBottom: "8px" }}>
+                    <i className="ti ti-brand-spotify"></i> Spotify Player Preview
+                  </div>
+                  <div style={{ borderRadius: "12px", overflow: "hidden" }}>
+                    <iframe
+                      src={getSpotifyEmbedUrl(spotifyUrl) || ""}
+                      width="100%"
+                      height="152"
+                      frameBorder="0"
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                      loading="lazy"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Spotify Links */}
+              <div style={{ marginTop: "16px", borderTop: "1px solid var(--cn-border)", paddingTop: "14px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)", margin: 0 }}>
+                    Additional Spotify Songs / Albums / Playlists
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setExtraSpotifyUrls(prev => [...prev, ""])}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      background: "#ecfdf5",
+                      color: "#059669",
+                      border: "1px solid #a7f3d0",
+                      borderRadius: "8px",
+                      padding: "5px 12px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: "pointer"
                     }}
-                  />
-                  <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: videoFiles.length > 0 ? "#10b981" : "linear-gradient(135deg, #f43f5e, #db2777)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "20px", marginBottom: "8px" }}>
-                    <i className={videoFiles.length > 0 ? "ti ti-check" : "ti ti-video"}></i>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: "13.5px", color: "var(--cn-ink)" }}>
-                    {videoFiles.length > 0 ? `${videoFiles.length} video${videoFiles.length > 1 ? "s" : ""} added` : "Add Live Videos"}
-                  </div>
-                  <div style={{ fontSize: "11.5px", color: "var(--cn-gray)", marginTop: "3px" }}>MP4, WebM clips</div>
-                </label>
+                  >
+                    <i className="ti ti-plus"></i> Add Another Track
+                  </button>
+                </div>
 
-                {/* Gallery Upload */}
-                <label style={{ border: "2px dashed #e2e8f0", borderRadius: "16px", padding: "20px 14px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", transition: "all 0.2s", background: "#f8fafc" }}>
+                {extraSpotifyUrls.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {extraSpotifyUrls.map((sp, idx) => {
+                      const embed = getSpotifyEmbedUrl(sp);
+                      return (
+                        <div key={`extra-sp-${idx}`} style={{ display: "flex", flexDirection: "column", gap: "8px", background: "#f8fafc", padding: "10px", borderRadius: "12px", border: "1px solid var(--cn-border)" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <div style={{ position: "relative", flex: 1 }}>
+                              <input
+                                placeholder="https://open.spotify.com/track/..."
+                                value={sp}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setExtraSpotifyUrls(prev => {
+                                    const copy = [...prev];
+                                    copy[idx] = val;
+                                    return copy;
+                                  });
+                                }}
+                                style={{ width: "100%", paddingLeft: "36px", borderColor: sp ? (embed ? "#10b981" : "var(--cn-border)") : "var(--cn-border)" }}
+                              />
+                              <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#10b981", fontSize: "16px" }}>
+                                <i className="ti ti-brand-spotify"></i>
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setExtraSpotifyUrls(prev => prev.filter((_, i) => i !== idx))}
+                              style={{ width: "36px", height: "36px", borderRadius: "8px", border: "1px solid #fecaca", background: "#fef2f2", color: "#ef4444", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                              title="Remove link"
+                            >
+                              <i className="ti ti-trash"></i>
+                            </button>
+                          </div>
+                          {sp && embed && (
+                            <div style={{ borderRadius: "10px", overflow: "hidden" }}>
+                              <iframe
+                                src={embed}
+                                width="100%"
+                                height="80"
+                                frameBorder="0"
+                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                loading="lazy"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Direct Audio Files Upload */}
+              <div style={{ marginTop: "16px", borderTop: "1px solid var(--cn-border)", paddingTop: "14px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: "var(--cn-ink)", display: "block", marginBottom: "6px" }}>
+                  Upload Audio Demo Tracks (MP3, WAV, M4A)
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "10px", padding: "8px 14px", fontSize: "13px", fontWeight: 600, cursor: "pointer", color: "var(--cn-ink)" }}>
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      multiple
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          const newFiles = Array.from(e.target.files).map(f => ({ file: f, name: f.name }));
+                          setSongFiles(prev => [...prev, ...newFiles]);
+                        }
+                      }}
+                    />
+                    <i className="ti ti-music" style={{ color: "#0891b2" }}></i> Select Audio Tracks
+                  </label>
+                  {songFiles.length > 0 && (
+                    <span style={{ fontSize: "12px", fontWeight: 700, color: "#065f46", background: "#ecfdf5", padding: "4px 10px", borderRadius: "12px", border: "1px solid #a7f3d0" }}>
+                      {songFiles.length} song{songFiles.length > 1 ? "s" : ""} added
+                    </span>
+                  )}
+                </div>
+                {songFiles.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "10px" }}>
+                    {songFiles.map((s, idx) => (
+                      <span key={`song-${idx}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#065f46", fontSize: "12px", fontWeight: 700, padding: "4px 10px", borderRadius: "14px" }}>
+                        <i className="ti ti-headphones"></i>
+                        <span style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
+                        <button type="button" onClick={() => setSongFiles(prev => prev.filter((_, i) => i !== idx))} style={{ border: "none", background: "none", color: "#065f46", cursor: "pointer", fontWeight: 800 }}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Card 3: Additional Streaming & Music Links */}
+            <Card
+              icon="ti-link"
+              iconBg="linear-gradient(135deg, #a855f7, #7c3aed)"
+              title="Additional Music & Platform Links"
+              subtitle="Add links to Soundcloud, Bandcamp, Apple Music, or other ministry profiles where church teams can hear more."
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)", margin: 0 }}>
+                    Additional Music Links (Apple Music, SoundCloud, Bandcamp, etc.)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addLinkInput}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      background: "#f1f5f9",
+                      color: "var(--cn-ink)",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "8px",
+                      padding: "5px 12px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    <i className="ti ti-plus"></i> Add Link
+                  </button>
+                </div>
+
+                {links.length === 0 ? (
+                  <div style={{ fontSize: "12.5px", color: "var(--cn-gray)", fontStyle: "italic", background: "#f8fafc", border: "1px dashed var(--cn-border)", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
+                    No extra music links added yet. Click &quot;Add Link&quot; if you have SoundCloud, Bandcamp, or Apple Music pages.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {links.map((linkVal, idx) => (
+                      <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div style={{ position: "relative", flex: 1 }}>
+                          <input
+                            placeholder="https://soundcloud.com/..."
+                            value={linkVal}
+                            onChange={(e) => updateLink(idx, e.target.value)}
+                            style={{ width: "100%", paddingLeft: "36px" }}
+                          />
+                          <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--cn-gray)", fontSize: "15px" }}>
+                            <i className="ti ti-link"></i>
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeLink(idx)}
+                          style={{ width: "36px", height: "36px", borderRadius: "8px", border: "1px solid #fecaca", background: "#fef2f2", color: "#ef4444", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <i className="ti ti-trash"></i>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Card 4: Ministry Photo Gallery */}
+            <Card
+              icon="ti-photo"
+              iconBg="linear-gradient(135deg, #3b82f6, #2563eb)"
+              title="Worship Ministry Photo Gallery"
+              subtitle="Photos of you leading at conferences, Sunday services, or acoustic sessions. These appear in the media gallery on your public listing."
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "12px" }}>
+                <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "10px", padding: "8px 14px", fontSize: "13px", fontWeight: 600, cursor: "pointer", color: "var(--cn-ink)" }}>
                   <input
                     type="file"
                     accept="image/*"
@@ -1559,131 +2179,49 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
                       }
                     }}
                   />
-                  <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: photoFiles.length > 0 ? "#10b981" : "linear-gradient(135deg, #a855f7, #7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "20px", marginBottom: "8px" }}>
-                    <i className={photoFiles.length > 0 ? "ti ti-check" : "ti ti-photo"}></i>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: "13.5px", color: "var(--cn-ink)" }}>
-                    {photoFiles.length > 0 ? `${photoFiles.length} photo${photoFiles.length > 1 ? "s" : ""}` : "Gallery Photos"}
-                  </div>
-                  <div style={{ fontSize: "11.5px", color: "var(--cn-gray)", marginTop: "3px" }}>Worship ministry pics</div>
+                  <i className="ti ti-photo-plus" style={{ color: "#2563eb" }}></i> Select Gallery Photos
                 </label>
+                {(existingPhotos.length > 0 || photoFiles.length > 0) && (
+                  <span style={{ fontSize: "12px", fontWeight: 700, color: "#1d4ed8", background: "#eff6ff", padding: "4px 10px", borderRadius: "12px", border: "1px solid #bfdbfe" }}>
+                    {existingPhotos.length + photoFiles.length} photo{existingPhotos.length + photoFiles.length > 1 ? "s" : ""} selected
+                  </span>
+                )}
               </div>
 
-              {/* Uploaded Files Chips */}
-              {(songFiles.length > 0 || videoFiles.length > 0 || photoFiles.length > 0) && (
-                <div style={{ background: "#f8fafc", borderRadius: "12px", border: "1px solid var(--cn-border)", padding: "12px 14px", marginBottom: "20px" }}>
-                  <div style={{ fontSize: "11.5px", fontWeight: 800, color: "var(--cn-gray)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "8px" }}>
-                    Selected Files ({songFiles.length + videoFiles.length + photoFiles.length})
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                    {songFiles.map((s, idx) => (
-                      <span key={`song-${idx}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#065f46", fontSize: "12px", fontWeight: 700, padding: "5px 10px", borderRadius: "16px" }}>
-                        <i className="ti ti-circle-check-filled" style={{ color: "#10b981", fontSize: "14px" }}></i>
-                        <span style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
-                        <button type="button" onClick={() => setSongFiles(prev => prev.filter((_, i) => i !== idx))} style={{ border: "none", background: "none", color: "#065f46", cursor: "pointer", padding: "0 2px", fontSize: "12px", fontWeight: 800 }}>×</button>
-                      </span>
-                    ))}
-                    {videoFiles.map((v, idx) => (
-                      <span key={`vid-${idx}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#fdf2f8", border: "1px solid #fbcfe8", color: "#9d174d", fontSize: "12px", fontWeight: 700, padding: "5px 10px", borderRadius: "16px" }}>
-                        <i className="ti ti-circle-check-filled" style={{ color: "#ec4899", fontSize: "14px" }}></i>
-                        <span style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.name}</span>
-                        <button type="button" onClick={() => setVideoFiles(prev => prev.filter((_, i) => i !== idx))} style={{ border: "none", background: "none", color: "#9d174d", cursor: "pointer", padding: "0 2px", fontSize: "12px", fontWeight: 800 }}>×</button>
-                      </span>
-                    ))}
-                    {photoFiles.map((p, idx) => (
-                      <span key={`pic-${idx}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#f3e8ff", border: "1px solid #e9d5ff", color: "#6b21a8", fontSize: "12px", fontWeight: 700, padding: "5px 10px", borderRadius: "16px" }}>
-                        <i className="ti ti-circle-check-filled" style={{ color: "#8b5cf6", fontSize: "14px" }}></i>
-                        <span style={{ maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                        <button type="button" onClick={() => setPhotoFiles(prev => prev.filter((_, i) => i !== idx))} style={{ border: "none", background: "none", color: "#6b21a8", cursor: "pointer", padding: "0 2px", fontSize: "12px", fontWeight: 800 }}>×</button>
-                      </span>
-                    ))}
-                  </div>
+              {(existingPhotos.length > 0 || photoFiles.length > 0) && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                  {existingPhotos.map((url, idx) => (
+                    <div key={`existing-pic-${idx}`} style={{ position: "relative", width: "80px", height: "80px", borderRadius: "10px", overflow: "hidden", border: "1.5px solid var(--cn-border)" }}>
+                      <img src={url} alt={`Gallery photo ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <button
+                        type="button"
+                        onClick={() => setExistingPhotos(prev => prev.filter((_, i) => i !== idx))}
+                        style={{ position: "absolute", top: "2px", right: "2px", background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: "20px", height: "20px", fontSize: "12px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        title="Remove photo"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {photoFiles.map((p, idx) => (
+                    <div key={`pic-${idx}`} style={{ position: "relative", width: "80px", height: "80px", borderRadius: "10px", overflow: "hidden", border: "1.5px solid var(--cn-border)" }}>
+                      <img src={URL.createObjectURL(p)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <button
+                        type="button"
+                        onClick={() => setPhotoFiles(prev => prev.filter((_, i) => i !== idx))}
+                        style={{ position: "absolute", top: "2px", right: "2px", background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: "50%", width: "20px", height: "20px", fontSize: "12px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        title="Remove photo"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
-
-              {/* Streaming and Social Links */}
-              <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                  <label style={{ margin: 0 }}>Streaming & Social Links (Spotify, YouTube, Instagram, Website)</label>
-                  <button
-                    type="button"
-                    onClick={addLinkInput}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "5px",
-                      background: "linear-gradient(135deg, #f43f5e, #7c3aed)",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: "20px",
-                      padding: "5px 12px",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      boxShadow: "0 2px 8px rgba(124, 58, 237, 0.25)"
-                    }}
-                  >
-                    <i className="ti ti-plus" style={{ fontSize: "14px" }}></i> Add Another Link
-                  </button>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                  {links.map((linkVal, idx) => {
-                    const isValid = linkVal.trim().startsWith("http://") || linkVal.trim().startsWith("https://");
-                    return (
-                      <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <div style={{ position: "relative", flex: 1 }}>
-                          <input
-                            placeholder={idx === 0 ? "e.g. https://open.spotify.com/artist/..." : "e.g. https://youtube.com/@channel or Instagram URL"}
-                            value={linkVal}
-                            onChange={(e) => updateLink(idx, e.target.value)}
-                            style={{
-                              paddingRight: "36px",
-                              borderColor: linkVal.trim() ? (isValid ? "#10b981" : "var(--cn-border)") : "var(--cn-border)"
-                            }}
-                          />
-                          {linkVal.trim() && (
-                            <span
-                              style={{
-                                position: "absolute",
-                                right: "12px",
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                                color: isValid ? "#10b981" : "#9ca3af",
-                                fontSize: "17px"
-                              }}
-                            >
-                              <i className={isValid ? "ti ti-circle-check-filled" : "ti ti-link"}></i>
-                            </span>
-                          )}
-                        </div>
-
-                        {idx === links.length - 1 ? (
-                          <button
-                            type="button"
-                            onClick={addLinkInput}
-                            style={{ width: "42px", height: "42px", borderRadius: "12px", border: "1.5px solid #e9d5ff", background: "#f5f3ff", color: "#7c3aed", cursor: "pointer", fontSize: "18px", display: "flex", alignItems: "center", justifyContent: "center" }}
-                          >
-                            <i className="ti ti-plus"></i>
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => removeLink(idx)}
-                            style={{ width: "42px", height: "42px", borderRadius: "12px", border: "1.5px solid #fecaca", background: "#fef2f2", color: "#ef4444", cursor: "pointer", fontSize: "18px", display: "flex", alignItems: "center", justifyContent: "center" }}
-                          >
-                            <i className="ti ti-trash"></i>
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+            </Card>
 
             {/* ACTION BUTTONS */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "24px" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
               <button onClick={() => setCurrentStep(2)} className="btn-secondary">
                 <i className="ti ti-arrow-left" style={{ fontSize: "14px" }}></i> Back
               </button>
@@ -1869,44 +2407,149 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
                     </div>
                   </div>
 
+                  {/* Section: Direct Contact & Social Channels */}
+                  <div style={{ borderTop: "1px solid var(--cn-border)", paddingTop: "14px", marginBottom: "16px" }}>
+                    <div style={{ fontSize: "11px", fontWeight: 800, color: "var(--cn-purple-dark)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "10px" }}>
+                      Direct Contact & Digital Presence
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "13px", marginBottom: "10px" }}>
+                      <div>
+                        <span style={{ color: "var(--cn-gray)" }}>Official Email:</span>{" "}
+                        <strong style={{ color: "var(--cn-ink)" }}>{email || <span style={{ color: "#ef4444" }}>Not specified</span>}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: "var(--cn-gray)" }}>Phone / WhatsApp:</span>{" "}
+                        <strong style={{ color: "var(--cn-ink)" }}>{phone || "Not specified"}</strong>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", fontSize: "12px" }}>
+                      {websiteUrl && (
+                        <span style={{ background: "#f8fafc", border: "1px solid #e2e8f0", color: "#334155", padding: "3px 9px", borderRadius: "12px", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                          <i className="ti ti-world"></i> {websiteUrl}
+                        </span>
+                      )}
+                      {facebookUrl && (
+                        <span style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", padding: "3px 9px", borderRadius: "12px", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                          <i className="ti ti-brand-facebook"></i> Facebook
+                        </span>
+                      )}
+                      {instagramUrl && (
+                        <span style={{ background: "#fdf2f8", border: "1px solid #fbcfe8", color: "#db2777", padding: "3px 9px", borderRadius: "12px", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                          <i className="ti ti-brand-instagram"></i> Instagram
+                        </span>
+                      )}
+                      {youtubeUrl && (
+                        <span style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", padding: "3px 9px", borderRadius: "12px", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                          <i className="ti ti-brand-youtube"></i> YouTube
+                        </span>
+                      )}
+                      {twitterUrl && (
+                        <span style={{ background: "#f8fafc", border: "1px solid #e2e8f0", color: "#0f172a", padding: "3px 9px", borderRadius: "12px", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                          <i className="ti ti-brand-x"></i> X
+                        </span>
+                      )}
+                      {linkedinUrl && (
+                        <span style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#0284c7", padding: "3px 9px", borderRadius: "12px", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                          <i className="ti ti-brand-linkedin"></i> LinkedIn
+                        </span>
+                      )}
+                      {tiktokUrl && (
+                        <span style={{ background: "#0f172a", color: "#fff", padding: "3px 9px", borderRadius: "12px", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                          <i className="ti ti-brand-tiktok"></i> TikTok
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Section: Media & Uploads */}
                   <div style={{ borderTop: "1px solid var(--cn-border)", paddingTop: "14px", marginBottom: "16px" }}>
                     <div style={{ fontSize: "11px", fontWeight: 800, color: "var(--cn-purple-dark)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "10px" }}>
-                      Media & Links ({songFiles.length + videoFiles.length + photoFiles.length + links.filter(l => !!l.trim()).length})
+                      Audio & Media Files
                     </div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", fontSize: "12.5px" }}>
-                      {songFiles.length > 0 && (
+                      {spotifyUrl && (
+                        <span style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#059669", padding: "4px 10px", borderRadius: "12px", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                          <i className="ti ti-brand-spotify"></i> Spotify Player
+                        </span>
+                      )}
+                      {(songFiles.length > 0 || existingSongUrl) && (
                         <span style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#065f46", padding: "4px 10px", borderRadius: "12px", fontWeight: 700 }}>
-                          🎵 {songFiles.length} Audio track{songFiles.length > 1 ? "s" : ""}
+                          🎵 {songFiles.length + (existingSongUrl ? 1 : 0)} Audio demo{(songFiles.length + (existingSongUrl ? 1 : 0)) > 1 ? "s" : ""}
                         </span>
                       )}
-                      {videoFiles.length > 0 && (
+                      {(videoFiles.length > 0 || existingVideoUrl) && (
                         <span style={{ background: "#fdf2f8", border: "1px solid #fbcfe8", color: "#9d174d", padding: "4px 10px", borderRadius: "12px", fontWeight: 700 }}>
-                          🎥 {videoFiles.length} Video{videoFiles.length > 1 ? "s" : ""}
+                          🎬 {videoFiles.length + (existingVideoUrl ? 1 : 0)} Video clip{(videoFiles.length + (existingVideoUrl ? 1 : 0)) > 1 ? "s" : ""}
                         </span>
                       )}
-                      {photoFiles.length > 0 && (
+                      {(photoFiles.length > 0 || existingPhotos.length > 0) && (
                         <span style={{ background: "#f3e8ff", border: "1px solid #e9d5ff", color: "#6b21a8", padding: "4px 10px", borderRadius: "12px", fontWeight: 700 }}>
-                          📸 {photoFiles.length} Photo{photoFiles.length > 1 ? "s" : ""}
+                          📸 {photoFiles.length + existingPhotos.length} Gallery photo{(photoFiles.length + existingPhotos.length) > 1 ? "s" : ""}
                         </span>
                       )}
-                      {links.filter(l => !!l.trim()).length > 0 && (
-                        <span style={{ background: "#f8fafc", border: "1px solid var(--cn-border)", color: "var(--cn-ink)", padding: "4px 10px", borderRadius: "12px", fontWeight: 700 }}>
-                          🔗 {links.filter(l => !!l.trim()).length} Social/streaming link{links.filter(l => !!l.trim()).length > 1 ? "s" : ""}
+                      {youtubeUrls.filter(u => !!u.trim()).map((u, i) => (
+                        <span key={`rev-yt-${i}`} style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", padding: "4px 10px", borderRadius: "12px", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                          <i className="ti ti-brand-youtube"></i> Video {i + 2}
                         </span>
-                      )}
-                      {songFiles.length === 0 && videoFiles.length === 0 && photoFiles.length === 0 && links.filter(l => !!l.trim()).length === 0 && (
-                        <span style={{ color: "var(--cn-gray-light)", fontSize: "12px" }}>No media or links added</span>
+                      ))}
+                      {extraSpotifyUrls.filter(u => !!u.trim()).map((u, i) => (
+                        <span key={`rev-sp-${i}`} style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#059669", padding: "4px 10px", borderRadius: "12px", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                          <i className="ti ti-brand-spotify"></i> Track {i + 2}
+                        </span>
+                      ))}
+                      {links.filter(l => !!l.trim()).map((l, i) => (
+                        <span key={i} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", color: "#475569", padding: "4px 10px", borderRadius: "12px", fontWeight: 600, fontSize: "12px" }}>
+                          🔗 {l}
+                        </span>
+                      ))}
+                      {!spotifyUrl && !existingSongUrl && !existingVideoUrl && songFiles.length === 0 && photoFiles.length === 0 && existingPhotos.length === 0 && links.filter(l => !!l.trim()).length === 0 && youtubeUrls.filter(u => !!u.trim()).length === 0 && extraSpotifyUrls.filter(u => !!u.trim()).length === 0 && (
+                        <span style={{ color: "var(--cn-gray-light)", fontSize: "12px" }}>No additional audio files or media links</span>
                       )}
                     </div>
 
                     {/* Link URLs preview */}
-                    {links.filter(l => !!l.trim()).length > 0 && (
-                      <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                    {(youtubeUrl || spotifyUrl || instagramUrl || websiteUrl || links.filter(l => !!l.trim()).length > 0 || youtubeUrls.filter(u => !!u.trim()).length > 0 || extraSpotifyUrls.filter(u => !!u.trim()).length > 0) && (
+                      <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "5px", background: "#f8fafc", padding: "10px 14px", borderRadius: "10px", border: "1px solid var(--cn-border)" }}>
+                        {youtubeUrl && (
+                          <div style={{ fontSize: "12px", color: "#dc2626", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <i className="ti ti-brand-youtube"></i>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{youtubeUrl} (Primary Video)</span>
+                          </div>
+                        )}
+                        {youtubeUrls.filter(u => !!u.trim()).map((u, idx) => (
+                          <div key={`y-prev-${idx}`} style={{ fontSize: "12px", color: "#dc2626", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <i className="ti ti-brand-youtube"></i>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u}</span>
+                          </div>
+                        ))}
+                        {spotifyUrl && (
+                          <div style={{ fontSize: "12px", color: "#059669", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <i className="ti ti-brand-spotify"></i>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{spotifyUrl} (Primary Spotify)</span>
+                          </div>
+                        )}
+                        {extraSpotifyUrls.filter(u => !!u.trim()).map((u, idx) => (
+                          <div key={`s-prev-${idx}`} style={{ fontSize: "12px", color: "#059669", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <i className="ti ti-brand-spotify"></i>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u}</span>
+                          </div>
+                        ))}
+                        {instagramUrl && (
+                          <div style={{ fontSize: "12px", color: "#db2777", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <i className="ti ti-brand-instagram"></i>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{instagramUrl}</span>
+                          </div>
+                        )}
+                        {websiteUrl && (
+                          <div style={{ fontSize: "12px", color: "#334155", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <i className="ti ti-world"></i>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{websiteUrl}</span>
+                          </div>
+                        )}
                         {links.filter(l => !!l.trim()).map((l, idx) => (
                           <div key={idx} style={{ fontSize: "12px", color: "var(--cn-purple)", display: "flex", alignItems: "center", gap: "6px" }}>
-                            <i className="ti ti-link" style={{ fontSize: "12px" }}></i>
-                            <span style={{ textDecoration: "underline", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l}</span>
+                            <i className="ti ti-link"></i>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l}</span>
                           </div>
                         ))}
                       </div>
@@ -1978,39 +2621,119 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
                     <div>{submitError}</div>
                   </div>
                 )}
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
-                  <button
-                    onClick={() => setCurrentStep(1)}
-                    className="btn-secondary"
-                    style={{ justifyContent: "center", padding: "9px 6px", fontSize: "12px" }}
-                    title="Edit Basics & Location"
-                  >
-                    Edit Step 1
-                  </button>
-                  <button
-                    onClick={() => setCurrentStep(2)}
-                    className="btn-secondary"
-                    style={{ justifyContent: "center", padding: "9px 6px", fontSize: "12px" }}
-                    title="Edit Sound & Availability"
-                  >
-                    Edit Step 2
-                  </button>
-                  <button
-                    onClick={() => setCurrentStep(3)}
-                    className="btn-secondary"
-                    style={{ justifyContent: "center", padding: "9px 6px", fontSize: "12px" }}
-                    title="Edit Media & Links"
-                  >
-                    Edit Step 3
-                  </button>
-                </div>
               </div>
             </div>
           </div>
         )}
 
       </div>
+    </div>
+  );
+}
+
+interface CardProps {
+  title?: string;
+  subtitle?: string;
+  icon?: string;
+  iconBg?: string;
+  badge?: string;
+  onLoadSample?: () => void;
+  children: React.ReactNode;
+}
+
+function Card({ title, subtitle, icon, iconBg, badge, onLoadSample, children }: CardProps) {
+  return (
+    <div className="scard" style={{
+      background: "#fff",
+      border: "1.5px solid #ebebf0",
+      borderRadius: "20px",
+      padding: "28px",
+      boxShadow: "0 4px 20px -2px rgba(15,15,26,0.05)",
+      overflow: "visible",
+      transition: "all 0.2s ease"
+    }}>
+      {title && (
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "22px", flexWrap: "wrap", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+            <div style={{
+              width: "42px",
+              height: "42px",
+              borderRadius: "12px",
+              background: iconBg || "linear-gradient(135deg, #7c3aed, #a855f7)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: iconBg ? "0 4px 12px rgba(0,0,0,0.15)" : "0 4px 12px rgba(124, 58, 237, 0.25)",
+              flexShrink: 0
+            }}>
+              <i className={`ti ${icon || 'ti-microphone-2'}`} style={{ fontSize: "20px", color: "#fff" }}></i>
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>{title}</div>
+                {badge && (
+                  <span style={{
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    color: "#7c3aed",
+                    background: "#f5f3ff",
+                    border: "1px solid #ddd6fe",
+                    borderRadius: "20px",
+                    padding: "2px 8px"
+                  }}>
+                    {badge}
+                  </span>
+                )}
+              </div>
+              {subtitle && (
+                <div style={{ fontSize: "12.5px", color: "var(--cn-gray)", marginTop: "3px" }}>{subtitle}</div>
+              )}
+            </div>
+          </div>
+          {onLoadSample && (
+            <button
+              type="button"
+              onClick={onLoadSample}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 14px",
+                borderRadius: "10px",
+                border: "1.5px solid #d8b4fe",
+                background: "#faf5ff",
+                color: "#7e22ce",
+                fontSize: "12.5px",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s"
+              }}
+            >
+              <i className="ti ti-sparkles" style={{ fontSize: "14px", color: "#9333ea" }}></i>
+              Load Sample Data
+            </button>
+          )}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "7px" }}>
+        <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)", margin: 0, display: "block" }}>
+          {label} {required && <span style={{ color: "#ef4444", fontWeight: 800 }}>*</span>}
+        </label>
+        {hint && (
+          <span style={{ fontSize: "11.5px", color: "var(--cn-gray)", fontWeight: 500 }}>
+            {hint}
+          </span>
+        )}
+      </div>
+      {children}
     </div>
   );
 }

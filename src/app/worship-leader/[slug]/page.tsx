@@ -202,11 +202,20 @@ export default async function WorshipLeaderProfilePage(props: {
                         <i className="ti ti-brand-youtube"></i>
                       </a>
                     )}
-                    {leader.website_url && (
-                      <a href={leader.website_url} target="_blank" rel="noreferrer" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
-                        <i className="ti ti-world"></i>
-                      </a>
-                    )}
+                    {(() => {
+                      if (!leader.website_url) return null;
+                      const firstCleanWeb = leader.website_url
+                        .split(/[\n,]+/)
+                        .map((s: string) => s.trim())
+                        .find((s: string) => s.startsWith("http://") || s.startsWith("https://") || (s.includes(".") && !s.startsWith("loc:") && !s.startsWith("mailto:") && !s.startsWith("tel:")));
+                      if (!firstCleanWeb) return null;
+                      const url = firstCleanWeb.startsWith("http") ? firstCleanWeb : `https://${firstCleanWeb}`;
+                      return (
+                        <a href={url} target="_blank" rel="noreferrer" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
+                          <i className="ti ti-world"></i>
+                        </a>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -265,16 +274,17 @@ export default async function WorshipLeaderProfilePage(props: {
 function getYouTubeEmbedUrl(url?: string | null): string | null {
   if (!url) return null;
   try {
-    if (url.includes('youtube.com/watch')) {
-      const v = new URL(url).searchParams.get('v');
+    const trimmed = url.trim();
+    if (trimmed.includes('youtube.com/watch')) {
+      const v = new URL(trimmed).searchParams.get('v');
       return v ? `https://www.youtube.com/embed/${v}` : null;
     }
-    if (url.includes('youtu.be/')) {
-      const id = url.split('youtu.be/')[1]?.split('?')[0];
+    if (trimmed.includes('youtu.be/')) {
+      const id = trimmed.split('youtu.be/')[1]?.split('?')[0];
       return id ? `https://www.youtube.com/embed/${id}` : null;
     }
-    if (url.includes('youtube.com/embed/')) {
-      return url;
+    if (trimmed.includes('youtube.com/embed/')) {
+      return trimmed;
     }
   } catch {
     return null;
@@ -285,9 +295,20 @@ function getYouTubeEmbedUrl(url?: string | null): string | null {
 function getSpotifyEmbedUrl(url?: string | null): string | null {
   if (!url) return null;
   try {
-    // e.g. https://open.spotify.com/track/... -> https://open.spotify.com/embed/track/...
-    if (url.includes('spotify.com/')) {
-      return url.replace('spotify.com/', 'spotify.com/embed/');
+    const trimmed = url.trim();
+    // Spotify iframe embeds are valid for tracks, albums, playlists, and artists with embed URLs
+    // e.g. https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT -> https://open.spotify.com/embed/track/4cOdK2wGLETKBW3PvgPWqT
+    if (trimmed.includes('spotify.com/embed/')) {
+      return trimmed;
+    }
+    if (trimmed.includes('open.spotify.com/')) {
+      const path = trimmed.split('open.spotify.com/')[1]?.split('?')[0];
+      if (path && (path.startsWith('track/') || path.startsWith('album/') || path.startsWith('playlist/') || path.startsWith('artist/'))) {
+        return `https://open.spotify.com/embed/${path}`;
+      }
+    }
+    if (trimmed.includes('spotify.com/')) {
+      return trimmed.replace('spotify.com/', 'spotify.com/embed/');
     }
   } catch {
     return null;
@@ -388,6 +409,48 @@ function MusicPane({ leader }: { leader: any }) {
               )}
             </div>
           )}
+
+          {/* Additional YouTube Videos parsed from profile */}
+          {(() => {
+            if (!leader.website_url) return null;
+            const extraYts = leader.website_url
+              .split(/[\n,]+/)
+              .map((s: string) => s.trim())
+              .filter((s: string) => (s.includes('youtube.com') || s.includes('youtu.be')) && s !== leader.youtube_url);
+            if (extraYts.length === 0) return null;
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '16px' }}>
+                {extraYts.map((url: string, idx: number) => {
+                  const embed = getYouTubeEmbedUrl(url);
+                  if (embed) {
+                    return (
+                      <div key={`extra-yt-${idx}`} style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '14px', background: '#000' }}>
+                        <iframe
+                          src={embed}
+                          title={`YouTube video ${idx + 2}`}
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    );
+                  }
+                  return (
+                    <a
+                      key={`extra-yt-link-${idx}`}
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}
+                    >
+                      <i className="ti ti-brand-youtube" style={{ fontSize: '17px' }}></i> Watch Video {idx + 2} on YouTube
+                    </a>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -433,6 +496,49 @@ function MusicPane({ leader }: { leader: any }) {
               </a>
             </div>
           )}
+
+          {/* Additional Spotify Players */}
+          {(() => {
+            if (!leader.website_url) return null;
+            const extraSp = leader.website_url
+              .split(/[\n,]+/)
+              .map((s: string) => s.trim())
+              .filter((s: string) => s.includes('spotify.com') && s !== leader.spotify_url);
+            if (extraSp.length === 0) return null;
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
+                {extraSp.map((url: string, idx: number) => {
+                  const spEmbed = getSpotifyEmbedUrl(url);
+                  if (spEmbed) {
+                    return (
+                      <div key={`extra-sp-${idx}`} style={{ borderRadius: '12px', overflow: 'hidden' }}>
+                        <iframe
+                          src={spEmbed}
+                          width="100%"
+                          height="80"
+                          frameBorder="0"
+                          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                          loading="lazy"
+                        />
+                      </div>
+                    );
+                  }
+                  return (
+                    <a
+                      key={`extra-sp-link-${idx}`}
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#059669', padding: '8px 14px', borderRadius: '10px', fontSize: '12.5px', fontWeight: 700, textDecoration: 'none' }}
+                    >
+                      <i className="ti ti-brand-spotify"></i> Listen to Track {idx + 2}
+                    </a>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -501,6 +607,7 @@ function MusicPane({ leader }: { leader: any }) {
           // Check if website_url has multiple comma/newline/space separated links
           const rawWebsites = leader.website_url.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean);
           for (const rawUrl of rawWebsites) {
+            if (rawUrl.startsWith("loc:")) continue;
             const lower = rawUrl.toLowerCase();
             let label = "Official Website";
             let icon = "ti-world";

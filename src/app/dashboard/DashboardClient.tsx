@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase-browser';
 import PastorVisitorMap, { VisitorLocation } from '@/components/dashboard/PastorVisitorMap';
 
+import BulkUploadModal from '@/components/admin/BulkUploadModal';
+import Papa from 'papaparse';
+
 interface DashboardClientProps {
   user: any;
   churches: any[];
@@ -28,6 +31,20 @@ export default function DashboardClient({
 }: DashboardClientProps) {
   // Main navigation section — now has 'enquiries' directly after 'events'
   const [section, setSection] = useState<NavSection>('pastors');
+
+  // Churches table state (matching reference screenshot)
+  const [churchSearch, setChurchSearch] = useState('');
+  const [churchStatusFilter, setChurchStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const [churchDenomFilter, setChurchDenomFilter] = useState('all');
+  const [selectedChurchIds, setSelectedChurchIds] = useState<string[]>([]);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkModalType, setBulkModalType] = useState<'churches' | 'pastors' | 'events'>('churches');
+
+  // All listings table state
+  const [allSearch, setAllSearch] = useState('');
+  const [allTypeFilter, setAllTypeFilter] = useState<string>('all');
+  const [allStatusFilter, setAllStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const [selectedAllIds, setSelectedAllIds] = useState<string[]>([]);
 
   // Selected Pastor Profile (if multiple exist)
   const [selectedPastorIndex, setSelectedPastorIndex] = useState(0);
@@ -289,6 +306,228 @@ export default function DashboardClient({
     }
   };
 
+  // Denominations list for Churches filter
+  const denominations = useMemo(() => {
+    const set = new Set<string>();
+    churches.forEach((c) => {
+      const d = c.denomination?.split('|||')[0];
+      if (d) set.add(d.trim());
+    });
+    return Array.from(set).sort();
+  }, [churches]);
+
+  // Filtered churches for Churches section
+  const filteredChurches = useMemo(() => {
+    return churches.filter((c) => {
+      const q = churchSearch.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        (c.name && c.name.toLowerCase().includes(q)) ||
+        (c.city && c.city.toLowerCase().includes(q)) ||
+        (c.email && c.email.toLowerCase().includes(q)) ||
+        (c.slug && c.slug.toLowerCase().includes(q));
+
+      const matchesStatus =
+        churchStatusFilter === 'all' || (c.status || 'published') === churchStatusFilter;
+
+      const matchesDenom =
+        churchDenomFilter === 'all' ||
+        (c.denomination && c.denomination.toLowerCase().includes(churchDenomFilter.toLowerCase()));
+
+      return matchesSearch && matchesStatus && matchesDenom;
+    });
+  }, [churches, churchSearch, churchStatusFilter, churchDenomFilter]);
+
+  // Combined and filtered listings for All Listings section
+  const filteredAllListings = useMemo(() => {
+    const list: any[] = [];
+    churches.forEach((c) =>
+      list.push({
+        id: `church-${c.id}`,
+        rawId: c.id,
+        type: 'church',
+        typeName: 'Church Sanctuary',
+        name: c.name,
+        email: c.email || '',
+        slug: c.slug,
+        location: c.city || c.address_line || 'UK',
+        denomination: c.denomination?.split('|||')[0] || '—',
+        status: c.status || 'published',
+        is_verified: c.is_verified,
+        viewUrl: `/church/${c.slug}`,
+        editUrl: `/church/${c.slug}?owner=true`,
+      })
+    );
+    pastors.forEach((p) =>
+      list.push({
+        id: `pastor-${p.id}`,
+        rawId: p.id,
+        type: 'pastor',
+        typeName: 'Pastor / Speaker',
+        name: p.full_name,
+        email: p.email || '',
+        slug: p.slug,
+        location: p.city || p.country || 'UK',
+        denomination: p.denomination || p.title || 'Minister',
+        status: p.status || 'published',
+        is_verified: p.verified || p.is_verified,
+        viewUrl: `/pastor/${p.slug}`,
+        editUrl: `/onboarding/pastor`,
+      })
+    );
+    worshipLeaders.forEach((wl) =>
+      list.push({
+        id: `wl-${wl.id}`,
+        rawId: wl.id,
+        type: 'worship-leader',
+        typeName: 'Worship Leader',
+        name: wl.display_name,
+        email: wl.email || '',
+        slug: wl.slug,
+        location: wl.city || wl.country || 'UK',
+        denomination: wl.tagline || 'Worship',
+        status: 'published',
+        is_verified: wl.is_verified,
+        viewUrl: `/worship-leader/${wl.slug}`,
+        editUrl: `/onboarding/worship-leader/${wl.slug}/edit`,
+      })
+    );
+    events.forEach((e) =>
+      list.push({
+        id: `event-${e.id}`,
+        rawId: e.id,
+        type: 'event',
+        typeName: 'Event',
+        name: e.title,
+        email: '',
+        slug: e.slug,
+        location: e.venue_name || e.city || 'UK',
+        denomination: e.type || 'Event',
+        status: e.status || 'published',
+        is_verified: true,
+        viewUrl: `/events/${e.slug}`,
+        editUrl: `/onboarding/events`,
+      })
+    );
+
+    return list.filter((item) => {
+      const q = allSearch.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        (item.name && item.name.toLowerCase().includes(q)) ||
+        (item.email && item.email.toLowerCase().includes(q)) ||
+        (item.location && item.location.toLowerCase().includes(q));
+
+      const matchesType = allTypeFilter === 'all' || item.type === allTypeFilter;
+      const matchesStatus = allStatusFilter === 'all' || item.status === allStatusFilter;
+
+      return matchesSearch && matchesType && matchesStatus;
+    });
+  }, [churches, pastors, worshipLeaders, events, allSearch, allTypeFilter, allStatusFilter]);
+
+  // Export Churches CSV
+  const handleExportChurchesCSV = () => {
+    if (churches.length === 0) return;
+    const exportRows = filteredChurches.map((c) => ({
+      Name: c.name || '',
+      Email: c.email || '',
+      Location: c.city || c.address_line || '',
+      Denomination: c.denomination?.split('|||')[0] || '',
+      Status: c.status || 'published',
+      Verified: c.is_verified ? 'Yes' : 'No',
+      Slug: c.slug || '',
+      Phone: c.phone || '',
+    }));
+    const csv = Papa.unparse(exportRows);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `churches_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Download Sample CSV
+  const handleDownloadSampleCSV = () => {
+    const sampleRows = [
+      {
+        name: 'Grace Community Church',
+        denomination: 'Pentecostal',
+        about: 'A vibrant, Christ-centered family church passionate about modern worship.',
+        address: '123 High Street',
+        city: 'London',
+        state: 'Greater London',
+        postcode: 'E12 5LH',
+        country: 'United Kingdom',
+        phone: '+44 20 7946 0912',
+        email: 'info@gracechurch.org',
+        website: 'https://gracechurch.org',
+        service_day: 'Sunday',
+        service_name: 'Morning Worship',
+        service_time: '10:30 AM',
+        status: 'published',
+      },
+      {
+        name: 'Bethel Baptist Chapel',
+        denomination: 'Baptist',
+        about: 'A historic, loving congregation dedicated to faithful Bible teaching.',
+        address: '45 Victoria Road',
+        city: 'Birmingham',
+        state: 'West Midlands',
+        postcode: 'B1 1AA',
+        country: 'United Kingdom',
+        phone: '+44 121 496 0123',
+        email: 'contact@bethelbaptist.org',
+        website: 'https://bethelbaptist.org',
+        service_day: 'Sunday',
+        service_name: 'Sunday Morning Worship',
+        service_time: '11:00 AM',
+        status: 'draft',
+      },
+    ];
+    const csv = Papa.unparse(sampleRows);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'church_sample_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Bulk Select Toggle for Churches
+  const handleToggleSelectAllChurches = () => {
+    if (selectedChurchIds.length === filteredChurches.length) {
+      setSelectedChurchIds([]);
+    } else {
+      setSelectedChurchIds(filteredChurches.map((c) => c.id));
+    }
+  };
+
+  const handleToggleSelectChurch = (id: string) => {
+    setSelectedChurchIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  // Bulk Select Toggle for All Listings
+  const handleToggleSelectAllListings = () => {
+    if (selectedAllIds.length === filteredAllListings.length) {
+      setSelectedAllIds([]);
+    } else {
+      setSelectedAllIds(filteredAllListings.map((l) => l.id));
+    }
+  };
+
+  const handleToggleSelectListing = (id: string) => {
+    setSelectedAllIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
   const userDisplayName = profileName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Minister';
 
   return (
@@ -312,78 +551,7 @@ export default function DashboardClient({
           padding: '24px 16px',
         }}
       >
-        {/* Brand Logo Header */}
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', marginBottom: '24px', paddingLeft: '8px' }}>
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '9px',
-              background: 'linear-gradient(135deg, #d946ef, #7c3aed)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              fontWeight: 900,
-              fontSize: '18px',
-            }}
-          >
-            ✝
-          </div>
-          <span style={{ fontSize: '19px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>
-            Ekklesia
-          </span>
-        </Link>
 
-        {/* Pastor / Minister Badge in Sidebar (matches screenshot top-left pink card) */}
-        {currentPastor && (
-          <div
-            style={{
-              background: 'linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%)',
-              border: '1px solid #f0abfc',
-              borderRadius: '16px',
-              padding: '12px 14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              marginBottom: '24px',
-            }}
-          >
-            {currentPastor.avatar_url ? (
-              <img
-                src={currentPastor.avatar_url}
-                alt={currentPastor.full_name}
-                style={{ width: '40px', height: '40px', borderRadius: '12px', objectFit: 'cover' }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #d946ef, #a21caf)',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 900,
-                  fontSize: '14px',
-                  flexShrink: 0,
-                }}
-              >
-                {currentPastor.initials || currentPastor.full_name?.slice(0, 2).toUpperCase() || 'P'}
-              </div>
-            )}
-            <div style={{ overflow: 'hidden' }}>
-              <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                {currentPastor.full_name}
-              </div>
-              <div style={{ fontSize: '11.5px', color: '#9333ea', fontWeight: 700 }}>
-                {currentPastor.title || 'Senior Pastor'}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ── MAIN SECTIONS NAVIGATION (User Requested Order) ──────── */}
         <div style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.08em', padding: '0 10px', marginBottom: '8px' }}>
@@ -1018,80 +1186,848 @@ export default function DashboardClient({
           {/* ═════════════════════════════════════════════════════════ */}
           {/* ── ALL LISTINGS SECTION ────────────────────────────────── */}
           {/* ═════════════════════════════════════════════════════════ */}
+          {/* ═════════════════════════════════════════════════════════ */}
+          {/* ── ALL LISTINGS SECTION (TABLE DESIGN LIKE SCREENSHOT) ── */}
+          {/* ═════════════════════════════════════════════════════════ */}
           {section === 'all' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{ background: '#ffffff', borderRadius: '20px', border: '1.5px solid #f1f5f9', padding: '24px' }}>
-                <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', marginBottom: '16px' }}>
-                  All Active Listings ({churches.length + pastors.length + events.length + worshipLeaders.length})
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-                  {pastors.map((p) => (
-                    <div key={p.id} style={{ border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '18px', background: '#ffffff' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 800, color: '#c026d3', textTransform: 'uppercase', marginBottom: '4px' }}>Pastor / Speaker</div>
-                      <div style={{ fontWeight: 800, fontSize: '16px', color: '#0f172a' }}>{p.full_name}</div>
-                      <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '14px' }}>{p.title || 'Minister'}</div>
-                      <Link href={`/pastor/${p.slug}`} target="_blank" style={{ color: '#9333ea', fontWeight: 800, fontSize: '13px', textDecoration: 'none' }}>View profile &rarr;</Link>
-                    </div>
-                  ))}
-                  {churches.map((c) => (
-                    <div key={c.id} style={{ border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '18px', background: '#ffffff' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', marginBottom: '4px' }}>Church Sanctuary</div>
-                      <div style={{ fontWeight: 800, fontSize: '16px', color: '#0f172a' }}>{c.name}</div>
-                      <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '14px' }}>📍 {c.city || 'UK'}</div>
-                      <Link href={`/church/${c.slug}`} target="_blank" style={{ color: '#7c3aed', fontWeight: 800, fontSize: '13px', textDecoration: 'none' }}>View church &rarr;</Link>
-                    </div>
-                  ))}
-                  {worshipLeaders.map((wl) => (
-                    <div key={wl.id} style={{ border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '18px', background: '#ffffff' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase', marginBottom: '4px' }}>Worship Leader</div>
-                      <div style={{ fontWeight: 800, fontSize: '16px', color: '#0f172a' }}>{wl.display_name}</div>
-                      <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '14px' }}>📍 {wl.city || wl.country || 'UK'}</div>
-                      <Link href={`/worship-leader/${wl.slug}`} target="_blank" style={{ color: '#0284c7', fontWeight: 800, fontSize: '13px', textDecoration: 'none' }}>View leader &rarr;</Link>
-                    </div>
-                  ))}
-                  {events.map((e) => (
-                    <div key={e.id} style={{ border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '18px', background: '#ffffff' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', marginBottom: '4px' }}>Event</div>
-                      <div style={{ fontWeight: 800, fontSize: '16px', color: '#0f172a' }}>{e.title}</div>
-                      <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '14px' }}>📍 {e.venue_name || e.city || 'UK'}</div>
-                      <Link href={`/events/${e.slug}`} target="_blank" style={{ color: '#16a34a', fontWeight: 800, fontSize: '13px', textDecoration: 'none' }}>View event &rarr;</Link>
-                    </div>
-                  ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Header Box matching screenshot */}
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1.5px solid #e2e8f0',
+                  padding: '24px 28px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '16px',
+                }}
+              >
+                <div>
+                  <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 6px' }}>
+                    All Listings Management
+                  </h1>
+                  <p style={{ fontSize: '13.5px', color: '#64748b', margin: 0 }}>
+                    Manage and moderate all your directory listings across the platform
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBulkModalType('churches');
+                      setIsBulkModalOpen(true);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: '#ffffff',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '20px',
+                      padding: '7px 14px',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      color: '#475569',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <i className="ti ti-upload" style={{ fontSize: '14px' }}></i> Import CSV
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleExportChurchesCSV}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: '#ffffff',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '20px',
+                      padding: '7px 14px',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      color: '#475569',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <i className="ti ti-download" style={{ fontSize: '14px' }}></i> Export CSV
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadSampleCSV}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: '#ffffff',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '20px',
+                      padding: '7px 14px',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      color: '#475569',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <i className="ti ti-file-text" style={{ fontSize: '14px' }}></i> Download Sample
+                  </button>
+
+                  <div
+                    style={{
+                      padding: '7px 14px',
+                      fontSize: '13px',
+                      fontWeight: 900,
+                      color: '#0f172a',
+                      background: '#f8fafc',
+                      borderRadius: '20px',
+                      border: '1px solid #e2e8f0',
+                      marginLeft: '4px',
+                    }}
+                  >
+                    {filteredAllListings.length} Listings
+                  </div>
+                </div>
+              </div>
+
+              {/* Filter / Search Bar (matching screenshot pill styling) */}
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1.5px solid #e2e8f0',
+                  padding: '12px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
+                  <i
+                    className="ti ti-search"
+                    style={{
+                      position: 'absolute',
+                      left: '14px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#94a3b8',
+                      fontSize: '16px',
+                    }}
+                  ></i>
+                  <input
+                    type="text"
+                    placeholder="Search by name, city, or email..."
+                    value={allSearch}
+                    onChange={(e) => setAllSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px 10px 40px',
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0',
+                      fontSize: '13.5px',
+                      color: '#0f172a',
+                      outline: 'none',
+                      background: '#f8fafc',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                <select
+                  value={allTypeFilter}
+                  onChange={(e) => setAllTypeFilter(e.target.value)}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    color: '#475569',
+                    background: '#ffffff',
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="all">All Types</option>
+                  <option value="church">Churches</option>
+                  <option value="pastor">Pastors</option>
+                  <option value="worship-leader">Worship Leaders</option>
+                  <option value="event">Events</option>
+                </select>
+
+                <select
+                  value={allStatusFilter}
+                  onChange={(e) => setAllStatusFilter(e.target.value as any)}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    color: '#475569',
+                    background: '#ffffff',
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="all">All Status</option>
+                  <option value="published">Published</option>
+                  <option value="draft">Draft</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => {}}
+                  style={{
+                    background: '#7c3aed',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '10px 22px',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Search
+                </button>
+              </div>
+
+              {/* Listings Data Table */}
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1.5px solid #e2e8f0',
+                  overflow: 'hidden',
+                }}
+              >
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1.5px solid #f1f5f9', background: '#fafaf9', color: '#64748b', fontWeight: 800, fontSize: '12.5px' }}>
+                        <th style={{ padding: '14px 18px', width: '36px' }}>
+                          <input
+                            type="checkbox"
+                            checked={filteredAllListings.length > 0 && selectedAllIds.length === filteredAllListings.length}
+                            onChange={handleToggleSelectAllListings}
+                            style={{
+                              width: '16px',
+                              height: '16px',
+                              borderRadius: '50%',
+                              accentColor: '#7c3aed',
+                              cursor: 'pointer',
+                            }}
+                          />
+                        </th>
+                        <th style={{ padding: '14px 18px' }}>Listing</th>
+                        <th style={{ padding: '14px 18px' }}>Category</th>
+                        <th style={{ padding: '14px 18px' }}>Location</th>
+                        <th style={{ padding: '14px 18px' }}>Type / Info</th>
+                        <th style={{ padding: '14px 18px' }}>Status</th>
+                        <th style={{ padding: '14px 18px' }}>Badges</th>
+                        <th style={{ padding: '14px 18px', textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAllListings.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} style={{ padding: '50px 20px', textAlign: 'center', color: '#64748b' }}>
+                            <i className="ti ti-folder-x" style={{ fontSize: '36px', color: '#cbd5e1', display: 'block', marginBottom: '8px' }}></i>
+                            No listings match your filter criteria.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredAllListings.map((item) => {
+                          const isSelected = selectedAllIds.includes(item.id);
+                          const isPublished = item.status === 'published';
+                          return (
+                            <tr
+                              key={item.id}
+                              style={{
+                                borderBottom: '1px solid #f8fafc',
+                                background: isSelected ? '#faf5ff' : 'transparent',
+                                transition: 'background 0.15s ease',
+                              }}
+                            >
+                              {/* Checkbox column */}
+                              <td style={{ padding: '16px 18px' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => handleToggleSelectListing(item.id)}
+                                  style={{
+                                    width: '16px',
+                                    height: '16px',
+                                    borderRadius: '50%',
+                                    accentColor: '#7c3aed',
+                                    cursor: 'pointer',
+                                  }}
+                                />
+                              </td>
+
+                              {/* Listing info: icon + name + email */}
+                              <td style={{ padding: '16px 18px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <div
+                                    style={{
+                                      width: '38px',
+                                      height: '38px',
+                                      borderRadius: '10px',
+                                      background: item.type === 'church' ? '#f5f3ff' : item.type === 'pastor' ? '#fdf4ff' : item.type === 'worship-leader' ? '#f0f9ff' : '#f0fdf4',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontSize: '18px',
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {item.type === 'church' ? '⛪' : item.type === 'pastor' ? '👤' : item.type === 'worship-leader' ? '🎵' : '📅'}
+                                  </div>
+                                  <div>
+                                    <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '14px' }}>
+                                      {item.name}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                                      {item.email || `/${item.slug}`}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Category tag */}
+                              <td style={{ padding: '16px 18px' }}>
+                                <span
+                                  style={{
+                                    fontSize: '11px',
+                                    fontWeight: 800,
+                                    padding: '3px 8px',
+                                    borderRadius: '6px',
+                                    background: item.type === 'church' ? '#f5f3ff' : item.type === 'pastor' ? '#fdf4ff' : item.type === 'worship-leader' ? '#f0f9ff' : '#f0fdf4',
+                                    color: item.type === 'church' ? '#7c3aed' : item.type === 'pastor' ? '#c026d3' : item.type === 'worship-leader' ? '#0284c7' : '#16a34a',
+                                  }}
+                                >
+                                  {item.typeName}
+                                </span>
+                              </td>
+
+                              {/* Location */}
+                              <td style={{ padding: '16px 18px', color: '#64748b' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <span style={{ fontSize: '13px' }}>📍</span>
+                                  <span>{item.location}</span>
+                                </div>
+                              </td>
+
+                              {/* Type / Info */}
+                              <td style={{ padding: '16px 18px', color: '#475569', fontWeight: 600 }}>
+                                {item.denomination}
+                              </td>
+
+                              {/* Status badge */}
+                              <td style={{ padding: '16px 18px' }}>
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    fontSize: '11.5px',
+                                    fontWeight: 800,
+                                    padding: '4px 12px',
+                                    borderRadius: '20px',
+                                    background: isPublished ? '#7c3aed' : '#f1f5f9',
+                                    color: isPublished ? '#ffffff' : '#64748b',
+                                  }}
+                                >
+                                  {isPublished ? '● Published' : 'Draft'}
+                                </span>
+                              </td>
+
+                              {/* Badges */}
+                              <td style={{ padding: '16px 18px' }}>
+                                {item.is_verified && (
+                                  <span
+                                    style={{
+                                      fontSize: '11px',
+                                      fontWeight: 800,
+                                      padding: '3px 8px',
+                                      borderRadius: '6px',
+                                      background: '#f0fdf4',
+                                      color: '#16a34a',
+                                      border: '1px solid #bbf7d0',
+                                    }}
+                                  >
+                                    ✓ Verified
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Actions */}
+                              <td style={{ padding: '16px 18px', textAlign: 'right' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
+                                  <Link
+                                    href={item.viewUrl}
+                                    target="_blank"
+                                    style={{
+                                      fontSize: '12.5px',
+                                      color: '#7c3aed',
+                                      fontWeight: 800,
+                                      textDecoration: 'none',
+                                    }}
+                                  >
+                                    View
+                                  </Link>
+                                  <Link
+                                    href={item.editUrl}
+                                    style={{
+                                      fontSize: '12.5px',
+                                      color: '#0284c7',
+                                      fontWeight: 800,
+                                      textDecoration: 'none',
+                                    }}
+                                  >
+                                    Edit
+                                  </Link>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
           )}
 
           {/* ═════════════════════════════════════════════════════════ */}
-          {/* ── CHURCHES SECTION ───────────────────────────────────── */}
+          {/* ── CHURCHES SECTION (EXACT SCREENSHOT CHURCH MANAGEMENT) ── */}
           {/* ═════════════════════════════════════════════════════════ */}
           {section === 'churches' && (
-            <div style={{ background: '#ffffff', borderRadius: '20px', border: '1.5px solid #f1f5f9', padding: '28px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a', margin: 0 }}>Registered Churches ({churches.length})</h3>
-                <Link href="/add-listing" style={{ background: '#7c3aed', color: '#fff', padding: '9px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 800, textDecoration: 'none' }}>+ Add Church</Link>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* Header Box matching screenshot */}
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1.5px solid #e2e8f0',
+                  padding: '24px 28px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '16px',
+                }}
+              >
+                <div>
+                  <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 6px' }}>
+                    Church Management
+                  </h1>
+                  <p style={{ fontSize: '13.5px', color: '#64748b', margin: 0 }}>
+                    Manage and moderate all church listings across the platform
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBulkModalType('churches');
+                      setIsBulkModalOpen(true);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: '#ffffff',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '20px',
+                      padding: '7px 14px',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      color: '#475569',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <i className="ti ti-upload" style={{ fontSize: '14px' }}></i> Import CSV
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleExportChurchesCSV}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: '#ffffff',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '20px',
+                      padding: '7px 14px',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      color: '#475569',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <i className="ti ti-download" style={{ fontSize: '14px' }}></i> Export CSV
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadSampleCSV}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: '#ffffff',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '20px',
+                      padding: '7px 14px',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      color: '#475569',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <i className="ti ti-file-text" style={{ fontSize: '14px' }}></i> Download Sample
+                  </button>
+
+                  <div
+                    style={{
+                      padding: '7px 14px',
+                      fontSize: '13px',
+                      fontWeight: 900,
+                      color: '#0f172a',
+                      background: '#f8fafc',
+                      borderRadius: '20px',
+                      border: '1px solid #e2e8f0',
+                      marginLeft: '4px',
+                    }}
+                  >
+                    {filteredChurches.length} Churches
+                  </div>
+                </div>
               </div>
 
-              {churches.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '14px', border: '1px dashed #cbd5e1' }}>
-                  <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '12px' }}>No churches registered under your account yet.</div>
-                  <Link href="/add-listing" style={{ background: '#7c3aed', color: '#fff', padding: '8px 16px', borderRadius: '10px', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>Register Your Church</Link>
+              {/* Filter / Search Bar (matching screenshot pill styling) */}
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1.5px solid #e2e8f0',
+                  padding: '12px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
+                  <i
+                    className="ti ti-search"
+                    style={{
+                      position: 'absolute',
+                      left: '14px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#94a3b8',
+                      fontSize: '16px',
+                    }}
+                  ></i>
+                  <input
+                    type="text"
+                    placeholder="Search by name, city, or email..."
+                    value={churchSearch}
+                    onChange={(e) => setChurchSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px 10px 40px',
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0',
+                      fontSize: '13.5px',
+                      color: '#0f172a',
+                      outline: 'none',
+                      background: '#f8fafc',
+                      boxSizing: 'border-box',
+                    }}
+                  />
                 </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '18px' }}>
-                  {churches.map((c) => (
-                    <div key={c.id} style={{ border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '20px', background: '#ffffff' }}>
-                      <div style={{ fontWeight: 900, fontSize: '17px', color: '#0f172a', marginBottom: '4px' }}>{c.name}</div>
-                      <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>📍 {c.city || c.address_line}</div>
-                      <div style={{ fontSize: '12.5px', color: '#7c3aed', fontWeight: 700, marginBottom: '16px' }}>{c.denomination?.split('|||')[0]}</div>
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <Link href={`/church/${c.slug}`} target="_blank" style={{ flex: 1, textAlign: 'center', background: '#f1f5f9', color: '#334155', padding: '9px', borderRadius: '10px', fontSize: '12.5px', fontWeight: 700, textDecoration: 'none' }}>View Public</Link>
-                        <Link href={`/church/${c.slug}?owner=true`} target="_blank" style={{ flex: 1, textAlign: 'center', background: '#f5f3ff', color: '#7c3aed', padding: '9px', borderRadius: '10px', fontSize: '12.5px', fontWeight: 800, textDecoration: 'none' }}>Edit Details</Link>
-                      </div>
-                    </div>
+
+                <select
+                  value={churchStatusFilter}
+                  onChange={(e) => setChurchStatusFilter(e.target.value as any)}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    color: '#475569',
+                    background: '#ffffff',
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="all">All Status</option>
+                  <option value="published">Published</option>
+                  <option value="draft">Draft</option>
+                </select>
+
+                <select
+                  value={churchDenomFilter}
+                  onChange={(e) => setChurchDenomFilter(e.target.value)}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    color: '#475569',
+                    background: '#ffffff',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    maxWidth: '200px',
+                  }}
+                >
+                  <option value="all">All Denominations</option>
+                  {denominations.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
                   ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => {}}
+                  style={{
+                    background: '#7c3aed',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '10px 22px',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Search
+                </button>
+              </div>
+
+              {/* Churches Data Table */}
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  border: '1.5px solid #e2e8f0',
+                  overflow: 'hidden',
+                }}
+              >
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1.5px solid #f1f5f9', background: '#fafaf9', color: '#64748b', fontWeight: 800, fontSize: '12.5px' }}>
+                        <th style={{ padding: '14px 18px', width: '36px' }}>
+                          <input
+                            type="checkbox"
+                            checked={filteredChurches.length > 0 && selectedChurchIds.length === filteredChurches.length}
+                            onChange={handleToggleSelectAllChurches}
+                            style={{
+                              width: '16px',
+                              height: '16px',
+                              borderRadius: '50%',
+                              accentColor: '#7c3aed',
+                              cursor: 'pointer',
+                            }}
+                          />
+                        </th>
+                        <th style={{ padding: '14px 18px' }}>Church</th>
+                        <th style={{ padding: '14px 18px' }}>Location</th>
+                        <th style={{ padding: '14px 18px' }}>Denomination</th>
+                        <th style={{ padding: '14px 18px' }}>Status</th>
+                        <th style={{ padding: '14px 18px' }}>Badges</th>
+                        <th style={{ padding: '14px 18px', textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredChurches.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} style={{ padding: '50px 20px', textAlign: 'center', color: '#64748b' }}>
+                            <i className="ti ti-building-church" style={{ fontSize: '36px', color: '#cbd5e1', display: 'block', marginBottom: '8px' }}></i>
+                            No churches found matching your filters.
+                            <div style={{ marginTop: '12px' }}>
+                              <Link
+                                href="/add-listing"
+                                style={{
+                                  background: '#7c3aed',
+                                  color: '#ffffff',
+                                  padding: '8px 16px',
+                                  borderRadius: '10px',
+                                  textDecoration: 'none',
+                                  fontSize: '12.5px',
+                                  fontWeight: 800,
+                                }}
+                              >
+                                + Add Church
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredChurches.map((c) => {
+                          const isSelected = selectedChurchIds.includes(c.id);
+                          const isPublished = (c.status || 'published') === 'published';
+                          return (
+                            <tr
+                              key={c.id}
+                              style={{
+                                borderBottom: '1px solid #f8fafc',
+                                background: isSelected ? '#faf5ff' : 'transparent',
+                                transition: 'background 0.15s ease',
+                              }}
+                            >
+                              {/* Checkbox column */}
+                              <td style={{ padding: '16px 18px' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => handleToggleSelectChurch(c.id)}
+                                  style={{
+                                    width: '16px',
+                                    height: '16px',
+                                    borderRadius: '50%',
+                                    accentColor: '#7c3aed',
+                                    cursor: 'pointer',
+                                  }}
+                                />
+                              </td>
+
+                              {/* Church info: icon + name + email */}
+                              <td style={{ padding: '16px 18px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <div
+                                    style={{
+                                      width: '38px',
+                                      height: '38px',
+                                      borderRadius: '10px',
+                                      background: '#f5f3ff',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontSize: '18px',
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    ⛪
+                                  </div>
+                                  <div>
+                                    <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '14px' }}>
+                                      {c.name}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                                      {c.email || `/${c.slug}`}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Location */}
+                              <td style={{ padding: '16px 18px', color: '#64748b' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <span style={{ fontSize: '13px' }}>📍</span>
+                                  <span>{c.city || c.address_line || 'UK'}</span>
+                                </div>
+                              </td>
+
+                              {/* Denomination */}
+                              <td style={{ padding: '16px 18px', color: '#475569', fontWeight: 600 }}>
+                                {c.denomination?.split('|||')[0] || '—'}
+                              </td>
+
+                              {/* Status badge */}
+                              <td style={{ padding: '16px 18px' }}>
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    fontSize: '11.5px',
+                                    fontWeight: 800,
+                                    padding: '4px 12px',
+                                    borderRadius: '20px',
+                                    background: isPublished ? '#7c3aed' : '#f1f5f9',
+                                    color: isPublished ? '#ffffff' : '#64748b',
+                                  }}
+                                >
+                                  {isPublished ? '● Published' : 'Draft'}
+                                </span>
+                              </td>
+
+                              {/* Badges */}
+                              <td style={{ padding: '16px 18px' }}>
+                                {c.is_verified && (
+                                  <span
+                                    style={{
+                                      fontSize: '11px',
+                                      fontWeight: 800,
+                                      padding: '3px 8px',
+                                      borderRadius: '6px',
+                                      background: '#f0fdf4',
+                                      color: '#16a34a',
+                                      border: '1px solid #bbf7d0',
+                                    }}
+                                  >
+                                    ✓ Verified
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Actions */}
+                              <td style={{ padding: '16px 18px', textAlign: 'right' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
+                                  <Link
+                                    href={`/church/${c.slug}`}
+                                    target="_blank"
+                                    style={{
+                                      fontSize: '12.5px',
+                                      color: '#7c3aed',
+                                      fontWeight: 800,
+                                      textDecoration: 'none',
+                                    }}
+                                  >
+                                    View
+                                  </Link>
+                                  <Link
+                                    href={`/church/${c.slug}?owner=true`}
+                                    target="_blank"
+                                    style={{
+                                      fontSize: '12.5px',
+                                      color: '#0284c7',
+                                      fontWeight: 800,
+                                      textDecoration: 'none',
+                                    }}
+                                  >
+                                    Edit
+                                  </Link>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
@@ -1396,6 +2332,15 @@ export default function DashboardClient({
         </div>
       </main>
 
+      {/* Bulk Upload Modal (Import CSV) */}
+      <BulkUploadModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onSuccess={(_type, _inserted) => {
+          setIsBulkModalOpen(false);
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }
