@@ -23,12 +23,12 @@ export default function AddChurchPage() {
     } else if (type === "events") {
       router.push("/onboarding/events");
     } else {
-      router.push("/onboarding/church/1"); // Route to Step 1
+      router.push("/add-listing/1"); // Route to Step 1
     }
   };
 
   const handleCompleteImport = () => {
-    router.push("/onboarding/church/1"); // Route to Step 1 after import
+    router.push("/add-listing/1"); // Route to Step 1 after import
   };
 
   return (

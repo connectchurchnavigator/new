@@ -55,6 +55,21 @@ export async function POST(req: NextRequest) {
     slug = withUniqueSuffix(slugifyName(data.display_name) || 'worship-leader');
   }
 
+  // Bundle all links cleanly into website_url:
+  // email (mailto:), phone (tel:), whatsapp, facebook, twitter, linkedin, tiktok, and other websites
+  const bundledLinks: string[] = [];
+  if (data.email) bundledLinks.push(`mailto:${data.email.trim()}`);
+  if (data.phone) bundledLinks.push(`tel:${data.phone.trim()}`);
+  if (data.facebook_url) bundledLinks.push(data.facebook_url.trim());
+  if (data.twitter_url) bundledLinks.push(data.twitter_url.trim());
+  if (data.linkedin_url) bundledLinks.push(data.linkedin_url.trim());
+  if (data.tiktok_url) bundledLinks.push(data.tiktok_url.trim());
+  if (data.website_url) {
+    const existingWebs = data.website_url.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    bundledLinks.push(...existingWebs);
+  }
+  const finalWebsiteUrl = bundledLinks.length > 0 ? Array.from(new Set(bundledLinks)).join('\n') : null;
+
   // Insert the main worship leader record
   const { data: leader, error: insertError } = await supabase
     .from('worship_leaders')
@@ -73,7 +88,7 @@ export async function POST(req: NextRequest) {
       song_url: data.song_url ?? null,
       video_url: data.video_url ?? null,
       cover_photo_urls: data.cover_photo_urls ?? '{}',
-      website_url: data.website_url ?? null,
+      website_url: finalWebsiteUrl,
       instagram_url: data.instagram_url ?? null,
       youtube_url: data.youtube_url ?? null,
       spotify_url: data.spotify_url ?? null,

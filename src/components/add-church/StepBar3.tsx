@@ -25,7 +25,7 @@ export default function StepBar3({ currentStep }: StepBarProps) {
             <div 
               className="step-wrap" 
               onClick={() => {
-                if (isDone || isActive) router.push(`/onboarding/church/${step.id}`);
+                if (isDone || isActive) router.push(`/add-listing/${step.id}`);
               }}
               style={{ cursor: isDone || isActive ? "pointer" : "default" }}
             >

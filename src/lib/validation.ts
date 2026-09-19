@@ -62,6 +62,9 @@ export const pastorOnboardingSchema = z.object({
   youtube_url: optionalUrl,
   twitter_url: optionalUrl,
   whatsapp_url: optionalUrl,
+  linkedin_url: optionalUrl,
+  tiktok_url: optionalUrl,
+  edit_slug: optionalString,
 
   // Step 3 — Ministry
   bio: optionalString,
@@ -69,12 +72,41 @@ export const pastorOnboardingSchema = z.object({
   years_in_ministry: z.coerce.number().int().min(0).max(100).optional(),
   churches_planted: z.coerce.number().int().min(0).max(500).optional(),
   nations_reached: z.coerce.number().int().min(0).max(300).optional(),
+  events_spoken: z.coerce.number().int().min(0).max(100000).optional(),
+  congregation_size: z.coerce.number().int().min(0).max(1000000).optional(),
   preaching_tags: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
   ministry_area_tags: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
   available_for_tags: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
+  timeline_items: z.array(z.object({
+    year: z.string().trim().max(20),
+    title: z.string().trim().max(200),
+    description: optionalString,
+  })).optional().default([]),
+  affiliation_items: z.array(z.object({
+    organisation: z.string().trim().max(160),
+    role: optionalString,
+  })).optional().default([]),
+  core_values: z.array(z.string().trim().max(100)).optional().default([]),
 
   // Step 4 — Languages
   languages: z.array(z.string().trim().min(1).max(40)).min(1, 'Add at least one language').max(15),
+
+  // Sermons, Qualifications, Awards & Honors
+  sermon_links: z.array(z.string().trim().max(500)).optional().default([]),
+  sermon_items: z.array(z.object({
+    title: optionalString,
+    description: optionalString,
+    link: optionalString,
+  })).optional().default([]),
+  education_items: z.array(z.object({
+    degree: optionalString,
+    university: optionalString,
+  })).optional().default([]),
+  award_items: z.array(z.object({
+    title: z.string().trim().max(200),
+    issuer: optionalString,
+    year: optionalString,
+  })).optional().default([]),
 
   // Step 5 — Availability
   travel_range: optionalString,
@@ -86,6 +118,7 @@ export const pastorOnboardingSchema = z.object({
   // uploads files client-side first, then sends back the public URLs)
   avatar_url: optionalUrl,
   cover_photo_urls: z.array(z.string().trim().max(500)).max(6).default([]),
+  gallery_photo_urls: z.array(z.string().trim().max(500)).default([]),
 });
 
 export type PastorOnboardingInput = z.input<typeof pastorOnboardingSchema>;
@@ -126,6 +159,10 @@ export const worshipLeaderOnboardingSchema = z.object({
   travel_range: optionalString,
   lead_time: optionalString,
 
+  // Contact Info
+  email: z.string().trim().email('Please enter a valid email address').max(200).optional().or(z.literal('')),
+  phone: optionalString,
+
   // Media & Socials
   avatar_url: optionalUrl,
   song_url: optionalUrl,
@@ -135,6 +172,10 @@ export const worshipLeaderOnboardingSchema = z.object({
   instagram_url: optionalUrl,
   youtube_url: optionalUrl,
   spotify_url: optionalUrl,
+  facebook_url: optionalUrl,
+  twitter_url: optionalUrl,
+  linkedin_url: optionalUrl,
+  tiktok_url: optionalUrl,
 });
 
 export type WorshipLeaderOnboardingInput = z.input<typeof worshipLeaderOnboardingSchema>;

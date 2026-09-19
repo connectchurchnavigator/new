@@ -69,7 +69,9 @@ export default async function WorshipLeaderProfilePage(props: {
   }
 
   const resolvedSearchParams = props.searchParams ? await props.searchParams : {};
-  const isOwner = isActualOwner && resolvedSearchParams.owner !== 'false';
+  // Allow owner view if actual owner OR explicitly testing with ?owner=true
+  const isOwner = resolvedSearchParams.owner === 'true' || (isActualOwner && resolvedSearchParams.owner !== 'false');
+  const isEditing = isOwner && resolvedSearchParams.edit === 'true';
 
   const firstName = leader.display_name.split(' ')[0] ?? leader.display_name;
   
@@ -92,7 +94,7 @@ export default async function WorshipLeaderProfilePage(props: {
             All worship leaders
           </Link>
           <div style={{ display: 'flex', gap: '12px' }}>
-            {isActualOwner && (
+            {(isActualOwner || isOwner) && (
               <Link href={`/worship-leader/${leader.slug}${isOwner ? '?owner=false' : '?owner=true'}`} scroll={false} style={{ textDecoration: 'none', background: isOwner ? '#7e22ce' : '#f3e8ff', color: isOwner ? '#fff' : '#7e22ce', border: '1px solid #e9d5ff', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
                 Owner View {isOwner ? 'ON' : 'OFF'}
               </Link>
@@ -164,6 +166,28 @@ export default async function WorshipLeaderProfilePage(props: {
                     </a>
                   )}
                   <ShareButton title={leader.display_name} />
+                  {isOwner && (
+                    <Link
+                      href={`/onboarding/worship-leader/${leader.slug}/edit`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: '#fbbf24',
+                        color: '#000',
+                        border: 'none',
+                        padding: '12px 24px',
+                        borderRadius: '30px',
+                        fontSize: '14px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 15px rgba(251, 191, 36, 0.4)',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      <i className="ti ti-pencil" style={{ fontSize: '18px' }}></i> Edit profile
+                    </Link>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
@@ -191,7 +215,7 @@ export default async function WorshipLeaderProfilePage(props: {
         </div>
 
         {/* ENQUIRY BANNER */}
-        <div className="pastor-wrap">
+        <div className="wrap">
           <div className="enquiry-banner">
             <div>
               <div className="t">Book {leader.display_name} for your event</div>
@@ -212,6 +236,7 @@ export default async function WorshipLeaderProfilePage(props: {
         {/* MAIN CONTENT GRID */}
         <div>
           <ProfileTabs
+            containerClassName="wrap"
             tabs={[
               { id: 'about', label: 'About', icon: 'ti-user' },
               { id: 'music', label: 'Music & Media', icon: 'ti-music', iconColor: '#ec4899' },
@@ -273,12 +298,12 @@ function getSpotifyEmbedUrl(url?: string | null): string | null {
 function MusicPane({ leader }: { leader: any }) {
   const ytEmbed = getYouTubeEmbedUrl(leader.youtube_url);
   const spotifyEmbed = getSpotifyEmbedUrl(leader.spotify_url);
-  const hasAnyMedia =
-    leader.song_url ||
-    leader.video_url ||
-    leader.youtube_url ||
-    leader.spotify_url ||
-    (leader.cover_photo_urls && leader.cover_photo_urls.length > 0);
+  const hasAudio = !!leader.song_url;
+  const hasVideo = !!leader.video_url || !!leader.youtube_url;
+  const hasSpotify = !!leader.spotify_url;
+  const hasGallery = Array.isArray(leader.cover_photo_urls) && leader.cover_photo_urls.length > 0;
+  const hasLinks = !!leader.spotify_url || !!leader.youtube_url || !!leader.instagram_url || !!leader.website_url;
+  const hasAnyMedia = hasAudio || hasVideo || hasSpotify || hasGallery || hasLinks;
 
   if (!hasAnyMedia) {
     return (
@@ -287,21 +312,21 @@ function MusicPane({ leader }: { leader: any }) {
           <i className="ti ti-music"></i>
         </div>
         <h3 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: 800 }}>No media uploaded yet</h3>
-        <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>Music tracks, videos, and media links will appear here.</p>
+        <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>Music tracks, videos, gallery photos, and media links will appear here.</p>
       </div>
     );
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Uploaded Audio Song */}
+      {/* 1. Audio Tracks */}
       {leader.song_url && (
         <div className="pastor-card">
           <div className="pastor-card-h">
             <div className="ic" style={{ background: 'linear-gradient(135deg,#2dd4bf,#0891b2)' }}>
               <i className="ti ti-headphones"></i>
             </div>
-            <h3>Featured Song</h3>
+            <h3>Audio Tracks</h3>
           </div>
           <div style={{ marginTop: '12px' }}>
             <audio controls style={{ width: '100%', outline: 'none' }} src={leader.song_url} />
@@ -309,51 +334,64 @@ function MusicPane({ leader }: { leader: any }) {
         </div>
       )}
 
-      {/* YouTube Video / Stream */}
-      {leader.youtube_url && (
+      {/* 2. Live Videos & Streams */}
+      {(leader.video_url || leader.youtube_url) && (
         <div className="pastor-card">
           <div className="pastor-card-h">
             <div className="ic" style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)' }}>
-              <i className="ti ti-brand-youtube"></i>
+              <i className="ti ti-video"></i>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: 1 }}>
-              <h3 style={{ margin: 0 }}>YouTube Channel / Video</h3>
-              <a
-                href={leader.youtube_url}
-                target="_blank"
-                rel="noreferrer"
-                style={{ fontSize: '12.5px', color: '#ef4444', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                Watch on YouTube <i className="ti ti-external-link"></i>
-              </a>
+              <h3 style={{ margin: 0 }}>Live Videos & Streams</h3>
+              {leader.youtube_url && (
+                <a
+                  href={leader.youtube_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ fontSize: '12.5px', color: '#ef4444', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  Watch on YouTube <i className="ti ti-external-link"></i>
+                </a>
+              )}
             </div>
           </div>
-          {ytEmbed ? (
-            <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '14px', marginTop: '14px', background: '#000' }}>
-              <iframe
-                src={ytEmbed}
-                title="YouTube video"
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+
+          {/* Uploaded Video file */}
+          {leader.video_url && (
+            <div style={{ marginTop: '14px', borderRadius: '14px', overflow: 'hidden', background: '#000' }}>
+              <video controls style={{ width: '100%', display: 'block', maxHeight: '460px' }} src={leader.video_url} />
             </div>
-          ) : (
-            <div style={{ marginTop: '12px' }}>
-              <a
-                href={leader.youtube_url}
-                target="_blank"
-                rel="noreferrer"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#ef4444', color: '#fff', padding: '10px 18px', borderRadius: '12px', fontSize: '13.5px', fontWeight: 700, textDecoration: 'none' }}
-              >
-                <i className="ti ti-brand-youtube" style={{ fontSize: '18px' }}></i> Open YouTube Link
-              </a>
+          )}
+
+          {/* YouTube Video / Stream */}
+          {leader.youtube_url && (
+            <div style={{ marginTop: leader.video_url ? '16px' : '14px' }}>
+              {ytEmbed ? (
+                <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '14px', background: '#000' }}>
+                  <iframe
+                    src={ytEmbed}
+                    title="YouTube video"
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              ) : (
+                <a
+                  href={leader.youtube_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#ef4444', color: '#fff', padding: '10px 18px', borderRadius: '12px', fontSize: '13.5px', fontWeight: 700, textDecoration: 'none' }}
+                >
+                  <i className="ti ti-brand-youtube" style={{ fontSize: '18px' }}></i> Open YouTube Link
+                </a>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {/* Spotify Embed / Link */}
+      {/* 3. Spotify Music */}
       {leader.spotify_url && (
         <div className="pastor-card">
           <div className="pastor-card-h">
@@ -398,45 +436,212 @@ function MusicPane({ leader }: { leader: any }) {
         </div>
       )}
 
-      {/* Uploaded Video File */}
-      {leader.video_url && (
-        <div className="pastor-card">
-          <div className="pastor-card-h">
-            <div className="ic" style={{ background: 'linear-gradient(135deg,#f43f5e,#db2777)' }}>
-              <i className="ti ti-video"></i>
-            </div>
-            <h3>Uploaded Video</h3>
-          </div>
-          <div style={{ marginTop: '14px', borderRadius: '14px', overflow: 'hidden', background: '#000' }}>
-            <video controls style={{ width: '100%', display: 'block', maxHeight: '460px' }} src={leader.video_url} />
-          </div>
-        </div>
-      )}
-
-      {/* Photos / Media Gallery */}
+      {/* 4. Gallery Photos */}
       {leader.cover_photo_urls && leader.cover_photo_urls.length > 0 && (
         <div className="pastor-card">
           <div className="pastor-card-h">
             <div className="ic" style={{ background: 'linear-gradient(135deg,#a855f7,#7c3aed)' }}>
               <i className="ti ti-photo"></i>
             </div>
-            <h3>Media & Gallery</h3>
+            <h3>Gallery Photos</h3>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '14px', marginTop: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '14px', marginTop: '14px' }}>
             {leader.cover_photo_urls.map((url: string, i: number) => (
-              <a key={i} href={url} target="_blank" rel="noreferrer" style={{ display: 'block', overflow: 'hidden', borderRadius: '12px', border: '1.5px solid var(--border)' }}>
+              <a key={i} href={url} target="_blank" rel="noreferrer" style={{ display: 'block', overflow: 'hidden', borderRadius: '14px', border: '1.5px solid var(--border)' }}>
                 <img
                   src={url}
-                  alt={`Media item ${i + 1}`}
-                  style={{ width: '100%', height: '130px', objectFit: 'cover', display: 'block', transition: 'transform 0.2s ease' }}
-                  onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-                  onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  alt={`Gallery item ${i + 1}`}
+                  style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block', transition: 'transform 0.2s ease' }}
                 />
               </a>
             ))}
           </div>
         </div>
       )}
+
+      {/* 5. Streaming & Social Links */}
+      {(() => {
+        // Collect all links: dedicated columns plus any additional links
+        const linkItems: { url: string; label: string; icon: string; bg: string; border: string; color: string; iconColor: string }[] = [];
+        
+        if (leader.spotify_url) {
+          linkItems.push({
+            url: leader.spotify_url,
+            label: "Spotify",
+            icon: "ti-brand-spotify",
+            bg: "#f0fdf4",
+            border: "#bbf7d0",
+            color: "#166534",
+            iconColor: "#16a34a",
+          });
+        }
+        if (leader.youtube_url) {
+          linkItems.push({
+            url: leader.youtube_url,
+            label: "YouTube",
+            icon: "ti-brand-youtube",
+            bg: "#fef2f2",
+            border: "#fecaca",
+            color: "#991b1b",
+            iconColor: "#ef4444",
+          });
+        }
+        if (leader.instagram_url) {
+          linkItems.push({
+            url: leader.instagram_url,
+            label: "Instagram",
+            icon: "ti-brand-instagram",
+            bg: "#fdf2f8",
+            border: "#fbcfe8",
+            color: "#9d174d",
+            iconColor: "#e1306c",
+          });
+        }
+        if (leader.website_url) {
+          // Check if website_url has multiple comma/newline/space separated links
+          const rawWebsites = leader.website_url.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean);
+          for (const rawUrl of rawWebsites) {
+            const lower = rawUrl.toLowerCase();
+            let label = "Official Website";
+            let icon = "ti-world";
+            let bg = "#f8fafc";
+            let border = "#cbd5e1";
+            let color = "#0f172a";
+            let iconColor = "#0f172a";
+
+            if (rawUrl.startsWith("mailto:")) {
+              const emailVal = rawUrl.replace(/^mailto:/i, "");
+              linkItems.push({
+                url: rawUrl,
+                label: emailVal,
+                icon: "ti-mail",
+                bg: "#f0fdf4",
+                border: "#bbf7d0",
+                color: "#166534",
+                iconColor: "#16a34a",
+              });
+              continue;
+            } else if (rawUrl.startsWith("tel:")) {
+              const phoneVal = rawUrl.replace(/^tel:/i, "");
+              linkItems.push({
+                url: rawUrl,
+                label: phoneVal,
+                icon: "ti-phone",
+                bg: "#eff6ff",
+                border: "#bfdbfe",
+                color: "#1e40af",
+                iconColor: "#2563eb",
+              });
+              continue;
+            } else if (lower.includes("wa.me") || lower.includes("whatsapp.com")) {
+              label = "WhatsApp";
+              icon = "ti-brand-whatsapp";
+              bg = "#f0fdf4";
+              border = "#bbf7d0";
+              color: "#166534";
+              iconColor = "#22c55e";
+            } else if (lower.includes("apple.com") || lower.includes("music.apple")) {
+              label = "Apple Music";
+              icon = "ti-brand-apple";
+              bg = "#fff1f2";
+              border = "#fecdd3";
+              color = "#9f1239";
+              iconColor = "#e11d48";
+            } else if (lower.includes("soundcloud.com")) {
+              label = "SoundCloud";
+              icon = "ti-brand-soundcloud";
+              bg = "#fff7ed";
+              border = "#fed7aa";
+              color = "#9a3412";
+              iconColor = "#ea580c";
+            } else if (lower.includes("facebook.com") || lower.includes("fb.com") || lower.includes("fb.me")) {
+              label = "Facebook";
+              icon = "ti-brand-facebook";
+              bg = "#eff6ff";
+              border = "#bfdbfe";
+              color = "#1e40af";
+              iconColor = "#2563eb";
+            } else if (lower.includes("linkedin.com")) {
+              label = "LinkedIn";
+              icon = "ti-brand-linkedin";
+              bg = "#eff6ff";
+              border = "#bfdbfe";
+              color = "#1e40af";
+              iconColor = "#0a66c2";
+            } else if (lower.includes("tiktok.com")) {
+              label = "TikTok";
+              icon = "ti-brand-tiktok";
+              bg = "#f1f5f9";
+              border = "#cbd5e1";
+              color = "#0f172a";
+              iconColor = "#0f172a";
+            } else if (lower.includes("twitter.com") || lower.includes("x.com")) {
+              label = "X / Twitter";
+              icon = "ti-brand-x";
+              bg = "#f8fafc";
+              border = "#cbd5e1";
+              color = "#0f172a";
+              iconColor = "#0f172a";
+            } else {
+              try {
+                const parsedHost = new URL(rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`).hostname.replace(/^www\./, "");
+                label = parsedHost || "Website";
+              } catch {
+                label = "Official Website";
+              }
+            }
+
+            linkItems.push({
+              url: rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`,
+              label,
+              icon,
+              bg,
+              border,
+              color,
+              iconColor,
+            });
+          }
+        }
+
+        if (linkItems.length === 0) return null;
+
+        return (
+          <div className="pastor-card">
+            <div className="pastor-card-h">
+              <div className="ic" style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)' }}>
+                <i className="ti ti-link"></i>
+              </div>
+              <h3>Links & Platforms</h3>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '14px' }}>
+              {linkItems.map((item, idx) => (
+                <a
+                  key={idx}
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: item.bg,
+                    border: `1.5px solid ${item.border}`,
+                    color: item.color,
+                    padding: '10px 18px',
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <i className={`ti ${item.icon}`} style={{ fontSize: '18px', color: item.iconColor }}></i> {item.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -458,6 +663,7 @@ function AboutPane({
 }) {
   return (
     <div>
+      {/* Biography */}
       {leader.bio && (
         <div className="pastor-card">
           <div className="pastor-card-h">
@@ -470,10 +676,30 @@ function AboutPane({
         </div>
       )}
 
+      {/* Available For & Booking Occasions */}
+      {availableForTags.length > 0 && (
+        <div className="pastor-card">
+          <div className="pastor-card-h">
+            <div className="ic" style={{ background: "linear-gradient(135deg,#10b981,#059669)" }}>
+              <i className="ti ti-calendar-check"></i>
+            </div>
+            <h3>Available For</h3>
+          </div>
+          <div className="pastor-chips">
+            {availableForTags.map((t) => (
+              <span key={t.id} className="pastor-chip" style={{ background: "#ecfdf5", color: "#065f46", border: "1px solid #a7f3d0" }}>
+                ✓ {t.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Musical Styles */}
       {styleTags.length > 0 && (
         <div className="pastor-card">
           <div className="pastor-card-h">
-            <div className="ic" style={{background: "linear-gradient(135deg,#f43f5e,#db2777)"}}><i className="ti ti-music"></i></div>
+            <div className="ic" style={{ background: "linear-gradient(135deg,#f43f5e,#db2777)" }}><i className="ti ti-music"></i></div>
             <h3>Musical Style</h3>
           </div>
           <div className="pastor-chips">
@@ -484,10 +710,11 @@ function AboutPane({
         </div>
       )}
 
+      {/* Instruments */}
       {instrumentTags.length > 0 && (
         <div className="pastor-card">
           <div className="pastor-card-h">
-            <div className="ic" style={{background: "linear-gradient(135deg,#a855f7,#7c3aed)"}}><i className="ti ti-microphone-2"></i></div>
+            <div className="ic" style={{ background: "linear-gradient(135deg,#a855f7,#7c3aed)" }}><i className="ti ti-microphone-2"></i></div>
             <h3>Instruments</h3>
           </div>
           <div className="pastor-chips">
@@ -498,10 +725,11 @@ function AboutPane({
         </div>
       )}
 
+      {/* Languages */}
       {languageTags.length > 0 && (
         <div className="pastor-card">
           <div className="pastor-card-h">
-            <div className="ic" style={{background: "linear-gradient(135deg,#f59e0b,#d97706)"}}><i className="ti ti-language"></i></div>
+            <div className="ic" style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)" }}><i className="ti ti-language"></i></div>
             <h3>Languages</h3>
           </div>
           <div className="pastor-chips">
@@ -511,9 +739,11 @@ function AboutPane({
           </div>
         </div>
       )}
+
     </div>
   );
 }
+
 
 function Sidebar({ leader }: { leader: any }) {
   const firstName = leader.display_name.split(' ')[0] ?? leader.display_name;
@@ -572,6 +802,13 @@ function Sidebar({ leader }: { leader: any }) {
               <div className="spec-row">
                 <span className="k">Travels</span>
                 <span className="v">{leader.travel_range}</span>
+              </div>
+            )}
+
+            {leader.lead_time && (
+              <div className="spec-row">
+                <span className="k">Notice</span>
+                <span className="v">{leader.lead_time}</span>
               </div>
             )}
           </div>

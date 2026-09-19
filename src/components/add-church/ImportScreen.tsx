@@ -44,7 +44,7 @@ export default function ImportScreen({ onBack, onComplete }: ImportScreenProps) 
             </div>
 
             <div className="scard">
-              <label>Church website <span className="req-badge">REQUIRED</span></label>
+              <label>Church website <span style={{ color: "#ef4444", fontWeight: 800 }}>*</span></label>
               <div style={{ position: "relative", marginBottom: "6px" }}>
                 <i className="ti ti-world" style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "var(--cn-gray-light)", zIndex: 2 }}></i>
                 <input 

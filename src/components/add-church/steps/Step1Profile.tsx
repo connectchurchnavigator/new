@@ -92,7 +92,7 @@ export default function Step1Profile({ onNext }: Step1ProfileProps) {
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
           <div>
-            <label>Church name <span className="req-badge">REQUIRED</span></label>
+            <label>Church name <span style={{ color: "#ef4444", fontWeight: 800 }}>*</span></label>
             <input 
               id="f-name"
               placeholder="e.g. Liberty Connections" 

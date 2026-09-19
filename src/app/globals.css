@@ -183,3 +183,10 @@ label { font-size: 13px; font-weight: 700; color: var(--cn-ink); display: block;
 .ai-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; }
 .nav-link { font-size: 13px; font-weight: 600; color: var(--cn-ink); cursor: pointer; white-space: nowrap; }
 .nav-cta { background: var(--cn-purple); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+
+/* Avatar and Cover upload box hover effect */
+.avatar-upload-box:hover .avatar-overlay,
+.cover-upload-box:hover .cover-overlay {
+  opacity: 1 !important;
+}
+

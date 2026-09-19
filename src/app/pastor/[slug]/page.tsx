@@ -12,6 +12,7 @@ import HeroCarousel from '@/components/church-profile/HeroCarousel';
 import ShareButton from '@/components/church-profile/ShareButton';
 import TopNav from '@/components/layout/TopNav';
 import ContactSection from '@/components/church-profile/ContactSection';
+import { GalleryLightbox } from '@/components/GalleryLightbox';
 import '@/app/church/[slug]/church.css';
 import './pastor.css';
 
@@ -29,23 +30,79 @@ async function getPastor(slug: string): Promise<PastorProfile | null> {
 
   if (!pastor) return null;
 
-  const [languagesRes, tagsRes, educationRes, timelineRes, sermonsRes, eventsRes, galleryRes, affiliationsRes, awardsRes, reviewsRes] =
-    await Promise.all([
-      supabase.from('pastor_languages').select('language').eq('pastor_id', pastor.id),
-      supabase.from('pastor_tags').select('*').eq('pastor_id', pastor.id),
-      supabase.from('pastor_education').select('*').eq('pastor_id', pastor.id).order('sort_order'),
-      supabase.from('pastor_timeline').select('*').eq('pastor_id', pastor.id).order('sort_order'),
-      supabase.from('pastor_sermons').select('*').eq('pastor_id', pastor.id).order('sort_order'),
-      supabase.from('pastor_events').select('*').eq('pastor_id', pastor.id).order('event_date'),
-      supabase.from('pastor_gallery').select('*').eq('pastor_id', pastor.id).order('sort_order'),
-      supabase.from('pastor_affiliations').select('*').eq('pastor_id', pastor.id).order('sort_order'),
-      supabase.from('pastor_awards').select('*').eq('pastor_id', pastor.id).order('sort_order'),
-      supabase.from('pastor_reviews').select('*').eq('pastor_id', pastor.id).order('created_at', { ascending: false }),
-    ]);
+  const [
+    languagesRes,
+    tagsRes,
+    educationRes,
+    timelineRes,
+    sermonsRes,
+    eventsRes,
+    hostedEventsRes,
+    galleryRes,
+    affiliationsRes,
+    awardsRes,
+    reviewsRes,
+  ] = await Promise.all([
+    supabase.from('pastor_languages').select('language').eq('pastor_id', pastor.id),
+    supabase.from('pastor_tags').select('*').eq('pastor_id', pastor.id),
+    supabase.from('pastor_education').select('*').eq('pastor_id', pastor.id).order('sort_order'),
+    supabase.from('pastor_timeline').select('*').eq('pastor_id', pastor.id).order('sort_order'),
+    supabase.from('pastor_sermons').select('*').eq('pastor_id', pastor.id).order('sort_order'),
+    supabase.from('pastor_events').select('*').eq('pastor_id', pastor.id).order('event_date'),
+    supabase
+      .from('events')
+      .select('*')
+      .or(`host_pastor_id.eq.${pastor.id},and(host_type.eq.pastor,host_id.eq.${pastor.id})`)
+      .order('starts_at', { ascending: true }),
+    supabase.from('pastor_gallery').select('*').eq('pastor_id', pastor.id).order('sort_order'),
+    supabase.from('pastor_affiliations').select('*').eq('pastor_id', pastor.id).order('sort_order'),
+    supabase.from('pastor_awards').select('*').eq('pastor_id', pastor.id).order('sort_order'),
+    supabase.from('pastor_reviews').select('*').eq('pastor_id', pastor.id).order('created_at', { ascending: false }),
+  ]);
 
   const reviews = reviewsRes.data ?? [];
   const averageRating =
     reviews.length > 0 ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10 : null;
+
+  // Combine pastor_events and events from public.events
+  const directEvents = (eventsRes.data ?? []).map((e: any) => ({
+    id: e.id,
+    pastor_id: e.pastor_id,
+    title: e.title,
+    event_date: e.event_date,
+    location: e.location,
+    start_time: e.start_time,
+    tags: e.tags || [],
+    registration_url: e.registration_url,
+    sort_order: e.sort_order || 0
+  }));
+
+  const hostedEvents = (hostedEventsRes.data ?? []).map((ev: any, idx: number) => ({
+    id: ev.id,
+    pastor_id: pastor.id,
+    title: ev.title,
+    event_date: ev.starts_at || new Date().toISOString(),
+    location: [ev.venue_name, ev.city].filter(Boolean).join(', ') || null,
+    start_time: ev.starts_at ? new Date(ev.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null,
+    tags: [ev.type, ev.is_free ? 'Free entry' : ev.price_label].filter(Boolean),
+    registration_url: ev.slug ? `/events/${ev.slug}` : null,
+    sort_order: 100 + idx
+  }));
+
+  const combinedEvents = [...directEvents, ...hostedEvents];
+
+  // Parse core values
+  let coreValues: string[] = [];
+  const rawVision = pastor.vision_statement || '';
+  if (rawVision.includes('<!--CORE_VALUES:')) {
+    try {
+      const match = rawVision.match(/<!--CORE_VALUES:(.*?)-->/);
+      if (match && match[1]) {
+        coreValues = JSON.parse(match[1]);
+      }
+    } catch {}
+  }
+  const cleanVision = rawVision.replace(/<!--CORE_VALUES:.*?-->/g, '').trim();
 
   // Fire-and-forget view increment
   supabase
@@ -56,18 +113,20 @@ async function getPastor(slug: string): Promise<PastorProfile | null> {
 
   return {
     ...pastor,
+    vision_statement: cleanVision,
+    core_values: coreValues,
     languages: (languagesRes.data ?? []).map((r) => r.language),
     tags: tagsRes.data ?? [],
     education: educationRes.data ?? [],
     timeline: timelineRes.data ?? [],
     sermons: sermonsRes.data ?? [],
-    events: eventsRes.data ?? [],
+    events: combinedEvents,
     gallery: galleryRes.data ?? [],
     affiliations: affiliationsRes.data ?? [],
     awards: awardsRes.data ?? [],
     reviews,
     average_rating: averageRating,
-  };
+  } as any;
 }
 
 export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -212,7 +271,7 @@ export default async function PastorProfilePage(props: {
                   )}
                   <ShareButton title={pastor.full_name} />
                   {isOwner && (
-                    <Link href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#fbbf24', color: '#000', border: 'none', padding: '12px 24px', borderRadius: '30px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 15px rgba(251, 191, 36, 0.4)', textDecoration: 'none' }}>
+                    <Link href={`/onboarding/pastor?edit=${pastor.slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#fbbf24', color: '#000', border: 'none', padding: '12px 24px', borderRadius: '30px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 15px rgba(251, 191, 36, 0.4)', textDecoration: 'none' }}>
                       <i className="ti ti-pencil" style={{ fontSize: '18px' }}></i> Edit profile
                     </Link>
                   )}
@@ -248,10 +307,10 @@ export default async function PastorProfilePage(props: {
         </div>
 
         {/* STATS STRIP - DYNAMIC FROM BACKEND */}
-        {(pastor.years_in_ministry || pastor.churches_planted || pastor.nations_reached || pastor.youtube_subscribers || pastor.events_spoken || pastor.languages.length > 0 || pastor.sermons.length > 0) && (
+        {(pastor.years_in_ministry || pastor.churches_planted || pastor.nations_reached || pastor.events_spoken || pastor.congregation_size || pastor.youtube_subscribers || pastor.languages.length > 0 || pastor.sermons.length > 0) && (
           <div style={{ background: '#fff' }}>
             <div className="pastor-wrap">
-              <div className="stats-strip" style={{ gridTemplateColumns: `repeat(${[pastor.years_in_ministry, pastor.churches_planted, pastor.nations_reached, pastor.youtube_subscribers, pastor.events_spoken, pastor.languages.length > 0, pastor.sermons.length > 0].filter(Boolean).length}, 1fr)` }}>
+              <div className="stats-strip" style={{ gridTemplateColumns: `repeat(${[pastor.years_in_ministry, pastor.churches_planted, pastor.nations_reached, pastor.events_spoken, pastor.congregation_size, pastor.youtube_subscribers, pastor.languages.length > 0, pastor.sermons.length > 0].filter(Boolean).length}, 1fr)` }}>
                 {pastor.years_in_ministry && (
                   <div className="stat-cell">
                     <div className="v">{pastor.years_in_ministry}+</div>
@@ -270,6 +329,18 @@ export default async function PastorProfilePage(props: {
                     <div className="l">Nations reached</div>
                   </div>
                 )}
+                {pastor.events_spoken && (
+                  <div className="stat-cell">
+                    <div className="v">{pastor.events_spoken}+</div>
+                    <div className="l">Events spoken</div>
+                  </div>
+                )}
+                {pastor.congregation_size && (
+                  <div className="stat-cell">
+                    <div className="v">{fmtK(pastor.congregation_size)}</div>
+                    <div className="l">Congregation</div>
+                  </div>
+                )}
                 {pastor.languages.length > 0 && (
                   <div className="stat-cell">
                     <div className="v">{pastor.languages.length}</div>
@@ -286,12 +357,6 @@ export default async function PastorProfilePage(props: {
                   <div className="stat-cell">
                     <div className="v">{fmtK(pastor.youtube_subscribers)}</div>
                     <div className="l">YouTube subs</div>
-                  </div>
-                )}
-                {pastor.events_spoken && (
-                  <div className="stat-cell">
-                    <div className="v">{pastor.events_spoken}+</div>
-                    <div className="l">Events spoken</div>
                   </div>
                 )}
               </div>
@@ -323,17 +388,19 @@ export default async function PastorProfilePage(props: {
           <ProfileTabs
             tabs={[
               { id: 'about', label: 'About', icon: 'ti-user' },
-              ...(pastor.sermons.length > 0 ? [{ id: 'sermons', label: 'Sermons', icon: 'ti-player-play' }] : []),
+              { id: 'sermons', label: 'Sermons', icon: 'ti-player-play', iconColor: '#ef4444' },
               { id: 'vision', label: 'Vision', icon: 'ti-eye' },
-              ...(pastor.education.length > 0 ? [{ id: 'education', label: 'Education', icon: 'ti-school' }] : []),
-              ...(pastor.gallery.length > 0 ? [{ id: 'gallery', label: 'Gallery', icon: 'ti-photo' }] : []),
+              { id: 'education', label: 'Education', icon: 'ti-school' },
+              { id: 'events', label: 'Events', icon: 'ti-calendar-event' },
+              { id: 'gallery', label: 'Gallery', icon: 'ti-photo' },
             ]}
             panes={{
               about: <AboutPane pastor={pastor} preachingTags={preachingTags} ministryTags={ministryTags} availableForTags={availableForTags} />,
-              ...(pastor.sermons.length > 0 ? { sermons: <SermonsPane pastor={pastor} /> } : {}),
+              sermons: <SermonsPane pastor={pastor} />,
               vision: <VisionPane pastor={pastor} />,
-              ...(pastor.education.length > 0 ? { education: <EducationPane pastor={pastor} /> } : {}),
-              ...(pastor.gallery.length > 0 ? { gallery: <GalleryPane pastor={pastor} /> } : {}),
+              education: <EducationPane pastor={pastor} />,
+              events: <EventsPane pastor={pastor} />,
+              gallery: <GalleryPane pastor={pastor} />,
             }}
             sidebar={<Sidebar pastor={pastor} />}
           />
@@ -461,20 +528,104 @@ function AboutPane({
       {pastor.timeline.length > 0 && (
         <div className="pastor-card">
           <div className="pastor-card-h">
-            <div className="ic"><i className="ti ti-timeline"></i></div>
-            <h3>Ministry journey</h3>
+            <div
+              className="ic"
+              style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '13px',
+                background: '#ea580c',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(234, 88, 12, 0.25)',
+                flexShrink: 0,
+              }}
+            >
+              <i className="ti ti-chart-line" style={{ fontSize: '20px' }}></i>
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f0f1a' }}>Ministry journey</h3>
           </div>
-          <div style={{ marginTop: '16px', position: 'relative', paddingLeft: '8px' }}>
-            {pastor.timeline.map((entry) => (
-              <div key={entry.id} style={{ display: 'flex', gap: '14px', paddingBottom: '18px', position: 'relative' }}>
-                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'linear-gradient(135deg,#f43f5e 0%,#7c3aed 100%)', flexShrink: 0, marginTop: '4px', zIndex: 1 }} />
-                <div>
-                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#6d28d9' }}>{entry.year}</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, margin: '1px 0 3px', color: '#0f0f1a' }}>{entry.title}</div>
-                  {entry.description && <div style={{ fontSize: '12.5px', color: '#6b7280', lineHeight: 1.55 }}>{entry.description}</div>}
+          <div style={{ marginTop: '24px', position: 'relative', paddingLeft: '4px' }}>
+            {pastor.timeline.map((entry, idx) => {
+              const isLast = idx === pastor.timeline.length - 1;
+              return (
+                <div
+                  key={entry.id}
+                  style={{
+                    display: 'flex',
+                    gap: '16px',
+                    position: 'relative',
+                    paddingBottom: isLast ? '0' : '28px',
+                  }}
+                >
+                  {/* Vertical connecting line */}
+                  {!isLast && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: '6.5px',
+                        top: '18px',
+                        bottom: '0',
+                        width: '2px',
+                        background: '#e2e8f0',
+                      }}
+                    />
+                  )}
+
+                  {/* Gradient milestone dot */}
+                  <div
+                    style={{
+                      width: '15px',
+                      height: '15px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
+                      boxShadow: '0 0 0 4px rgba(237, 233, 254, 0.6)',
+                      flexShrink: 0,
+                      marginTop: '3px',
+                      zIndex: 1,
+                    }}
+                  />
+
+                  <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: 800,
+                        color: '#7c3aed',
+                        letterSpacing: '0.3px',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      {entry.year}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '16px',
+                        fontWeight: 800,
+                        color: '#0f0f1a',
+                        lineHeight: 1.3,
+                        marginBottom: '6px',
+                      }}
+                    >
+                      {entry.title}
+                    </div>
+                    {entry.description && (
+                      <div
+                        style={{
+                          fontSize: '14px',
+                          color: '#64748b',
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        {entry.description}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -670,48 +821,123 @@ function Sidebar({ pastor }: { pastor: PastorProfile }) {
       {pastor.affiliations.length > 0 && (
         <div className="pastor-card">
           <div className="pastor-card-h">
-            <div className="ic"><i className="ti ti-certificate"></i></div>
-            <h3>Ministerial affiliation</h3>
+            <div className="ic" style={{ background: '#4f46e5', color: '#fff', borderRadius: '12px' }}>
+              <i className="ti ti-certificate"></i>
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f0f1a' }}>Ministerial affiliation</h3>
           </div>
-          <div style={{ marginTop: '8px' }}>
-            {pastor.affiliations.map((a) => (
-              <div key={a.id} className="list-item">
-                <div className="li-mark"><i className="ti ti-building-community"></i></div>
-                <div>
-                  <div className="li-t">{a.organisation}</div>
-                  {a.role && <div className="li-n">{a.role}</div>}
+          <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {pastor.affiliations.map((a, idx) => {
+              // Generate badge initials and distinct gradient/solid background matching user design
+              const words = a.organisation.trim().split(/\s+/);
+              const badgeText = words.length >= 2
+                ? (words[0][0] + words[1][0]).toUpperCase()
+                : a.organisation.slice(0, 2).toUpperCase();
+
+              const badgeStyles = [
+                { bg: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', color: '#fff' }, // pink-purple (RCCG)
+                { bg: '#7c3aed', color: '#fff' }, // purple (PE)
+                { bg: '#15803d', color: '#fff' }, // green (IC)
+                { bg: '#2563eb', color: '#fff' }, // blue (EV)
+                { bg: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: '#fff' }
+              ];
+              const badgeStyle = badgeStyles[idx % badgeStyles.length];
+
+              return (
+                <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', paddingBottom: idx !== pastor.affiliations.length - 1 ? '14px' : '0', borderBottom: idx !== pastor.affiliations.length - 1 ? '1px solid #f1f1f5' : 'none' }}>
+                  <div
+                    style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '14px',
+                      background: badgeStyle.bg,
+                      color: badgeStyle.color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 800,
+                      fontSize: '15px',
+                      letterSpacing: '0.5px',
+                      flexShrink: 0,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                    }}
+                  >
+                    {badgeText}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f0f1a', lineHeight: 1.25 }}>
+                      {a.organisation}
+                    </div>
+                    {a.role && (
+                      <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 500, marginTop: '3px' }}>
+                        {a.role}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
       {pastor.awards.length > 0 && (
         <div className="pastor-card">
-          <div className="pastor-card-h">
-            <div className="ic" style={{ background: 'linear-gradient(135deg, #f43f5e 0%, #7c3aed 100%)' }}>
+          <div className="pastor-card-h" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              className="ic"
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                background: '#f59e0b',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '20px',
+                flexShrink: 0
+              }}
+            >
               <i className="ti ti-award"></i>
             </div>
-            <h3>Awards &amp; recognition</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f0f1a', margin: 0 }}>
+              Awards &amp; recognition
+            </h3>
           </div>
-          <div style={{ marginTop: '8px' }}>
-            {pastor.awards.map((a) => (
-              <div key={a.id} className="list-item">
+          <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {pastor.awards.map((a, idx) => (
+              <div
+                key={a.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  paddingBottom: idx !== pastor.awards.length - 1 ? '14px' : '0',
+                  borderBottom: idx !== pastor.awards.length - 1 ? '1px solid #f1f1f5' : 'none'
+                }}
+              >
                 <div
-                  className="li-mark"
                   style={{
                     background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
-                    borderRadius: '11px',
-                    width: '40px',
-                    height: '40px',
+                    borderRadius: '12px',
+                    width: '42px',
+                    height: '42px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    flexShrink: 0,
+                    boxShadow: '0 4px 10px rgba(236, 72, 153, 0.25)'
                   }}
                 >
-                  <i className="ti ti-award" style={{ fontSize: '18px', color: '#fff' }}></i>
+                  <i className="ti ti-award" style={{ fontSize: '20px' }}></i>
                 </div>
-                <div>
-                  <div className="li-t">{a.title}</div>
-                  <div className="li-n">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f0f1a', lineHeight: 1.25 }}>
+                    {a.title}
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 500, marginTop: '3px' }}>
                     {[a.issuer, (a as any).year].filter(Boolean).join(' · ')}
                   </div>
                 </div>
@@ -736,44 +962,113 @@ function SidebarRow({ icon, label, value }: { icon: string; label: string; value
 }
 
 function SermonsPane({ pastor }: { pastor: PastorProfile }) {
+  const sermons = pastor.sermons || [];
+
   return (
     <div>
       <div className="pastor-card">
         <div className="pastor-card-h">
-          <div className="ic"><i className="ti ti-player-play"></i></div>
-          <h3>Sermons &amp; messages</h3>
+          <div className="ic" style={{ background: '#ef4444', color: '#fff', borderRadius: '12px' }}>
+            <i className="ti ti-player-play"></i>
+          </div>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f0f1a' }}>Sermons &amp; messages</h3>
         </div>
-        <div style={{ marginTop: '14px' }}>
-          {pastor.sermons.length === 0 && (
-            <p className="text-sm text-gray" style={{ color: '#6b7280' }}>
-              No sermons added yet.
-            </p>
-          )}
-          {pastor.sermons.map((s) => (
-            <div key={s.id} className="sermon">
-              <div className="thumb">
-                <i className="ti ti-player-play-filled"></i>
-                {s.duration_min ? <div className="dur">{s.duration_min} min</div> : null}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div className="st">{s.title}</div>
-                <div className="sm">
-                  {[s.series, s.views ? `${fmtK(s.views)} views` : null].filter(Boolean).join(' · ')}
-                </div>
-              </div>
-              {s.youtube_url && (
-                <a
-                  href={s.youtube_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn"
-                  style={{ background: '#fff', border: '1.5px solid #e9e9ef', color: '#0f0f1a', fontSize: '12.5px', fontWeight: 700, padding: '7px 14px', borderRadius: '10px', height: 'fit-content', alignSelf: 'center' }}
-                >
-                  <i className="ti ti-player-play" style={{ fontSize: '13px' }}></i> Watch
-                </a>
-              )}
+
+        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {sermons.length === 0 ? (
+            <div style={{ padding: '32px 20px', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '16px', border: '1.5px dashed #e2e8f0' }}>
+              <i className="ti ti-video-off" style={{ fontSize: '32px', color: '#94a3b8', display: 'block', marginBottom: '8px' }}></i>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>No sermons uploaded yet</div>
+              <p style={{ fontSize: '13px', margin: '4px 0 0', color: '#64748b' }}>Videos and sermon links will appear here once added in profile settings.</p>
             </div>
-          ))}
+          ) : (
+            sermons.map((s) => (
+              <div
+                key={s.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  padding: '16px',
+                  borderRadius: '18px',
+                  background: '#ffffff',
+                  border: '1.5px solid #f1f1f5',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.02)',
+                  transition: 'transform 0.15s ease, border-color 0.15s ease'
+                }}
+              >
+                <div
+                  style={{
+                    position: 'relative',
+                    width: '120px',
+                    height: '75px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, #f43f5e 0%, #8b5cf6 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    flexShrink: 0,
+                    boxShadow: '0 6px 16px rgba(244, 63, 94, 0.25)'
+                  }}
+                >
+                  <i className="ti ti-player-play-filled" style={{ fontSize: '24px' }}></i>
+                  {s.duration_min ? (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: '6px',
+                        right: '6px',
+                        background: 'rgba(0,0,0,0.7)',
+                        color: '#fff',
+                        fontSize: '10.5px',
+                        fontWeight: 700,
+                        padding: '2px 6px',
+                        borderRadius: '6px'
+                      }}
+                    >
+                      {s.duration_min} min
+                    </div>
+                  ) : null}
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '15.5px', fontWeight: 800, color: '#0f0f1a', lineHeight: 1.3 }}>
+                    {s.title}
+                  </div>
+                  <div style={{ fontSize: '12.5px', color: '#64748b', fontWeight: 600, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ti ti-notes" style={{ fontSize: '13px', color: '#7c3aed' }}></i>
+                    {[s.series, s.views ? `${fmtK(s.views)} views` : null].filter(Boolean).join(' · ') || 'Sermon message'}
+                  </div>
+                </div>
+
+                {s.youtube_url && (
+                  <a
+                    href={s.youtube_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: '#ffffff',
+                      border: '1.5px solid #e2e8f0',
+                      color: '#0f172a',
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      padding: '8px 16px',
+                      borderRadius: '12px',
+                      textDecoration: 'none',
+                      flexShrink: 0,
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+                    }}
+                  >
+                    <i className="ti ti-player-play" style={{ fontSize: '14px', color: '#ef4444' }}></i> Watch
+                  </a>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
@@ -787,12 +1082,12 @@ function VisionPane({ pastor }: { pastor: PastorProfile }) {
     <div>
       <div className="pastor-card">
         <div className="pastor-card-h">
-          <div className="ic"><i className="ti ti-eye"></i></div>
-          <h3>Vision &amp; Mission</h3>
+          <div className="ic" style={{ background: '#7c3aed', color: '#fff' }}><i className="ti ti-eye"></i></div>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f0f1a' }}>Vision &amp; Mission</h3>
         </div>
 
         {pastor.vision_statement && (
-          <div className="vision-card">
+          <div className="vision-card" style={{ marginTop: '16px' }}>
             <div className="vlabel">VISION STATEMENT</div>
             <div className="vstmt">&quot;{pastor.vision_statement}&quot;</div>
             <div className="vattr">— {pastor.full_name}</div>
@@ -800,19 +1095,33 @@ function VisionPane({ pastor }: { pastor: PastorProfile }) {
         )}
 
         {pastor.availability_status === 'available' && (
-          <div className="avail-pill">
+          <div className="avail-pill" style={{ marginTop: '16px' }}>
             <div className="d"></div>
             <span>Available for ministry</span>
           </div>
         )}
 
         {coreValues.length > 0 && (
-          <div style={{ marginTop: '22px' }}>
-            <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#0f0f1a', marginBottom: '12px' }}>Core Values</h4>
+          <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #f1f1f5' }}>
+            <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#0f0f1a', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <i className="ti ti-flame" style={{ color: '#ec4899', fontSize: '18px' }}></i> Core Values &amp; Tenets
+            </h4>
             <div className="pastor-chips">
               {coreValues.map((val: string, i: number) => (
-                <span key={i} className="pastor-chip purple" style={{ fontSize: '13px', padding: '6px 14px' }}>
-                  {val}
+                <span
+                  key={i}
+                  className="pastor-chip"
+                  style={{
+                    background: 'linear-gradient(135deg, #f5f3ff 0%, #fdf4ff 100%)',
+                    color: '#7c3aed',
+                    border: '1px solid #ddd6fe',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    padding: '8px 16px',
+                    borderRadius: '30px'
+                  }}
+                >
+                  ✦ {val}
                 </span>
               ))}
             </div>
@@ -824,7 +1133,7 @@ function VisionPane({ pastor }: { pastor: PastorProfile }) {
 }
 
 function EducationPane({ pastor }: { pastor: PastorProfile }) {
-  if (pastor.education.length === 0) return null;
+  const education = pastor.education || [];
 
   const colors = [
     { bg: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)', text: '#6d28d9', icon: 'ti-school' },
@@ -836,28 +1145,65 @@ function EducationPane({ pastor }: { pastor: PastorProfile }) {
     <div>
       <div className="pastor-card">
         <div className="pastor-card-h">
-          <div className="ic"><i className="ti ti-school"></i></div>
-          <h3>Education &amp; Training</h3>
+          <div className="ic" style={{ background: '#7c3aed', color: '#fff' }}><i className="ti ti-school"></i></div>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f0f1a' }}>Education &amp; Training</h3>
         </div>
 
-        <div style={{ marginTop: '14px' }}>
-          {pastor.education.map((e, idx) => {
-            const style = colors[idx % colors.length];
-            return (
-              <div key={e.id} className="edu">
-                <div className="ei" style={{ background: style.bg }}>
-                  <i className={`ti ${style.icon}`}></i>
-                </div>
-                <div>
-                  <div className="et">{e.degree}</div>
-                  <div className="eo" style={{ color: style.text }}>{e.institution}</div>
-                  <div className="ed">
-                    {[e.year_range, e.detail].filter(Boolean).join(' · ')}
+        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {education.length === 0 ? (
+            <div style={{ padding: '32px 20px', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '16px', border: '1.5px dashed #e2e8f0' }}>
+              <i className="ti ti-school-off" style={{ fontSize: '32px', color: '#94a3b8', display: 'block', marginBottom: '8px' }}></i>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>No qualifications listed yet</div>
+              <p style={{ fontSize: '13px', margin: '4px 0 0', color: '#64748b' }}>Degrees and certifications will show here once added in profile settings.</p>
+            </div>
+          ) : (
+            education.map((e, idx) => {
+              const style = colors[idx % colors.length];
+              return (
+                <div
+                  key={e.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '16px',
+                    borderRadius: '18px',
+                    background: '#f8fafc',
+                    border: '1.5px solid #f1f1f5'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '14px',
+                      background: style.bg,
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '20px',
+                      flexShrink: 0,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                    }}
+                  >
+                    <i className={`ti ${style.icon}`}></i>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f0f1a', lineHeight: 1.25 }}>
+                      {e.degree}
+                    </div>
+                    <div style={{ fontSize: '13.5px', fontWeight: 700, color: style.text, marginTop: '2px' }}>
+                      {e.institution}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500, marginTop: '3px' }}>
+                      {[e.year_range, e.detail].filter(Boolean).join(' · ')}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
     </div>
@@ -865,68 +1211,133 @@ function EducationPane({ pastor }: { pastor: PastorProfile }) {
 }
 
 function EventsPane({ pastor }: { pastor: PastorProfile }) {
-  return (
-    <div>
-      <SecCard>
-        <SecTitle icon="ti-calendar-event" gradient="bg-gradient-to-br from-pink-600 to-pink-300">
-          Upcoming Events
-        </SecTitle>
-        {pastor.events.length === 0 && <p className="text-sm text-gray">No upcoming events.</p>}
-        {pastor.events.map((e) => {
-          const date = new Date(e.event_date);
-          return (
-            <div key={e.id} className="flex gap-3 items-start py-3.5 border-b border-border last:border-none">
-              <div className="min-w-[48px] text-center bg-gradient-to-br from-coral to-purple rounded-xl py-2.5 px-1">
-                <div className="text-lg font-extrabold text-white">{date.getDate()}</div>
-                <div className="text-[9px] font-extrabold text-white/70 uppercase">
-                  {date.toLocaleString('en-GB', { month: 'short' })}
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-extrabold text-ink mb-1">{e.title}</div>
-                <div className="text-xs text-gray mb-2">
-                  {[e.location, e.start_time].filter(Boolean).join(' · ')}
-                </div>
-                {e.tags.map((tag) => (
-                  <span key={tag} className="chip chip-purple text-[11px] py-1 px-2.5">{tag}</span>
-                ))}
-              </div>
-              {e.registration_url && (
-                <a
-                  href={e.registration_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-purple text-white rounded-full px-4.5 py-2 text-xs font-bold flex-shrink-0"
-                >
-                  Register
-                </a>
-              )}
-            </div>
-          );
-        })}
-      </SecCard>
-    </div>
-  );
-}
-
-function GalleryPane({ pastor }: { pastor: PastorProfile }) {
-  if (pastor.gallery.length === 0) return null;
+  const events = pastor.events || [];
 
   return (
     <div>
       <div className="pastor-card">
         <div className="pastor-card-h">
-          <div className="ic"><i className="ti ti-photo"></i></div>
-          <h3>Gallery</h3>
+          <div className="ic" style={{ background: '#ec4899', color: '#fff' }}>
+            <i className="ti ti-calendar-event"></i>
+          </div>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f0f1a' }}>Upcoming Events</h3>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginTop: '16px' }}>
-          {pastor.gallery.map((g) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={g.id} src={g.image_url} alt={g.caption ?? ''} style={{ aspectRatio: '1', borderRadius: '14px', objectFit: 'cover', width: '100%', height: '100%' }} />
-          ))}
+        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {events.length === 0 ? (
+            <div style={{ padding: '32px 20px', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '16px', border: '1.5px dashed #e2e8f0' }}>
+              <i className="ti ti-calendar-off" style={{ fontSize: '32px', color: '#94a3b8', display: 'block', marginBottom: '8px' }}></i>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>No upcoming events scheduled</div>
+              <p style={{ fontSize: '13px', margin: '4px 0 0', color: '#64748b' }}>Events organized by or featuring this pastor will appear here.</p>
+            </div>
+          ) : (
+            events.map((e, idx) => {
+              const date = new Date(e.event_date);
+              const day = isNaN(date.getDate()) ? '15' : String(date.getDate());
+              const month = isNaN(date.getDate())
+                ? 'JUN'
+                : date.toLocaleString('en-GB', { month: 'short' }).toUpperCase();
+
+              const badgeColors = [
+                'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+                'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
+                'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+              ];
+              const dateBg = badgeColors[idx % badgeColors.length];
+
+              return (
+                <div
+                  key={e.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '16px',
+                    borderRadius: '18px',
+                    background: '#ffffff',
+                    border: '1.5px solid #f1f1f5',
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '14px',
+                      background: dateBg,
+                      color: '#fff',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    <div style={{ fontSize: '17px', fontWeight: 900, lineHeight: 1 }}>{day}</div>
+                    <div style={{ fontSize: '10px', fontWeight: 800, opacity: 0.85, marginTop: '2px', letterSpacing: '0.5px' }}>{month}</div>
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f0f1a', lineHeight: 1.25 }}>
+                      {e.title}
+                    </div>
+                    <div style={{ fontSize: '12.5px', color: '#64748b', fontWeight: 600, marginTop: '4px' }}>
+                      {[e.location, e.start_time].filter(Boolean).join(' · ')}
+                    </div>
+                    {e.tags && e.tags.length > 0 && (
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                        {e.tags.map((tag: string, tIdx: number) => (
+                          <span
+                            key={tIdx}
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              background: tIdx === 0 ? '#f5f3ff' : '#f0fdf4',
+                              color: tIdx === 0 ? '#7c3aed' : '#16a34a',
+                              border: tIdx === 0 ? '1px solid #ddd6fe' : '1px solid #bbf7d0',
+                              padding: '3px 10px',
+                              borderRadius: '20px'
+                            }}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {e.registration_url && (
+                    <a
+                      href={e.registration_url}
+                      target={e.registration_url.startsWith('http') ? '_blank' : '_self'}
+                      rel="noopener noreferrer"
+                      style={{
+                        background: 'linear-gradient(135deg, #e11d48 0%, #7c3aed 100%)',
+                        color: '#fff',
+                        fontSize: '13px',
+                        fontWeight: 800,
+                        padding: '10px 20px',
+                        borderRadius: '12px',
+                        textDecoration: 'none',
+                        flexShrink: 0,
+                        boxShadow: '0 4px 14px rgba(225, 29, 72, 0.25)'
+                      }}
+                    >
+                      Register
+                    </a>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>
   );
+}
+
+function GalleryPane({ pastor }: { pastor: PastorProfile }) {
+  return <GalleryLightbox photos={pastor.gallery || []} />;
 }

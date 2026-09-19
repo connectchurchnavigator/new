@@ -1,5 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 
+interface LocationDetails {
+  city?: string;
+  area?: string;
+  postcode?: string;
+  country?: string;
+}
+
 interface SharedAddressFieldProps {
   country: string;
   address: string;
@@ -10,10 +17,12 @@ interface SharedAddressFieldProps {
   onUpdateAddress: (val: string) => void;
   onUpdateAddressDetails?: (val: string) => void;
   onUpdateCity?: (val: string) => void;
+  onLocationSelected?: (details: LocationDetails) => void;
   onUpdateCoordinates: (lat: number | undefined, lng: number | undefined) => void;
   errors?: { country?: string, address?: string, addressDetails?: string };
   idPrefix: string;
   hideAddress?: boolean;
+  hideCountry?: boolean;
 }
 
 function InteractiveMap({ lat, lng, onDragEnd }: { lat: number; lng: number; onDragEnd: (lat: number, lng: number) => void }) {
@@ -163,7 +172,7 @@ function flagEmoji(code: string) {
   return [...code.toUpperCase()].map(c => String.fromCodePoint(127397 + c.charCodeAt(0))).join('');
 }
 
-export default function SharedAddressField({ country, address, addressDetails, latitude, longitude, onUpdateCountry, onUpdateAddress, onUpdateAddressDetails, onUpdateCity, onUpdateCoordinates, errors, idPrefix, hideAddress }: SharedAddressFieldProps) {
+export default function SharedAddressField({ country, address, addressDetails, latitude, longitude, onUpdateCountry, onUpdateAddress, onUpdateAddressDetails, onUpdateCity, onLocationSelected, onUpdateCoordinates, errors, idPrefix, hideAddress, hideCountry }: SharedAddressFieldProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
   const [trigger, setTrigger] = useState(0);
@@ -186,20 +195,75 @@ export default function SharedAddressField({ country, address, addressDetails, l
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const parseLocationFromAddressObj = (a: any, typedAddress: string = ""): LocationDetails => {
+    if (!a) return {};
+    const detectedCity = a.city || a.town || a.village || a.municipality || a.county || getLocality(typedAddress);
+    const detectedArea = a.suburb || a.neighbourhood || a.city_district || a.quarter || a.borough || a.district || "";
+    const detectedPostcode = a.postcode || "";
+    const detectedCountry = a.country || "";
+    return {
+      city: detectedCity,
+      area: detectedArea,
+      postcode: detectedPostcode,
+      country: detectedCountry,
+    };
+  };
+
+  const handleCoordinatesChanged = async (lat: number, lng: number) => {
+    onUpdateCoordinates(lat, lng);
+    // Reverse geocode to get refined area, city, postcode if dragging or detecting
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
+      const data = await res.json();
+      if (data && data.address) {
+        const details = parseLocationFromAddressObj(data.address, address);
+        if (details.city && onUpdateCity) {
+          onUpdateCity(details.city);
+        }
+        if (onLocationSelected) {
+          onLocationSelected(details);
+        }
+      }
+    } catch (e) {
+      // ignore reverse geocode error
+    }
+  };
+
   const handleUseTypedAddress = async () => {
     const extractedCity = getLocality(address);
     if (extractedCity && onUpdateCity) {
       onUpdateCity(extractedCity);
     }
     
+    // Extract UK postcode if typed e.g. SW1A 1AA or E12 5LH
+    const ukPostcodeMatch = address.match(/\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i);
+    const detectedPostcode = ukPostcodeMatch ? ukPostcodeMatch[1].toUpperCase() : "";
+
+    if (onLocationSelected) {
+      onLocationSelected({
+        city: extractedCity || undefined,
+        postcode: detectedPostcode || undefined,
+        country: country || undefined,
+      });
+    }
+
     // Attempt instant geocode for typed postcode or address (UK postcodes like E12 5LH, E125LH, etc.)
     try {
       const cc = COUNTRIES.find(c => c[1] === country)?.[0] || "";
       const q = address.trim();
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=${cc}&limit=1`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=${cc}&addressdetails=1&limit=1`);
       const data = await res.json();
       if (data && data[0] && data[0].lat && data[0].lon) {
         onUpdateCoordinates(parseFloat(data[0].lat), parseFloat(data[0].lon));
+        if (data[0].address) {
+          const details = parseLocationFromAddressObj(data[0].address, address);
+          if (details.city && onUpdateCity) {
+            onUpdateCity(details.city);
+          }
+          if (onLocationSelected) {
+            onLocationSelected(details);
+          }
+        }
       } else {
         onUpdateCoordinates(0.0001, 0.0001);
       }
@@ -249,49 +313,53 @@ export default function SharedAddressField({ country, address, addressDetails, l
 
   return (
     <>
-      <label>Country <span className="req-badge">REQUIRED</span></label>
-      <div id={`f-country-${idPrefix}`} style={{ position: "relative", marginBottom: "18px" }} ref={countryRef}>
-        <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "20px", zIndex: 2 }}>{selectedCountryCode ? flagEmoji(selectedCountryCode) : "🌍"}</span>
-        <input 
-          placeholder="Select your country" 
-          style={{ paddingLeft: "44px", paddingRight: "44px", backgroundColor: country && !showDropdown ? "#f0fdf4" : "", border: errors?.country ? "1.5px solid red" : (country && !showDropdown ? "1.5px solid #16a34a" : "") }} 
-          value={country || ""}
-          onChange={(e) => {
-            onUpdateCountry(e.target.value);
-            setShowDropdown(true);
-          }}
-          onFocus={() => setShowDropdown(true)}
-        />
-        {country && !showDropdown && (
-          <i className="ti ti-circle-check-filled" style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "18px", color: "#16a34a" }}></i>
-        )}
-        {showDropdown && (
-          <div className="autocomplete-dropdown" style={{ display: "block", position: "absolute", width: "100%", top: "100%", zIndex: 10, background: "#fff", border: "1.5px solid var(--cn-border)", borderRadius: "12px", marginTop: "4px", maxHeight: "200px", overflowY: "auto", boxShadow: "0 10px 25px rgba(15,15,26,0.08)" }}>
-            {filteredCountries.length === 0 ? (
-              <div style={{ padding: "12px 14px", fontSize: "12px", color: "var(--cn-gray)" }}>No matching country</div>
-            ) : (
-              filteredCountries.map(c => (
-                <div 
-                  key={c[0]} 
-                  className="autocomplete-item" 
-                  style={{ padding: "9px 14px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", transition: "background 0.2s" }}
-                  onClick={() => selectCountry(c[1])}
-                  onMouseEnter={(e) => e.currentTarget.style.background = "var(--cn-surface)"}
-                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                >
-                  <span style={{ fontSize: "18px", flexShrink: 0 }}>{flagEmoji(c[0])}</span>
-                  <div style={{ flex: 1, fontSize: "13px", fontWeight: 600, color: "var(--cn-ink)" }}>{c[1]}</div>
-                </div>
-              ))
+      {!hideCountry && (
+        <>
+          <label>Country <span style={{ color: "#ef4444", fontWeight: 800 }}>*</span></label>
+          <div id={`f-country-${idPrefix}`} style={{ position: "relative", marginBottom: "18px" }} ref={countryRef}>
+            <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "20px", zIndex: 2 }}>{selectedCountryCode ? flagEmoji(selectedCountryCode) : "🌍"}</span>
+            <input 
+              placeholder="Select your country" 
+              style={{ paddingLeft: "44px", paddingRight: "44px", backgroundColor: country && !showDropdown ? "#f0fdf4" : "", border: errors?.country ? "1.5px solid red" : (country && !showDropdown ? "1.5px solid #16a34a" : "") }} 
+              value={country || ""}
+              onChange={(e) => {
+                onUpdateCountry(e.target.value);
+                setShowDropdown(true);
+              }}
+              onFocus={() => setShowDropdown(true)}
+            />
+            {country && !showDropdown && (
+              <i className="ti ti-circle-check-filled" style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "18px", color: "#16a34a" }}></i>
             )}
+            {showDropdown && (
+              <div className="autocomplete-dropdown" style={{ display: "block", position: "absolute", width: "100%", top: "100%", zIndex: 10, background: "#fff", border: "1.5px solid var(--cn-border)", borderRadius: "12px", marginTop: "4px", maxHeight: "200px", overflowY: "auto", boxShadow: "0 10px 25px rgba(15,15,26,0.08)" }}>
+                {filteredCountries.length === 0 ? (
+                  <div style={{ padding: "12px 14px", fontSize: "12px", color: "var(--cn-gray)" }}>No matching country</div>
+                ) : (
+                  filteredCountries.map(c => (
+                    <div 
+                      key={c[0]} 
+                      className="autocomplete-item" 
+                      style={{ padding: "9px 14px", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", transition: "background 0.2s" }}
+                      onClick={() => selectCountry(c[1])}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "var(--cn-surface)"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    >
+                      <span style={{ fontSize: "18px", flexShrink: 0 }}>{flagEmoji(c[0])}</span>
+                      <div style={{ flex: 1, fontSize: "13px", fontWeight: 600, color: "var(--cn-ink)" }}>{c[1]}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+            {errors?.country && <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{errors.country}</div>}
           </div>
-        )}
-        {errors?.country && <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{errors.country}</div>}
-      </div>
+        </>
+      )}
 
       {!hideAddress && (
         <>
-          <label>Pin point your address (Map) <span className="req-badge">REQUIRED</span></label>
+          <label>Pin point your address (Map) <span style={{ color: "#ef4444", fontWeight: 800 }}>*</span></label>
           {!latitude ? (
             <div id={`f-address-${idPrefix}`} style={{ position: "relative", marginBottom: "6px" }} ref={addressRef}>
               {isSearchingAddress ? (
@@ -351,9 +419,12 @@ export default function SharedAddressField({ country, address, addressDetails, l
                       style={{ padding: "11px 14px", display: "flex", alignItems: "center", cursor: "pointer", borderBottom: "1px solid #f1f0f5" }}
                       onClick={() => {
                         const a = p.address || {};
-                        const detectedCity = a.city || a.town || a.village || a.municipality || a.county || getLocality(address || '');
-                        if (detectedCity && onUpdateCity) {
-                          onUpdateCity(detectedCity);
+                        const details = parseLocationFromAddressObj(a, address || '');
+                        if (details.city && onUpdateCity) {
+                          onUpdateCity(details.city);
+                        }
+                        if (onLocationSelected) {
+                          onLocationSelected(details);
                         }
                         onUpdateAddress([line1, line2].filter(Boolean).join(', '));
                         onUpdateCoordinates(parseFloat(p.lat), parseFloat(p.lon));
@@ -438,7 +509,7 @@ export default function SharedAddressField({ country, address, addressDetails, l
                       lat={latitude!} 
                       lng={longitude!} 
                       onDragEnd={(newLat, newLng) => {
-                        onUpdateCoordinates(newLat, newLng);
+                        handleCoordinatesChanged(newLat, newLng);
                       }}
                     />
                   </div>
@@ -459,7 +530,7 @@ export default function SharedAddressField({ country, address, addressDetails, l
           {/* Full Address Details (Flat / Unit / Plot / Landmark) */}
           {onUpdateAddressDetails && (
             <div style={{ marginTop: "16px", marginBottom: "14px" }}>
-              <label>Full Address <span className="req-badge">REQUIRED</span></label>
+              <label>Full Address <span style={{ color: "#ef4444", fontWeight: 800 }}>*</span></label>
               <div id={`f-${idPrefix}-addressDetails`} style={{ position: "relative" }}>
                 <input
                   id={`f-${idPrefix}-address-details-input`}

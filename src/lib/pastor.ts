@@ -28,6 +28,7 @@ export interface Pastor {
   nations_reached: number | null;
   books_published: number | null;
   events_spoken: number | null;
+  congregation_size: number | null;
 
   phone: string | null;
   email: string | null;

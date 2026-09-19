@@ -9,9 +9,10 @@ interface StepBarWLProps {
 
 export default function StepBarWL({ currentStep, onStepClick }: StepBarWLProps) {
   const stepsData = [
-    { id: 1, icon: "ti-user", title: "Basics & Contact" },
-    { id: 2, icon: "ti-music", title: "Sound & Availability" },
-    { id: 3, icon: "ti-photo-heart", title: "Media & Links" },
+    { id: 1, icon: "ti-user", title: "Basics & Location" },
+    { id: 2, icon: "ti-phone", title: "Contact Info" },
+    { id: 3, icon: "ti-music", title: "Sound & Availability" },
+    { id: 4, icon: "ti-photo-heart", title: "Media & Samples" },
   ];
 
   return (

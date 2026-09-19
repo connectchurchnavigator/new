@@ -14,6 +14,7 @@ interface ProfileTabsProps {
   tabs: Tab[];
   panes: Record<string, React.ReactNode>;
   sidebar?: React.ReactNode;
+  containerClassName?: string;
 }
 
 /**
@@ -22,12 +23,12 @@ interface ProfileTabsProps {
  * as a map, so the data-fetching stays server-side while only the
  * "which tab is active" interactivity runs on the client.
  */
-export function ProfileTabs({ tabs, panes, sidebar }: ProfileTabsProps) {
+export function ProfileTabs({ tabs, panes, sidebar, containerClassName = 'pastor-wrap' }: ProfileTabsProps) {
   const [active, setActive] = useState(tabs[0]?.id);
 
   return (
     <>
-      <div className="pastor-wrap">
+      <div className={containerClassName}>
         <div className="pastor-tabs">
           {tabs.map((tab) => (
             <div
@@ -47,7 +48,7 @@ export function ProfileTabs({ tabs, panes, sidebar }: ProfileTabsProps) {
         </div>
       </div>
 
-      <div className="pastor-wrap">
+      <div className={containerClassName}>
         {sidebar ? (
           <div className="two-col-grid">
             <div>

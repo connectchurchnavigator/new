@@ -19,11 +19,11 @@ export default function StepPage() {
   const [toastMsg, setToastMsg] = useState("");
 
   const handleNext = (nextStep: number) => {
-    router.push(`/onboarding/church/${nextStep}`);
+    router.push(`/add-listing/${nextStep}`);
   };
 
   const handleBack = (prevStep: number) => {
-    router.push(`/onboarding/church/${prevStep}`);
+    router.push(`/add-listing/${prevStep}`);
   };
 
   const handleLoadSampleData = () => {

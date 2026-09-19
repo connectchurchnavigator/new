@@ -142,7 +142,7 @@ export default function Step2Contact({ onNext, onBack }: Step2ContactProps) {
         </div>
 
         <div style={{ marginBottom: "18px" }}>
-          <label>Email <span className="req-badge">REQUIRED</span></label>
+          <label>Email <span style={{ color: "#ef4444", fontWeight: 800 }}>*</span></label>
           <input 
             id="f-email"
             type="email" 

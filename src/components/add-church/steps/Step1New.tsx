@@ -198,7 +198,7 @@ export default function Step1New({ onNext }: Step1NewProps) {
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
           <div>
-            <label>Church name <span className="req-badge">REQUIRED</span></label>
+            <label>Church name <span style={{ color: "#ef4444", fontWeight: 800 }}>*</span></label>
             <input 
               id="f-name"
               placeholder="e.g. Liberty Connections" 
@@ -295,7 +295,7 @@ export default function Step1New({ onNext }: Step1NewProps) {
         </div>
 
         <div style={{ marginBottom: "18px" }}>
-          <label>Email <span className="req-badge">REQUIRED</span></label>
+          <label>Email <span style={{ color: "#ef4444", fontWeight: 800 }}>*</span></label>
           <input 
             id="f-email"
             type="email" 

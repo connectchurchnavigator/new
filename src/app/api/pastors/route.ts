@@ -36,29 +36,40 @@ export async function POST(req: NextRequest) {
   const data = body as any;
   const supabase = createAdminClient();
 
-  // Generate a unique slug, retrying with a random suffix on collision.
-  let slug = slugifyName(data.full_name) || 'pastor';
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const { data: existing } = await supabase
+  // If edit_slug is provided, check if the record exists to update it
+  let existingPastor: any = null;
+  if (data.edit_slug) {
+    const { data: found } = await supabase
       .from('pastors')
-      .select('id')
-      .eq('slug', slug)
+      .select('id, slug')
+      .eq('slug', data.edit_slug)
       .maybeSingle();
-
-    if (!existing) break;
-    slug = withUniqueSuffix(slugifyName(data.full_name) || 'pastor');
+    existingPastor = found;
   }
 
-  const { data: pastor, error: insertError } = await supabase
-    .from('pastors')
-    .insert({
-      slug,
-      owner_id: user.id,
-      full_name: data.full_name,
-      title: data.title ?? null,
-      initials: deriveInitials(data.full_name),
-      avatar_url: data.avatar_url ?? null,
-      cover_photo_urls: data.cover_photo_urls || [],
+  // Generate a unique slug, retrying with a random suffix on collision if creating.
+  let slug = existingPastor?.slug || slugifyName(data.full_name) || 'pastor';
+  if (!existingPastor) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data: existing } = await supabase
+        .from('pastors')
+        .select('id')
+        .eq('slug', slug)
+        .maybeSingle();
+
+      if (!existing) break;
+      slug = withUniqueSuffix(slugifyName(data.full_name) || 'pastor');
+    }
+  }
+
+  const baseInsert = {
+    slug,
+    owner_id: user.id,
+    full_name: data.full_name,
+    title: data.title ?? null,
+    initials: deriveInitials(data.full_name),
+    avatar_url: data.avatar_url ?? null,
+    cover_photo_urls: data.cover_photo_urls || [],
 
       church_id: data.church_id ?? null,
       church_name_cache: data.church_name_cache ?? null,
@@ -67,10 +78,17 @@ export async function POST(req: NextRequest) {
       country: data.country,
 
       bio: data.bio ?? null,
-      vision_statement: data.vision_statement ?? null,
+      vision_statement: (() => {
+        let stmt = data.vision_statement || '';
+        if (Array.isArray(data.core_values) && data.core_values.length > 0) {
+          stmt = `${stmt.trim()} <!--CORE_VALUES:${JSON.stringify(data.core_values)}-->`;
+        }
+        return stmt || null;
+      })(),
       years_in_ministry: data.years_in_ministry ?? null,
       churches_planted: data.churches_planted ?? null,
       nations_reached: data.nations_reached ?? null,
+      events_spoken: data.events_spoken ?? null,
 
       phone: data.phone ?? null,
       email: data.email ?? null,
@@ -90,14 +108,80 @@ export async function POST(req: NextRequest) {
 
       is_verified: false,
       is_published: true,
-    })
-    .select('id, slug')
-    .single();
+    };
 
-  if (insertError || !pastor) {
-    console.error('Failed to insert pastor:', insertError);
-    return NextResponse.json({ error: 'Failed to create pastor profile' }, { status: 500 });
-  }
+    let pastor: any = null;
+
+    if (existingPastor) {
+      // Update existing record
+      let { data: updatedPastor, error: updateError } = await supabase
+        .from('pastors')
+        .update({
+          ...baseInsert,
+          congregation_size: data.congregation_size ?? null,
+        })
+        .eq('id', existingPastor.id)
+        .select('id, slug')
+        .single();
+
+      if (updateError && (updateError.code === 'PGRST204' || updateError.message?.includes('congregation_size'))) {
+        const fallback = await supabase
+          .from('pastors')
+          .update(baseInsert)
+          .eq('id', existingPastor.id)
+          .select('id, slug')
+          .single();
+        updatedPastor = fallback.data;
+        updateError = fallback.error;
+      }
+
+      if (updateError || !updatedPastor) {
+        console.error('Failed to update pastor:', updateError);
+        return NextResponse.json({ error: updateError?.message || 'Failed to update pastor profile' }, { status: 500 });
+      }
+
+      pastor = updatedPastor;
+
+      // Clean up previous child entries before rewriting
+      await Promise.allSettled([
+        supabase.from('pastor_languages').delete().eq('pastor_id', pastor.id),
+        supabase.from('pastor_tags').delete().eq('pastor_id', pastor.id),
+        supabase.from('pastor_sermons').delete().eq('pastor_id', pastor.id),
+        supabase.from('pastor_education').delete().eq('pastor_id', pastor.id),
+        supabase.from('pastor_awards').delete().eq('pastor_id', pastor.id),
+        supabase.from('pastor_timeline').delete().eq('pastor_id', pastor.id),
+        supabase.from('pastor_affiliations').delete().eq('pastor_id', pastor.id),
+        supabase.from('pastor_gallery').delete().eq('pastor_id', pastor.id),
+      ]);
+    } else {
+      // Insert new record
+      let { data: insertedPastor, error: insertError } = await supabase
+        .from('pastors')
+        .insert({
+          ...baseInsert,
+          congregation_size: data.congregation_size ?? null,
+        })
+        .select('id, slug')
+        .single();
+
+      if (insertError && (insertError.code === 'PGRST204' || insertError.message?.includes('congregation_size'))) {
+        console.warn('congregation_size column not present in database table, retrying insert without it...');
+        const fallback = await supabase
+          .from('pastors')
+          .insert(baseInsert)
+          .select('id, slug')
+          .single();
+        insertedPastor = fallback.data;
+        insertError = fallback.error;
+      }
+
+      pastor = insertedPastor;
+
+      if (insertError || !pastor) {
+        console.error('Failed to insert pastor:', insertError);
+        return NextResponse.json({ error: insertError?.message || 'Failed to create pastor profile' }, { status: 500 });
+      }
+    }
 
   // Write child rows.
   const childWrites: PromiseLike<unknown>[] = [];
@@ -123,8 +207,19 @@ export async function POST(req: NextRequest) {
     childWrites.push(supabase.from('pastor_tags').insert(tagRows));
   }
 
-  // Save Sermons from sermon_links
-  if (Array.isArray(data.sermon_links) && data.sermon_links.filter(Boolean).length > 0) {
+  // Save Sermons from sermon_items or fallback to sermon_links
+  if (Array.isArray(data.sermon_items) && data.sermon_items.filter((s: any) => s.link || s.title).length > 0) {
+    const sermonRows = data.sermon_items
+      .filter((s: any) => s.link || s.title)
+      .map((s: any, idx: number) => ({
+        pastor_id: pastor.id,
+        title: s.title?.trim() || `Message ${idx + 1}`,
+        series: s.description?.trim() || null,
+        youtube_url: s.link?.trim() || null,
+        sort_order: idx + 1,
+      }));
+    childWrites.push(supabase.from('pastor_sermons').insert(sermonRows));
+  } else if (Array.isArray(data.sermon_links) && data.sermon_links.filter(Boolean).length > 0) {
     const sermonRows = data.sermon_links.filter(Boolean).map((link: string, idx: number) => ({
       pastor_id: pastor.id,
       title: `Message ${idx + 1}`,
@@ -154,6 +249,29 @@ export async function POST(req: NextRequest) {
       sort_order: idx + 1,
     }));
     childWrites.push(supabase.from('pastor_awards').insert(awardRows));
+  }
+
+  // Save Ministry Journey Timeline from timeline_items
+  if (Array.isArray(data.timeline_items) && data.timeline_items.filter((t: any) => t.title || t.year).length > 0) {
+    const timelineRows = data.timeline_items.filter((t: any) => t.title || t.year).map((t: any, idx: number) => ({
+      pastor_id: pastor.id,
+      year: t.year || '',
+      title: t.title || '',
+      description: t.description || null,
+      sort_order: idx + 1,
+    }));
+    childWrites.push(supabase.from('pastor_timeline').insert(timelineRows));
+  }
+
+  // Save Ministerial Affiliations from affiliation_items
+  if (Array.isArray(data.affiliation_items) && data.affiliation_items.filter((a: any) => a.organisation).length > 0) {
+    const affiliationRows = data.affiliation_items.filter((a: any) => a.organisation).map((a: any, idx: number) => ({
+      pastor_id: pastor.id,
+      organisation: a.organisation,
+      role: a.role || null,
+      sort_order: idx + 1,
+    }));
+    childWrites.push(supabase.from('pastor_affiliations').insert(affiliationRows));
   }
 
   // Save Gallery photos

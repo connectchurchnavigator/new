@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 interface TagInputProps {
   value: string[];
@@ -8,14 +8,22 @@ interface TagInputProps {
   placeholder?: string;
   suggestions?: string[];
   colorClass?: string;
+  labelPrefix?: string;
 }
 
 /**
- * A simple chip/tag input: type + Enter (or click a suggestion) to
- * add, click the × to remove. Used for preaching specialisms,
- * ministry areas, available-for, and languages in the wizard.
+ * Modern chip/tag input matching Church onboarding format:
+ * 1. Suggestions on TOP (quick picks with purple checkmark when selected)
+ * 2. Search / text input box in the MIDDLE (with search icon)
+ * 3. Selected items on the BOTTOM (solid purple pills with × to remove)
  */
-export function TagInput({ value, onChange, placeholder, suggestions = [], colorClass = 'chip-purple' }: TagInputProps) {
+export function TagInput({ 
+  value, 
+  onChange, 
+  placeholder = "Type and press Enter...", 
+  suggestions = [],
+  labelPrefix = "SELECTED"
+}: TagInputProps) {
   const [draft, setDraft] = useState('');
 
   function addTag(tag: string) {
@@ -25,50 +33,131 @@ export function TagInput({ value, onChange, placeholder, suggestions = [], color
     setDraft('');
   }
 
+  function toggleTag(tag: string) {
+    if (value.includes(tag)) {
+      onChange(value.filter((t) => t !== tag));
+    } else {
+      onChange([...value, tag]);
+    }
+  }
+
   function removeTag(tag: string) {
     onChange(value.filter((t) => t !== tag));
   }
 
   return (
-    <div>
-      <div className="flex flex-wrap gap-1 mb-2 min-h-[1px]">
-        {value.map((tag) => (
-          <span key={tag} className={`chip ${colorClass} !mr-1`}>
-            {tag}
-            <button type="button" onClick={() => removeTag(tag)} className="ml-1 opacity-60 hover:opacity-100">
-              ×
-            </button>
-          </span>
-        ))}
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
+      {/* 1. Suggestions on TOP (Popular / Quick Picks) */}
+      {suggestions.length > 0 && (
+        <div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {suggestions.map((item) => {
+              const isSel = value.includes(item);
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => toggleTag(item)}
+                  style={{
+                    padding: "7px 14px",
+                    borderRadius: "20px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    border: isSel ? "1.5px solid #7e22ce" : "1.5px solid var(--cn-border)",
+                    background: isSel ? "#f3e8ff" : "#fff",
+                    color: isSel ? "#7e22ce" : "var(--cn-ink)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  {isSel && <i className="ti ti-check" style={{ fontSize: "13px", color: "#7e22ce" }}></i>}
+                  {item}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 2. Search / Input Box in the MIDDLE */}
+      <div style={{ position: "relative" }}>
+        <i
+          className="ti ti-search"
+          style={{
+            position: "absolute",
+            left: "14px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            fontSize: "15px",
+            color: "var(--cn-gray)",
+          }}
+        ></i>
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              addTag(draft);
+            }
+          }}
+          placeholder={placeholder}
+          style={{
+            paddingLeft: "40px",
+            fontSize: "13.5px",
+            height: "44px",
+            borderRadius: "12px",
+            border: "1.5px solid var(--cn-border)",
+            width: "100%",
+            outline: "none",
+            backgroundColor: "#fff",
+          }}
+        />
       </div>
 
-      <input
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            addTag(draft);
-          }
-        }}
-        placeholder={placeholder}
-        className="w-full border-[1.5px] border-border rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-purple"
-      />
-
-      {suggestions.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {suggestions
-            .filter((s) => !value.includes(s))
-            .map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => addTag(s)}
-                className="text-xs border-[1.5px] border-border rounded-full px-3 py-1 text-gray hover:border-purple hover:text-purple"
+      {/* 3. Selected items at the BOTTOM */}
+      {value.length > 0 && (
+        <div>
+          <div
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              color: "var(--cn-gray)",
+              letterSpacing: "0.05em",
+              marginBottom: "8px",
+            }}
+          >
+            {labelPrefix} ({value.length})
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {value.map((tag) => (
+              <span
+                key={tag}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "#7e22ce",
+                  color: "#fff",
+                  borderRadius: "20px",
+                  padding: "6px 14px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  boxShadow: "0 2px 6px rgba(126, 34, 206, 0.2)",
+                }}
               >
-                + {s}
-              </button>
+                {tag}
+                <i
+                  className="ti ti-x"
+                  onClick={() => removeTag(tag)}
+                  style={{ cursor: "pointer", fontSize: "12px", opacity: 0.85 }}
+                ></i>
+              </span>
             ))}
+          </div>
         </div>
       )}
     </div>
