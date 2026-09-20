@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -20,6 +20,8 @@ interface InsightsClientProps {
   funnel: { stage: string; count: number }[];
   sources: { source: string; count: number }[];
   visitors: any[];
+  embedded?: boolean;
+  onSelectChurch?: (churchId: string) => void;
 }
 
 const STAGES = [
@@ -94,16 +96,71 @@ function getFollowUp(stage: string) {
 }
 
 export default function InsightsClient({
-  churchName,
-  churchId,
+  churchName: initialChurchName,
+  churchId: initialChurchId,
   availableChurches = [],
-  stats,
-  funnel,
-  sources,
-  visitors
+  stats: initialStats,
+  funnel: initialFunnel,
+  sources: initialSources,
+  visitors: initialVisitors,
+  embedded = false,
+  onSelectChurch,
 }: InsightsClientProps) {
   const router = useRouter();
+  const [currentChurchId, setCurrentChurchId] = useState(initialChurchId);
   const [range, setRange] = useState('30d');
+
+  // Live state when switching churches
+  const [stats, setStats] = useState(initialStats);
+  const [funnel, setFunnel] = useState(initialFunnel);
+  const [sources, setSources] = useState(initialSources);
+  const [visitors, setVisitors] = useState(initialVisitors);
+  const [isLoadingChurch, setIsLoadingChurch] = useState(false);
+
+  // Sync if initial props change
+  React.useEffect(() => {
+    setCurrentChurchId(initialChurchId);
+    setStats(initialStats);
+    setFunnel(initialFunnel);
+    setSources(initialSources);
+    setVisitors(initialVisitors);
+  }, [initialChurchId, initialStats, initialFunnel, initialSources, initialVisitors]);
+
+  const activeChurchName = availableChurches.find(c => c.id === currentChurchId)?.name || initialChurchName;
+
+  const handleChurchChange = async (newChurchId: string) => {
+    setCurrentChurchId(newChurchId);
+    if (onSelectChurch) {
+      onSelectChurch(newChurchId);
+    }
+
+    if (!embedded) {
+      router.push(`/dashboard/insights?church_id=${newChurchId}`);
+      return;
+    }
+
+    // Client-side fetch for embedded mode without full page reload
+    setIsLoadingChurch(true);
+    try {
+      const { createClient } = await import('@/lib/supabase-browser');
+      const { getVisitorStats, getVisitorFunnel, getVisitorSources, getVisitors } = await import('@/lib/api');
+      const sb = createClient();
+      const [stRes, fnRes, scRes, vtRes] = await Promise.all([
+        getVisitorStats(sb, newChurchId).catch(() => null),
+        getVisitorFunnel(sb, newChurchId).catch(() => []),
+        getVisitorSources(sb, newChurchId).catch(() => []),
+        getVisitors(sb, newChurchId).catch(() => []),
+      ]);
+      setStats(stRes);
+      setFunnel(fnRes || []);
+      setSources(scRes || []);
+      setVisitors(vtRes || []);
+    } catch (e) {
+      console.error('Error fetching church insights:', e);
+    } finally {
+      setIsLoadingChurch(false);
+    }
+  };
 
   const total = stats?.total || visitors.length;
   const newThisMonth = stats?.new_this_month || visitors.filter(v => v.stage === 'first').length;
@@ -146,7 +203,7 @@ export default function InsightsClient({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `${churchName ? churchName.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'church'}_visitors.csv`);
+    link.setAttribute('download', `${activeChurchName ? activeChurchName.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'church'}_visitors.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -154,52 +211,93 @@ export default function InsightsClient({
 
   return (
     <>
-      <div className="top" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link href="/dashboard" className="brand" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Image src={logoImg} alt="Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-          </Link>
-          
-          {availableChurches.length > 1 ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <select
-                value={churchId}
-                onChange={(e) => {
-                  router.push(`/dashboard/insights?church_id=${e.target.value}`);
-                }}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '10px',
-                  border: '1.5px solid #cbd5e1',
-                  background: '#f8fafc',
-                  fontSize: '13.5px',
-                  fontWeight: 700,
-                  color: '#0f172a',
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                {availableChurches.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <span className="crumb">&middot; Dashboard</span>
+      {!embedded && (
+        <div className="top" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Link href="/dashboard" className="brand" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Image src={logoImg} alt="Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
+            </Link>
+            
+            {availableChurches.length > 1 ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <select
+                  value={currentChurchId}
+                  onChange={(e) => handleChurchChange(e.target.value)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #cbd5e1',
+                    background: '#f8fafc',
+                    fontSize: '13.5px',
+                    fontWeight: 700,
+                    color: '#0f172a',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {availableChurches.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="crumb">&middot; Dashboard</span>
+              </div>
+            ) : (
+              <span className="crumb">{activeChurchName} &middot; Dashboard</span>
+            )}
+          </div>
+
+          <div className="seg">
+            <button className={range === '7d' ? 'on' : ''} onClick={() => setRange('7d')}>7 days</button>
+            <button className={range === '30d' ? 'on' : ''} onClick={() => setRange('30d')}>30 days</button>
+            <button className={range === '90d' ? 'on' : ''} onClick={() => setRange('90d')}>90 days</button>
+          </div>
+        </div>
+      )}
+
+      <div className="content" style={embedded ? { padding: '0 0 40px 0', maxWidth: '100%', margin: 0 } : undefined}>
+        {embedded && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '13.5px', fontWeight: 800, color: '#64748b' }}>Select Church:</span>
+              {availableChurches.length > 0 ? (
+                <select
+                  value={currentChurchId}
+                  onChange={(e) => handleChurchChange(e.target.value)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #cbd5e1',
+                    background: '#f8fafc',
+                    fontSize: '13.5px',
+                    fontWeight: 700,
+                    color: '#0f172a',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    minWidth: '220px',
+                  }}
+                >
+                  {availableChurches.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span style={{ color: '#7c3aed', fontWeight: 800, fontSize: '14px' }}>{activeChurchName}</span>
+              )}
+              {isLoadingChurch && (
+                <span style={{ fontSize: '12px', color: '#9333ea', fontWeight: 600 }}>Loading insights...</span>
+              )}
             </div>
-          ) : (
-            <span className="crumb">{churchName} &middot; Dashboard</span>
-          )}
-        </div>
-
-        <div className="seg">
-          <button className={range === '7d' ? 'on' : ''} onClick={() => setRange('7d')}>7 days</button>
-          <button className={range === '30d' ? 'on' : ''} onClick={() => setRange('30d')}>30 days</button>
-          <button className={range === '90d' ? 'on' : ''} onClick={() => setRange('90d')}>90 days</button>
-        </div>
-      </div>
-
-      <div className="content">
+            <div className="seg" style={{ marginLeft: 0 }}>
+              <button className={range === '7d' ? 'on' : ''} onClick={() => setRange('7d')}>7 days</button>
+              <button className={range === '30d' ? 'on' : ''} onClick={() => setRange('30d')}>30 days</button>
+              <button className={range === '90d' ? 'on' : ''} onClick={() => setRange('90d')}>90 days</button>
+            </div>
+          </div>
+        )}
         <h1>Visitor insights</h1>
         <div className="sub">See who's discovering your church and where they are in their journey — so you can follow up at the right moment.</div>
 

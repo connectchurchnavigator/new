@@ -176,4 +176,5 @@ export interface PastorProfile extends Pastor {
   awards: PastorAward[];
   reviews: PastorReview[];
   average_rating: number | null;
+  associated_churches?: { image?: string; name: string; location: string; link: string }[];
 }

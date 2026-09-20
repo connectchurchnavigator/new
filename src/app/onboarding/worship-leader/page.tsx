@@ -610,17 +610,11 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
     } else if (displayName.trim().length < 3) {
       errors.displayName = "Display name must be at least 3 characters.";
     }
-    if (!city.trim()) {
-      errors.city = "City is required.";
-    }
-    if (!postcode.trim()) {
-      errors.postcode = "Postcode is required.";
-    }
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       const firstErrorKey = Object.keys(errors)[0];
-      const targetId = firstErrorKey === "displayName" ? "field-displayName" : firstErrorKey === "city" ? "f-city" : "f-postcode";
+      const targetId = firstErrorKey === "displayName" ? "field-displayName" : `f-${firstErrorKey}`;
       const firstErrorEl = document.getElementById(targetId);
       if (firstErrorEl) firstErrorEl.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
@@ -1295,31 +1289,26 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
                   idPrefix="wl"
                   country={country}
                   address={address}
-                  addressDetails={addressDetails}
                   latitude={latitude}
                   longitude={longitude}
                   onUpdateCountry={(c) => {
                     if (c) setCountry(c);
                   }}
                   onUpdateAddress={setAddress}
-                  onUpdateAddressDetails={setAddressDetails}
                   onUpdateCity={(c) => {
                     if (c) {
                       setCity(c);
-                      if (fieldErrors.city) setFieldErrors(prev => ({ ...prev, city: "" }));
                     }
                   }}
                   onLocationSelected={(details) => {
                     if (details.city) {
                       setCity(details.city);
-                      if (fieldErrors.city) setFieldErrors(prev => ({ ...prev, city: "" }));
                     }
                     if (details.area) {
                       setArea(details.area);
                     }
                     if (details.postcode) {
                       setPostcode(details.postcode);
-                      if (fieldErrors.postcode) setFieldErrors(prev => ({ ...prev, postcode: "" }));
                     }
                     if (details.country) {
                       setCountry(details.country);
@@ -1330,74 +1319,6 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
                     setLongitude(lng);
                   }}
                 />
-              </div>
-
-              {/* City *, Area / Borough, and Postcode * (Auto-filled from pinpointed map) */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "8px" }}>
-                <div>
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    City <span style={{ color: "#ef4444", fontWeight: 800 }}>*</span>
-                    {city && (
-                      <span style={{ fontSize: "10.5px", fontWeight: 700, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "1px 7px", borderRadius: "10px" }}>
-                        Autofilled
-                      </span>
-                    )}
-                  </label>
-                  <input
-                    id="f-city"
-                    placeholder="e.g. London"
-                    value={city}
-                    onChange={(e) => {
-                      setCity(e.target.value);
-                      if (fieldErrors.city) setFieldErrors(prev => ({ ...prev, city: "" }));
-                    }}
-                    style={{ border: fieldErrors.city ? "1.5px solid red" : "" }}
-                  />
-                  {fieldErrors.city && (
-                    <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{fieldErrors.city}</div>
-                  )}
-                </div>
-
-                <div>
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    Area / Borough
-                    {area && (
-                      <span style={{ fontSize: "10.5px", fontWeight: 700, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "1px 7px", borderRadius: "10px" }}>
-                        Autofilled
-                      </span>
-                    )}
-                  </label>
-                  <input
-                    id="f-area"
-                    placeholder="e.g. Mayfair, Peckham"
-                    value={area}
-                    onChange={(e) => setArea(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    Postcode <span style={{ color: "#ef4444", fontWeight: 800 }}>*</span>
-                    {postcode && (
-                      <span style={{ fontSize: "10.5px", fontWeight: 700, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "1px 7px", borderRadius: "10px" }}>
-                        Autofilled
-                      </span>
-                    )}
-                  </label>
-                  <input
-                    id="f-postcode"
-                    placeholder="e.g. W1J 7NT"
-                    value={postcode}
-                    onChange={(e) => {
-                      setPostcode(e.target.value);
-                      if (fieldErrors.postcode) setFieldErrors(prev => ({ ...prev, postcode: "" }));
-                    }}
-                    style={{ border: fieldErrors.postcode ? "1.5px solid red" : "" }}
-                  />
-                  {fieldErrors.postcode && (
-                    <div style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{fieldErrors.postcode}</div>
-                  )}
-                </div>
               </div>
             </div>
 

@@ -180,7 +180,10 @@ export default function ChurchProfileClient({
             youtube: church.social_youtube || church.youtube,
             twitter: church.social_twitter || church.twitter,
             tiktok: church.social_tiktok || church.tiktok,
-            telegram: church.social_telegram || church.telegram
+            telegram: church.social_telegram || church.telegram,
+            whatsapp: church.social_whatsapp || church.whatsapp,
+            linkedin: church.social_linkedin || church.linkedin,
+            website: church.website_url || church.website
           }}
         />
       </div>

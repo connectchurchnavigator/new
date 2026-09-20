@@ -839,12 +839,13 @@ export default function ExploreClient({
   // Helper to normalize day string comparison (e.g. "Sun" matches "Sunday" / "Sun")
   const matchesDayName = (srvDay?: string, targetDay?: string) => {
     if (!srvDay || !targetDay) return false;
+    if (targetDay === "all") return true;
     const s = srvDay.toLowerCase().trim();
     const t = targetDay.toLowerCase().trim();
     return s.startsWith(t) || t.startsWith(s);
   };
 
-  // Helper to check if a service time matches time slot (Morning <12:00, Afternoon 12:00-17:00, Evening 17:00+)
+  // Helper to check if a service time matches time slot (Morning <12:00, Afternoon 12:00-17:00, Evening 17:00+, or specific time)
   const matchesTimeSlot = (startTime?: string | null, slot?: string) => {
     if (!slot || slot === "all") return true;
     if (!startTime || !startTime.trim()) return false; // Strict: if filtering by time, must have a start_time
@@ -857,14 +858,17 @@ export default function ExploreClient({
     const match12 = str.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
 
     let hour = -1;
+    let minute = 0;
 
     if (match12) {
       hour = parseInt(match12[1], 10);
+      minute = match12[2] ? parseInt(match12[2], 10) : 0;
       const meridian = match12[3].toLowerCase();
       if (meridian === "pm" && hour < 12) hour += 12;
       if (meridian === "am" && hour === 12) hour = 0;
     } else if (match24) {
       hour = parseInt(match24[1], 10);
+      minute = parseInt(match24[2], 10);
     } else {
       const parsedNum = parseInt(str, 10);
       if (!isNaN(parsedNum)) hour = parsedNum;
@@ -875,6 +879,37 @@ export default function ExploreClient({
     if (slot === "morning") return hour < 12;
     if (slot === "afternoon") return hour >= 12 && hour < 17;
     if (slot === "evening") return hour >= 17;
+
+    // Custom filled time in slot (e.g. "10:30 AM", "10:30", "10 AM", "10am", "6pm", etc.)
+    const trimmedSlot = slot.trim();
+    const targetMatch12 = trimmedSlot.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+    const targetMatch24 = trimmedSlot.match(/^(\d{1,2}):(\d{2})/);
+
+    let targetHour = -1;
+    let targetMinute = 0;
+
+    if (targetMatch12) {
+      targetHour = parseInt(targetMatch12[1], 10);
+      targetMinute = targetMatch12[2] ? parseInt(targetMatch12[2], 10) : 0;
+      const meridian = targetMatch12[3].toLowerCase();
+      if (meridian === "pm" && targetHour < 12) targetHour += 12;
+      if (meridian === "am" && targetHour === 12) targetHour = 0;
+    } else if (targetMatch24) {
+      targetHour = parseInt(targetMatch24[1], 10);
+      targetMinute = parseInt(targetMatch24[2], 10);
+    } else {
+      const parsedNum = parseInt(trimmedSlot, 10);
+      if (!isNaN(parsedNum) && parsedNum >= 0 && parsedNum <= 24) {
+        targetHour = parsedNum;
+      }
+    }
+
+    if (targetHour !== -1) {
+      const srvMins = hour * 60 + minute;
+      const targetMins = targetHour * 60 + targetMinute;
+      return Math.abs(srvMins - targetMins) <= 60;
+    }
+
     return true;
   };
 
@@ -1386,14 +1421,13 @@ export default function ExploreClient({
     (exploreType === "churches" && (
       selectedDenoms.length > 0 ||
       selectedLanguages.length > 0 ||
-      selectedWorshipStyles.length > 0 ||
       selectedMinistries.length > 0 ||
       openingStatus !== "all"
     )) ||
     (exploreType === "events" && (
       selectedEventTypes.length > 0 ||
       selectedEventPrice !== "all" ||
-      selectedEventTime !== "all"
+      selectedEventTime !== "upcoming"
     )) ||
     (exploreType === "pastors" && (
       selectedPastorNames.length > 0 ||
@@ -1413,9 +1447,13 @@ export default function ExploreClient({
     setSearchQuery("");
     setSelectedCities([]);
     setUserLocation(null);
+    setIsLocating(false);
+    setMaxDistance(30);
     setSortBy("latest");
     // Church filters
     setOpeningStatus("all");
+    setCustomDay("Sun");
+    setCustomTime("all");
     setSelectedDenoms([]);
     setSelectedLanguages([]);
     setSelectedWorshipStyles([]);
@@ -1423,7 +1461,7 @@ export default function ExploreClient({
     // Event filters
     setSelectedEventTypes([]);
     setSelectedEventPrice("all");
-    setSelectedEventTime("all");
+    setSelectedEventTime("upcoming");
     // Pastor filters
     setSelectedPastorNames([]);
     setSelectedPastorDenoms([]);
@@ -1435,6 +1473,13 @@ export default function ExploreClient({
     setSelectedWlInstruments([]);
     setSelectedWlLanguages([]);
     setSelectedWlAvailabilities([]);
+  };
+
+  const handleTabChange = (newType: "churches" | "pastors" | "events" | "worship_leaders") => {
+    if (exploreType === newType) return;
+    setExploreType(newType);
+    clearAllFilters();
+    setSelectedChurchId(null);
   };
 
   return (
@@ -1616,41 +1661,25 @@ export default function ExploreClient({
           gap: "4px"
         }}>
           <button
-            onClick={() => {
-              setExploreType("churches");
-              setSelectedCities([]);
-              setSelectedChurchId(null);
-            }}
+            onClick={() => handleTabChange("churches")}
             className={`explore-tab ${exploreType === "churches" ? "active" : ""}`}
           >
             <i className="ti ti-building-church" style={{ fontSize: "16px" }}></i> Churches
           </button>
           <button
-            onClick={() => {
-              setExploreType("pastors");
-              setSelectedCities([]);
-              setSelectedChurchId(null);
-            }}
+            onClick={() => handleTabChange("pastors")}
             className={`explore-tab ${exploreType === "pastors" ? "active" : ""}`}
           >
             <i className="ti ti-user" style={{ fontSize: "16px" }}></i> Pastors
           </button>
           <button
-            onClick={() => {
-              setExploreType("worship_leaders");
-              setSelectedCities([]);
-              setSelectedChurchId(null);
-            }}
+            onClick={() => handleTabChange("worship_leaders")}
             className={`explore-tab ${exploreType === "worship_leaders" ? "active" : ""}`}
           >
             <i className="ti ti-microphone-2" style={{ fontSize: "16px" }}></i> Worship Leaders
           </button>
           <button
-            onClick={() => {
-              setExploreType("events");
-              setSelectedCities([]);
-              setSelectedChurchId(null);
-            }}
+            onClick={() => handleTabChange("events")}
             className={`explore-tab ${exploreType === "events" ? "active" : ""}`}
           >
             <i className="ti ti-calendar-event" style={{ fontSize: "16px" }}></i> Events
@@ -1810,18 +1839,174 @@ export default function ExploreClient({
               {exploreType === "churches" && (
                 <>
                   <div>
-                    <h3 style={{ fontSize: "10px", textTransform: "uppercase", fontWeight: 800, color: "#94a3b8", letterSpacing: "0.05em", marginBottom: "12px" }}>Opening Status</h3>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                      <h3 style={{ fontSize: "10px", textTransform: "uppercase", fontWeight: 800, color: "#94a3b8", letterSpacing: "0.05em", margin: 0 }}>Opening Status</h3>
+                      {openingStatus === "custom" && (
+                        <span style={{ fontSize: "10px", fontWeight: 600, color: "#7c3aed" }}>
+                          {customDay === "all" ? "Any Day" : customDay} • {customTime === "all" ? "Any Time" : customTime === "morning" ? "Morning" : customTime === "afternoon" ? "Afternoon" : customTime === "evening" ? "Evening" : customTime}
+                        </span>
+                      )}
+                    </div>
                     <div style={{ display: "flex", background: "#f1f5f9", borderRadius: "8px", padding: "4px" }}>
                       {["all", "open_now", "custom"].map(status => (
                         <button
                           key={status}
+                          type="button"
                           onClick={() => setOpeningStatus(status as any)}
-                          style={{ flex: 1, padding: "8px 0", fontSize: "11px", fontWeight: 700, borderRadius: "6px", border: "none", background: openingStatus === status ? "#fff" : "transparent", color: openingStatus === status ? "#0f172a" : "#64748b", boxShadow: openingStatus === status ? "0 1px 3px rgba(0,0,0,0.1)" : "none", cursor: "pointer" }}
+                          style={{ flex: 1, padding: "8px 0", fontSize: "11px", fontWeight: 700, borderRadius: "6px", border: "none", background: openingStatus === status ? "#fff" : "transparent", color: openingStatus === status ? "#0f172a" : "#64748b", boxShadow: openingStatus === status ? "0 1px 3px rgba(0,0,0,0.1)" : "none", cursor: "pointer", transition: "all 0.15s ease" }}
                         >
                           {status === "all" ? "ALL" : status === "open_now" ? "OPEN NOW" : "CUSTOM"}
                         </button>
                       ))}
                     </div>
+
+                    {/* Custom Day & Timing Controls */}
+                    {openingStatus === "custom" && (
+                      <div style={{
+                        marginTop: "10px",
+                        padding: "12px",
+                        background: "#faf5ff",
+                        borderRadius: "10px",
+                        border: "1px solid #e9d5ff",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px"
+                      }}>
+                        {/* Day selector */}
+                        <div>
+                          <span style={{ fontSize: "10px", fontWeight: 700, color: "#6b21a8", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: "6px" }}>
+                            Service Day
+                          </span>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "4px" }}>
+                            {[
+                              { label: "Any", value: "all" },
+                              { label: "Sun", value: "Sun" },
+                              { label: "Wed", value: "Wed" },
+                              { label: "Sat", value: "Sat" },
+                              { label: "Mon", value: "Mon" },
+                              { label: "Tue", value: "Tue" },
+                              { label: "Thu", value: "Thu" },
+                              { label: "Fri", value: "Fri" },
+                            ].map(d => (
+                              <button
+                                key={d.value}
+                                type="button"
+                                onClick={() => setCustomDay(d.value)}
+                                style={{
+                                  padding: "6px 2px",
+                                  fontSize: "11px",
+                                  fontWeight: customDay === d.value ? 700 : 500,
+                                  borderRadius: "6px",
+                                  border: customDay === d.value ? "1.5px solid #7c3aed" : "1px solid #e2e8f0",
+                                  background: customDay === d.value ? "#7c3aed" : "#fff",
+                                  color: customDay === d.value ? "#fff" : "#475569",
+                                  cursor: "pointer",
+                                  textAlign: "center",
+                                  transition: "all 0.15s ease"
+                                }}
+                              >
+                                {d.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Time slot selector */}
+                        <div>
+                          <span style={{ fontSize: "10px", fontWeight: 700, color: "#6b21a8", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: "6px" }}>
+                            Service Time
+                          </span>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px" }}>
+                            {[
+                              { label: "Any Time", value: "all", icon: "ti-clock" },
+                              { label: "Morning (< 12 PM)", value: "morning", icon: "ti-sun" },
+                              { label: "Afternoon (12 - 5 PM)", value: "afternoon", icon: "ti-sun-high" },
+                              { label: "Evening (5 PM+)", value: "evening", icon: "ti-moon" }
+                            ].map(t => (
+                              <button
+                                key={t.value}
+                                type="button"
+                                onClick={() => setCustomTime(t.value)}
+                                style={{
+                                  padding: "7px 6px",
+                                  fontSize: "10.5px",
+                                  fontWeight: customTime === t.value ? 700 : 500,
+                                  borderRadius: "6px",
+                                  border: customTime === t.value ? "1.5px solid #7c3aed" : "1px solid #e2e8f0",
+                                  background: customTime === t.value ? "#7c3aed" : "#fff",
+                                  color: customTime === t.value ? "#fff" : "#475569",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: "4px",
+                                  transition: "all 0.15s ease"
+                                }}
+                              >
+                                <i className={`ti ${t.icon}`} style={{ fontSize: "12px" }}></i>
+                                {t.label}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Specific Time Input Box */}
+                          <div style={{ marginTop: "8px" }}>
+                            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                              <i className="ti ti-clock" style={{ position: "absolute", left: "10px", color: !["all", "morning", "afternoon", "evening"].includes(customTime) && customTime.trim() !== "" ? "#7c3aed" : "#94a3b8", fontSize: "14px", pointerEvents: "none" }}></i>
+                              <input
+                                type="text"
+                                value={["all", "morning", "afternoon", "evening"].includes(customTime) ? "" : customTime}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setCustomTime(val ? val : "all");
+                                }}
+                                placeholder="Fill time (e.g. 10:30 AM or 11:00)"
+                                style={{
+                                  width: "100%",
+                                  padding: "8px 30px 8px 30px",
+                                  fontSize: "11.5px",
+                                  fontWeight: !["all", "morning", "afternoon", "evening"].includes(customTime) && customTime.trim() !== "" ? 600 : 400,
+                                  borderRadius: "7px",
+                                  border: !["all", "morning", "afternoon", "evening"].includes(customTime) && customTime.trim() !== "" ? "1.5px solid #7c3aed" : "1px solid #d1d5db",
+                                  background: "#ffffff",
+                                  color: "#0f172a",
+                                  outline: "none",
+                                  transition: "all 0.15s ease",
+                                  boxShadow: !["all", "morning", "afternoon", "evening"].includes(customTime) && customTime.trim() !== "" ? "0 0 0 3px rgba(124, 58, 237, 0.1)" : "none"
+                                }}
+                              />
+                              {!["all", "morning", "afternoon", "evening"].includes(customTime) && customTime.trim() !== "" && (
+                                <button
+                                  type="button"
+                                  onClick={() => setCustomTime("all")}
+                                  style={{
+                                    position: "absolute",
+                                    right: "8px",
+                                    border: "none",
+                                    background: "#f1f5f9",
+                                    borderRadius: "50%",
+                                    width: "18px",
+                                    height: "18px",
+                                    color: "#64748b",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    padding: 0
+                                  }}
+                                  title="Clear filled time"
+                                >
+                                  <i className="ti ti-x" style={{ fontSize: "11px" }}></i>
+                                </button>
+                              )}
+                            </div>
+                            <span style={{ fontSize: "10px", color: "#94a3b8", marginTop: "4px", display: "block" }}>
+                              Type any time (e.g. 9:30 AM, 11:00, 6:00 PM)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -1838,13 +2023,6 @@ export default function ExploreClient({
                       options={languages}
                       selected={selectedLanguages}
                       onChange={setSelectedLanguages}
-                    />
-                    <MultiSelectSearchFilter
-                      label="Worship Styles"
-                      placeholder="Search worship style..."
-                      options={worshipStyles}
-                      selected={selectedWorshipStyles}
-                      onChange={setSelectedWorshipStyles}
                     />
                     <MultiSelectSearchFilter
                       label="Ministries"
@@ -1865,8 +2043,8 @@ export default function ExploreClient({
                     <h3 style={{ fontSize: "10px", textTransform: "uppercase", fontWeight: 800, color: "#94a3b8", letterSpacing: "0.05em", marginBottom: "12px" }}>Timeframe</h3>
                     <div style={{ display: "flex", background: "#f1f5f9", borderRadius: "8px", padding: "4px" }}>
                       {[
-                        { label: "ALL", value: "all" },
                         { label: "UPCOMING", value: "upcoming" },
+                        { label: "ALL", value: "all" },
                         { label: "PAST", value: "past" }
                       ].map(t => (
                         <button

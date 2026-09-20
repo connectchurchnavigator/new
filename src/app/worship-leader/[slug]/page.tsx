@@ -189,35 +189,6 @@ export default async function WorshipLeaderProfilePage(props: {
                     </Link>
                   )}
                 </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    {leader.instagram_url && (
-                      <a href={leader.instagram_url} target="_blank" rel="noreferrer" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e1306c', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
-                        <i className="ti ti-brand-instagram"></i>
-                      </a>
-                    )}
-                    {leader.youtube_url && (
-                      <a href={leader.youtube_url} target="_blank" rel="noreferrer" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
-                        <i className="ti ti-brand-youtube"></i>
-                      </a>
-                    )}
-                    {(() => {
-                      if (!leader.website_url) return null;
-                      const firstCleanWeb = leader.website_url
-                        .split(/[\n,]+/)
-                        .map((s: string) => s.trim())
-                        .find((s: string) => s.startsWith("http://") || s.startsWith("https://") || (s.includes(".") && !s.startsWith("loc:") && !s.startsWith("mailto:") && !s.startsWith("tel:")));
-                      if (!firstCleanWeb) return null;
-                      const url = firstCleanWeb.startsWith("http") ? firstCleanWeb : `https://${firstCleanWeb}`;
-                      return (
-                        <a href={url} target="_blank" rel="noreferrer" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
-                          <i className="ti ti-world"></i>
-                        </a>
-                      );
-                    })()}
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -266,6 +237,61 @@ export default async function WorshipLeaderProfilePage(props: {
             sidebar={<Sidebar leader={leader} />}
           />
         </div>
+
+        {/* Contact & Get in Touch Section */}
+        {(() => {
+          let parsedEmail: string | undefined = leader.email || undefined;
+          let parsedPhone: string | undefined = leader.phone || undefined;
+          let parsedFacebook: string | undefined = leader.facebook_url || undefined;
+          let parsedTwitter: string | undefined = leader.twitter_url || undefined;
+          let parsedLinkedin: string | undefined = (leader as any).linkedin_url || undefined;
+          let parsedTiktok: string | undefined = (leader as any).tiktok_url || undefined;
+          let parsedWebsite: string | undefined = undefined;
+
+          if (leader.website_url) {
+            const lines = leader.website_url.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean);
+            for (const l of lines) {
+              if (l.startsWith("loc:")) continue;
+              if (l.startsWith("mailto:")) {
+                if (!parsedEmail) parsedEmail = l.replace(/^mailto:/i, "");
+              } else if (l.startsWith("tel:")) {
+                if (!parsedPhone) parsedPhone = l.replace(/^tel:/i, "");
+              } else if (l.includes("facebook.com") || l.includes("fb.com") || l.includes("fb.me")) {
+                if (!parsedFacebook) parsedFacebook = l;
+              } else if (l.includes("twitter.com") || l.includes("x.com")) {
+                if (!parsedTwitter) parsedTwitter = l;
+              } else if (l.includes("linkedin.com")) {
+                if (!parsedLinkedin) parsedLinkedin = l;
+              } else if (l.includes("tiktok.com")) {
+                if (!parsedTiktok) parsedTiktok = l;
+              } else if (!l.includes("youtube.com") && !l.includes("youtu.be") && !l.includes("spotify.com") && !l.includes("instagram.com")) {
+                if (!parsedWebsite) parsedWebsite = l.startsWith("http") ? l : `https://${l}`;
+              }
+            }
+          }
+
+          return (
+            <div className="wrap" style={{ marginTop: '40px' }}>
+              <ContactSection
+                churchName={leader.display_name}
+                email={parsedEmail}
+                phone={parsedPhone}
+                address={leader.city ? `${leader.city}, ${leader.country}` : undefined}
+                socials={{
+                  youtube: leader.youtube_url || undefined,
+                  instagram: leader.instagram_url || undefined,
+                  spotify: leader.spotify_url || undefined,
+                  facebook: parsedFacebook,
+                  twitter: parsedTwitter,
+                  linkedin: parsedLinkedin,
+                  tiktok: parsedTiktok,
+                  whatsapp: parsedPhone,
+                  website: parsedWebsite,
+                }}
+              />
+            </div>
+          );
+        })()}
       </main>
     </>
   );
@@ -564,191 +590,6 @@ function MusicPane({ leader }: { leader: any }) {
           </div>
         </div>
       )}
-
-      {/* 5. Streaming & Social Links */}
-      {(() => {
-        // Collect all links: dedicated columns plus any additional links
-        const linkItems: { url: string; label: string; icon: string; bg: string; border: string; color: string; iconColor: string }[] = [];
-        
-        if (leader.spotify_url) {
-          linkItems.push({
-            url: leader.spotify_url,
-            label: "Spotify",
-            icon: "ti-brand-spotify",
-            bg: "#f0fdf4",
-            border: "#bbf7d0",
-            color: "#166534",
-            iconColor: "#16a34a",
-          });
-        }
-        if (leader.youtube_url) {
-          linkItems.push({
-            url: leader.youtube_url,
-            label: "YouTube",
-            icon: "ti-brand-youtube",
-            bg: "#fef2f2",
-            border: "#fecaca",
-            color: "#991b1b",
-            iconColor: "#ef4444",
-          });
-        }
-        if (leader.instagram_url) {
-          linkItems.push({
-            url: leader.instagram_url,
-            label: "Instagram",
-            icon: "ti-brand-instagram",
-            bg: "#fdf2f8",
-            border: "#fbcfe8",
-            color: "#9d174d",
-            iconColor: "#e1306c",
-          });
-        }
-        if (leader.website_url) {
-          // Check if website_url has multiple comma/newline/space separated links
-          const rawWebsites = leader.website_url.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean);
-          for (const rawUrl of rawWebsites) {
-            if (rawUrl.startsWith("loc:")) continue;
-            const lower = rawUrl.toLowerCase();
-            let label = "Official Website";
-            let icon = "ti-world";
-            let bg = "#f8fafc";
-            let border = "#cbd5e1";
-            let color = "#0f172a";
-            let iconColor = "#0f172a";
-
-            if (rawUrl.startsWith("mailto:")) {
-              const emailVal = rawUrl.replace(/^mailto:/i, "");
-              linkItems.push({
-                url: rawUrl,
-                label: emailVal,
-                icon: "ti-mail",
-                bg: "#f0fdf4",
-                border: "#bbf7d0",
-                color: "#166534",
-                iconColor: "#16a34a",
-              });
-              continue;
-            } else if (rawUrl.startsWith("tel:")) {
-              const phoneVal = rawUrl.replace(/^tel:/i, "");
-              linkItems.push({
-                url: rawUrl,
-                label: phoneVal,
-                icon: "ti-phone",
-                bg: "#eff6ff",
-                border: "#bfdbfe",
-                color: "#1e40af",
-                iconColor: "#2563eb",
-              });
-              continue;
-            } else if (lower.includes("wa.me") || lower.includes("whatsapp.com")) {
-              label = "WhatsApp";
-              icon = "ti-brand-whatsapp";
-              bg = "#f0fdf4";
-              border = "#bbf7d0";
-              color: "#166534";
-              iconColor = "#22c55e";
-            } else if (lower.includes("apple.com") || lower.includes("music.apple")) {
-              label = "Apple Music";
-              icon = "ti-brand-apple";
-              bg = "#fff1f2";
-              border = "#fecdd3";
-              color = "#9f1239";
-              iconColor = "#e11d48";
-            } else if (lower.includes("soundcloud.com")) {
-              label = "SoundCloud";
-              icon = "ti-brand-soundcloud";
-              bg = "#fff7ed";
-              border = "#fed7aa";
-              color = "#9a3412";
-              iconColor = "#ea580c";
-            } else if (lower.includes("facebook.com") || lower.includes("fb.com") || lower.includes("fb.me")) {
-              label = "Facebook";
-              icon = "ti-brand-facebook";
-              bg = "#eff6ff";
-              border = "#bfdbfe";
-              color = "#1e40af";
-              iconColor = "#2563eb";
-            } else if (lower.includes("linkedin.com")) {
-              label = "LinkedIn";
-              icon = "ti-brand-linkedin";
-              bg = "#eff6ff";
-              border = "#bfdbfe";
-              color = "#1e40af";
-              iconColor = "#0a66c2";
-            } else if (lower.includes("tiktok.com")) {
-              label = "TikTok";
-              icon = "ti-brand-tiktok";
-              bg = "#f1f5f9";
-              border = "#cbd5e1";
-              color = "#0f172a";
-              iconColor = "#0f172a";
-            } else if (lower.includes("twitter.com") || lower.includes("x.com")) {
-              label = "X / Twitter";
-              icon = "ti-brand-x";
-              bg = "#f8fafc";
-              border = "#cbd5e1";
-              color = "#0f172a";
-              iconColor = "#0f172a";
-            } else {
-              try {
-                const parsedHost = new URL(rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`).hostname.replace(/^www\./, "");
-                label = parsedHost || "Website";
-              } catch {
-                label = "Official Website";
-              }
-            }
-
-            linkItems.push({
-              url: rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`,
-              label,
-              icon,
-              bg,
-              border,
-              color,
-              iconColor,
-            });
-          }
-        }
-
-        if (linkItems.length === 0) return null;
-
-        return (
-          <div className="pastor-card">
-            <div className="pastor-card-h">
-              <div className="ic" style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)' }}>
-                <i className="ti ti-link"></i>
-              </div>
-              <h3>Links & Platforms</h3>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '14px' }}>
-              {linkItems.map((item, idx) => (
-                <a
-                  key={idx}
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    background: item.bg,
-                    border: `1.5px solid ${item.border}`,
-                    color: item.color,
-                    padding: '10px 18px',
-                    borderRadius: '12px',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    textDecoration: 'none',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <i className={`ti ${item.icon}`} style={{ fontSize: '18px', color: item.iconColor }}></i> {item.label}
-                </a>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }

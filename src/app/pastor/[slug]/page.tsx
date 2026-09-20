@@ -91,8 +91,9 @@ async function getPastor(slug: string): Promise<PastorProfile | null> {
 
   const combinedEvents = [...directEvents, ...hostedEvents];
 
-  // Parse core values
+  // Parse core values & associated churches
   let coreValues: string[] = [];
+  let associatedChurches: any[] = [];
   const rawVision = pastor.vision_statement || '';
   if (rawVision.includes('<!--CORE_VALUES:')) {
     try {
@@ -102,7 +103,18 @@ async function getPastor(slug: string): Promise<PastorProfile | null> {
       }
     } catch {}
   }
-  const cleanVision = rawVision.replace(/<!--CORE_VALUES:.*?-->/g, '').trim();
+  if (rawVision.includes('<!--ASSOCIATED_CHURCHES:')) {
+    try {
+      const match = rawVision.match(/<!--ASSOCIATED_CHURCHES:(.*?)-->/);
+      if (match && match[1]) {
+        associatedChurches = JSON.parse(match[1]);
+      }
+    } catch {}
+  }
+  const cleanVision = rawVision
+    .replace(/<!--CORE_VALUES:.*?-->/g, '')
+    .replace(/<!--ASSOCIATED_CHURCHES:.*?-->/g, '')
+    .trim();
 
   // Fire-and-forget view increment
   supabase
@@ -115,6 +127,7 @@ async function getPastor(slug: string): Promise<PastorProfile | null> {
     ...pastor,
     vision_statement: cleanVision,
     core_values: coreValues,
+    associated_churches: associatedChurches.length > 0 ? associatedChurches : (pastor.church_name_cache ? [{ name: pastor.church_name_cache, location: pastor.city || '', image: '', link: '' }] : []),
     languages: (languagesRes.data ?? []).map((r) => r.language),
     tags: tagsRes.data ?? [],
     education: educationRes.data ?? [],
@@ -266,7 +279,7 @@ export default async function PastorProfilePage(props: {
                   />
                   {pastor.youtube_url && (
                     <a href={pastor.youtube_url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#ef4444', color: '#fff', textDecoration: 'none', padding: '12px 24px', borderRadius: '30px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)' }}>
-                      <i className="ti ti-brand-youtube" style={{ fontSize: '18px' }}></i> Watch sermon
+                      <i className="ti ti-brand-youtube" style={{ fontSize: '18px' }}></i> YouTube
                     </a>
                   )}
                   <ShareButton title={pastor.full_name} />
@@ -276,31 +289,6 @@ export default async function PastorProfilePage(props: {
                     </Link>
                   )}
                 </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    {pastor.instagram_url && (
-                      <a href={pastor.instagram_url} target="_blank" rel="noreferrer" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e1306c', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
-                        <i className="ti ti-brand-instagram"></i>
-                      </a>
-                    )}
-                    {pastor.facebook_url && (
-                      <a href={pastor.facebook_url} target="_blank" rel="noreferrer" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1877f2', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
-                        <i className="ti ti-brand-facebook"></i>
-                      </a>
-                    )}
-                    {pastor.youtube_url && (
-                      <a href={pastor.youtube_url} target="_blank" rel="noreferrer" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
-                        <i className="ti ti-brand-youtube"></i>
-                      </a>
-                    )}
-                    {pastor.twitter_url && (
-                      <a href={pastor.twitter_url} target="_blank" rel="noreferrer" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
-                        <i className="ti ti-brand-x"></i>
-                      </a>
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -309,7 +297,7 @@ export default async function PastorProfilePage(props: {
         {/* STATS STRIP - DYNAMIC FROM BACKEND */}
         {(pastor.years_in_ministry || pastor.churches_planted || pastor.nations_reached || pastor.events_spoken || pastor.congregation_size || pastor.youtube_subscribers || pastor.languages.length > 0 || pastor.sermons.length > 0) && (
           <div style={{ background: '#fff' }}>
-            <div className="pastor-wrap">
+            <div className="wrap">
               <div className="stats-strip" style={{ gridTemplateColumns: `repeat(${[pastor.years_in_ministry, pastor.churches_planted, pastor.nations_reached, pastor.events_spoken, pastor.congregation_size, pastor.youtube_subscribers, pastor.languages.length > 0, pastor.sermons.length > 0].filter(Boolean).length}, 1fr)` }}>
                 {pastor.years_in_ministry && (
                   <div className="stat-cell">
@@ -365,7 +353,7 @@ export default async function PastorProfilePage(props: {
         )}
 
         {/* ENQUIRY BANNER - EXACT FROM MOCKUP */}
-        <div className="pastor-wrap">
+        <div className="wrap">
           <div className="enquiry-banner">
             <div>
               <div className="t">Book {pastor.full_name} for your event</div>
@@ -386,6 +374,7 @@ export default async function PastorProfilePage(props: {
         {/* MAIN CONTENT GRID */}
         <div>
           <ProfileTabs
+            containerClassName="wrap"
             tabs={[
               { id: 'about', label: 'About', icon: 'ti-user' },
               { id: 'sermons', label: 'Sermons', icon: 'ti-player-play', iconColor: '#ef4444' },
@@ -416,7 +405,11 @@ export default async function PastorProfilePage(props: {
               facebook: pastor.facebook_url || undefined,
               instagram: pastor.instagram_url || undefined,
               youtube: pastor.youtube_url || undefined,
-              twitter: pastor.twitter_url || undefined
+              twitter: pastor.twitter_url || undefined,
+              whatsapp: pastor.whatsapp_url || undefined,
+              linkedin: (pastor as any).linkedin_url || undefined,
+              tiktok: (pastor as any).tiktok_url || undefined,
+              website: pastor.website_url || undefined
             }}
           />
         </div>
@@ -665,23 +658,74 @@ function Sidebar({ pastor }: { pastor: PastorProfile }) {
         })()}
       </div>
 
-      {pastor.church_name_cache && (
+      {((pastor.associated_churches && pastor.associated_churches.length > 0) || pastor.church_name_cache) && (
         <div className="pastor-card">
           <div className="pastor-card-h">
             <div className="ic"><i className="ti ti-building-church"></i></div>
-            <h3>Churches</h3>
+            <h3>Associated Churches &amp; Ministries</h3>
           </div>
-          <div style={{ marginTop: '14px' }}>
-            <div style={{ display: 'flex', gap: '13px', alignItems: 'flex-start', border: '1px solid #e9e9ef', borderRadius: '14px', padding: '15px' }}>
-              <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'linear-gradient(135deg,#f43f5e 0%,#7c3aed 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, flexShrink: 0 }}>
-                LC
+          <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {pastor.associated_churches && pastor.associated_churches.length > 0 ? (
+              pastor.associated_churches.map((church, idx) => {
+                const initials = (church.name || 'CH').split(' ').map((w: string) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+                return (
+                  <div key={idx} style={{ display: 'flex', gap: '14px', alignItems: 'center', border: '1px solid #e9e9ef', borderRadius: '14px', padding: '14px', background: '#fafafa' }}>
+                    {church.image ? (
+                      <img
+                        src={church.image}
+                        alt={church.name}
+                        style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0, border: '1px solid #e2e8f0' }}
+                      />
+                    ) : (
+                      <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg,#f43f5e 0%,#7c3aed 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, flexShrink: 0, fontSize: '14px' }}>
+                        {initials}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f0f1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{church.name}</div>
+                      {church.location && (
+                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <i className="ti ti-map-pin" style={{ fontSize: '13px' }}></i> {church.location}
+                        </div>
+                      )}
+                    </div>
+                    {church.link && (
+                      <a
+                        href={church.link.startsWith('http') ? church.link : `https://${church.link}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          background: '#f3e8ff',
+                          color: '#7c3aed',
+                          fontSize: '11.5px',
+                          fontWeight: 700,
+                          textDecoration: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          flexShrink: 0
+                        }}
+                      >
+                        Visit <i className="ti ti-external-link" style={{ fontSize: '12px' }}></i>
+                      </a>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div style={{ display: 'flex', gap: '13px', alignItems: 'flex-start', border: '1px solid #e9e9ef', borderRadius: '14px', padding: '15px' }}>
+                <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: 'linear-gradient(135deg,#f43f5e 0%,#7c3aed 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, flexShrink: 0 }}>
+                  LC
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f0f1a' }}>{pastor.church_name_cache}</div>
+                  <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#6d28d9', marginTop: '2px' }}>Senior Pastor &amp; Founder</div>
+                  {pastor.city && <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>{pastor.city}</div>}
+                </div>
               </div>
-              <div>
-                <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f0f1a' }}>{pastor.church_name_cache}</div>
-                <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#6d28d9', marginTop: '2px' }}>Senior Pastor & Founder</div>
-                {pastor.city && <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>{pastor.city}</div>}
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -718,105 +762,6 @@ function Sidebar({ pastor }: { pastor: PastorProfile }) {
           </div>
         </div>
       </div>
-
-      {(pastor.facebook_url || pastor.instagram_url || pastor.youtube_url || pastor.whatsapp_url || pastor.twitter_url || pastor.website_url || (pastor as any).linkedin_url || (pastor as any).tiktok_url) && (
-        <div className="pastor-card">
-          <div className="pastor-card-h">
-            <div className="ic"><i className="ti ti-world"></i></div>
-            <h3>Find me online</h3>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', marginTop: '14px' }}>
-            {pastor.facebook_url && (
-              <a
-                href={pastor.facebook_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#1877f2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '22px', boxShadow: '0 4px 12px rgba(24, 119, 242, 0.3)' }}
-                title="Facebook"
-              >
-                <i className="ti ti-brand-facebook"></i>
-              </a>
-            )}
-            {pastor.instagram_url && (
-              <a
-                href={pastor.instagram_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '22px', boxShadow: '0 4px 12px rgba(225, 48, 108, 0.3)' }}
-                title="Instagram"
-              >
-                <i className="ti ti-brand-instagram"></i>
-              </a>
-            )}
-            {pastor.youtube_url && (
-              <a
-                href={pastor.youtube_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#ff0000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '22px', boxShadow: '0 4px 12px rgba(255, 0, 0, 0.3)' }}
-                title="YouTube"
-              >
-                <i className="ti ti-brand-youtube"></i>
-              </a>
-            )}
-            {pastor.whatsapp_url && (
-              <a
-                href={pastor.whatsapp_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#25d366', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '22px', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.3)' }}
-                title="WhatsApp"
-              >
-                <i className="ti ti-brand-whatsapp"></i>
-              </a>
-            )}
-            {pastor.twitter_url && (
-              <a
-                href={pastor.twitter_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '22px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)' }}
-                title="X / Twitter"
-              >
-                <i className="ti ti-brand-x"></i>
-              </a>
-            )}
-            {(pastor as any).linkedin_url && (
-              <a
-                href={(pastor as any).linkedin_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#0a66c2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '22px', boxShadow: '0 4px 12px rgba(10, 102, 194, 0.3)' }}
-                title="LinkedIn"
-              >
-                <i className="ti ti-brand-linkedin"></i>
-              </a>
-            )}
-            {(pastor as any).tiktok_url && (
-              <a
-                href={(pastor as any).tiktok_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '22px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)' }}
-                title="TikTok"
-              >
-                <i className="ti ti-brand-tiktok"></i>
-              </a>
-            )}
-            {pastor.website_url && (
-              <a
-                href={pastor.website_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg,#f43f5e 0%,#7c3aed 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '22px', boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)' }}
-                title="Website"
-              >
-                <i className="ti ti-world"></i>
-              </a>
-            )}
-          </div>
-        </div>
-      )}
 
       {pastor.affiliations.length > 0 && (
         <div className="pastor-card">

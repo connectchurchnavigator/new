@@ -59,10 +59,9 @@ export default function PastorVisitorMap({
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // Clean CartoDB Positron / OSM tiles for high-end SaaS look
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          maxZoom: 18,
-          subdomains: 'abcd',
+        // Clean OpenStreetMap tiles (no API key required, crisp and reliable)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
         }).addTo(map);
 
         mapInstanceRef.current = map;

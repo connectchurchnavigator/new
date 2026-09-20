@@ -9,10 +9,18 @@ import { ImageUpload } from '@/components/ImageUpload';
 import SharedAddressField from '@/components/add-church/steps/SharedAddressField';
 import logoImg from '@/Assets/logo (1).png';
 
+export interface AssociatedChurchItem {
+  image?: string;
+  name: string;
+  location: string;
+  link: string;
+}
+
 interface FormState {
   full_name: string;
   title: string;
   church_name_cache: string;
+  associated_churches: AssociatedChurchItem[];
   city: string;
   country: string;
   address?: string;
@@ -81,6 +89,9 @@ const initialState: FormState = {
   full_name: '',
   title: 'Senior Pastor',
   church_name_cache: '',
+  associated_churches: [
+    { image: '', name: '', location: '', link: '' }
+  ],
   city: '',
   country: 'United Kingdom',
   phone: '',
@@ -180,6 +191,11 @@ function PastorOnboardingContent() {
           full_name: data.full_name || '',
           title: data.title || '',
           church_name_cache: data.church_name_cache || '',
+          associated_churches: Array.isArray(data.associated_churches) && data.associated_churches.length > 0
+            ? data.associated_churches
+            : data.church_name_cache
+              ? [{ image: '', name: data.church_name_cache, location: data.city || '', link: '' }]
+              : [{ image: '', name: '', location: '', link: '' }],
           city: data.city || '',
           country: data.country || 'United Kingdom',
           address: data.city ? `${data.city}, ${data.country || 'United Kingdom'}` : '',
@@ -259,6 +275,20 @@ function PastorOnboardingContent() {
         full_name: "Pastor Emmanuel Adeyemi",
         title: "Senior Pastor",
         church_name_cache: "Kingsway International Christian Centre",
+        associated_churches: [
+          {
+            image: "https://images.unsplash.com/photo-1548625361-195feee15f9b?w=400&q=80",
+            name: "Kingsway International Christian Centre",
+            location: "London, United Kingdom",
+            link: "https://kicc.org.uk"
+          },
+          {
+            image: "https://images.unsplash.com/photo-1519491050282-cf00c82424b4?w=400&q=80",
+            name: "Grace City Fellowship",
+            location: "Manchester, United Kingdom",
+            link: "https://gracecity.org.uk"
+          }
+        ],
         city: "London",
         country: "United Kingdom",
         address: "Waterberry Drive, Waterlooville, PO7 7XX",
@@ -383,6 +413,64 @@ function PastorOnboardingContent() {
     if (errors[field]) return { border: "1.5px solid red", backgroundColor: "#fef2f2" };
     if (verified[field]) return { border: "1.5px solid #16a34a", backgroundColor: "#f0fdf4" };
     return {};
+  };
+
+  const [uploadingChurchIdx, setUploadingChurchIdx] = useState<number | null>(null);
+
+  const handleChurchImageUpload = async (file: File, index: number) => {
+    setUploadingChurchIdx(index);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('kind', 'avatar');
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setForm(prev => {
+          const next = [...prev.associated_churches];
+          next[index] = { ...next[index], image: data.url };
+          return { ...prev, associated_churches: next };
+        });
+      }
+    } catch (err) {
+      console.error("Church image upload failed:", err);
+    } finally {
+      setUploadingChurchIdx(null);
+    }
+  };
+
+  const handleAddChurch = () => {
+    setForm(prev => ({
+      ...prev,
+      associated_churches: [
+        ...prev.associated_churches,
+        { image: '', name: '', location: '', link: '' }
+      ]
+    }));
+  };
+
+  const handleRemoveChurch = (index: number) => {
+    setForm(prev => {
+      const next = prev.associated_churches.filter((_, i) => i !== index);
+      const updated = next.length > 0 ? next : [{ image: '', name: '', location: '', link: '' }];
+      return {
+        ...prev,
+        associated_churches: updated,
+        church_name_cache: updated[0]?.name || ''
+      };
+    });
+  };
+
+  const handleUpdateChurch = (index: number, field: keyof AssociatedChurchItem, value: string) => {
+    setForm(prev => {
+      const next = [...prev.associated_churches];
+      next[index] = { ...next[index], [field]: value };
+      return {
+        ...prev,
+        associated_churches: next,
+        church_name_cache: index === 0 && field === 'name' ? value : prev.church_name_cache
+      };
+    });
   };
 
   function validateStep(s: number): boolean {
@@ -709,26 +797,263 @@ function PastorOnboardingContent() {
                   </Field>
                 </div>
 
-                {/* Subtle Divider */}
-                <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "4px 0" }}></div>
+              </div>
+            </Card>
 
-                <Field label="Home Church / Ministry Base">
-                  <div style={{ position: "relative" }}>
-                    <input
-                      value={form.church_name_cache}
-                      onChange={(e) => {
-                        update('church_name_cache', e.target.value);
-                        if (errors.church_name_cache) setErrors(prev => ({ ...prev, church_name_cache: '' }));
-                      }}
-                      placeholder="e.g. Kingsway International Christian Centre"
-                      style={{ paddingLeft: "42px" }}
-                    />
-                    <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--cn-purple)", pointerEvents: "none" }}>
-                      <i className="ti ti-building-church" style={{ fontSize: "18px" }}></i>
+            {/* Thematic Card: Associated Churches & Ministries */}
+            <Card
+              title="Associated Churches & Ministries"
+              subtitle="Specify the church(es) or ministry branches you are currently associated with, lead, or serve"
+              icon="ti-building-church"
+              badge="Church Affiliations"
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {form.associated_churches.map((church, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      padding: "16px",
+                      borderRadius: "14px",
+                      border: "1.5px solid #e2e8f0",
+                      background: "#fbfbfe",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "14px",
+                      position: "relative"
+                    }}
+                  >
+                    {/* Header: Church Index & Delete */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{
+                          width: "22px",
+                          height: "22px",
+                          borderRadius: "50%",
+                          background: "#7c3aed",
+                          color: "#fff",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}>
+                          {idx + 1}
+                        </span>
+                        <span style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a" }}>
+                          {idx === 0 ? "Primary Church / Ministry Base" : `Associated Church #${idx + 1}`}
+                        </span>
+                      </div>
+
+                      {form.associated_churches.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveChurch(idx)}
+                          style={{
+                            border: "none",
+                            background: "#fee2e2",
+                            color: "#ef4444",
+                            padding: "4px 9px",
+                            borderRadius: "6px",
+                            fontSize: "11.5px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px"
+                          }}
+                          title="Remove church"
+                        >
+                          <i className="ti ti-trash" style={{ fontSize: "13px" }}></i> Remove
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Church Fields: Image + Info */}
+                    <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: "16px", alignItems: "start" }}>
+                      {/* Image Upload Box */}
+                      <div>
+                        <label style={{ fontSize: "11px", fontWeight: 700, color: "#475569", display: "block", marginBottom: "6px" }}>
+                          Image / Logo
+                        </label>
+                        <div style={{ position: "relative" }}>
+                          <div
+                            onClick={() => document.getElementById(`church-img-upload-${idx}`)?.click()}
+                            style={{
+                              width: "110px",
+                              height: "105px",
+                              borderRadius: "10px",
+                              border: "1.5px dashed #cbd5e1",
+                              background: church.image ? "#ffffff" : "#f8fafc",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              overflow: "hidden",
+                              position: "relative",
+                              transition: "all 0.15s ease"
+                            }}
+                          >
+                            {church.image ? (
+                              <img
+                                src={church.image}
+                                alt={church.name || "Church"}
+                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                              />
+                            ) : (
+                              <div style={{ textAlign: "center", padding: "6px", color: "#64748b" }}>
+                                <i className="ti ti-photo" style={{ fontSize: "22px", color: "#7c3aed", display: "block", marginBottom: "2px" }}></i>
+                                <span style={{ fontSize: "10.5px", fontWeight: 600 }}>
+                                  {uploadingChurchIdx === idx ? "Uploading..." : "Upload Image"}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <input
+                            id={`church-img-upload-${idx}`}
+                            type="file"
+                            accept="image/*"
+                            style={{ display: "none" }}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleChurchImageUpload(file, idx);
+                            }}
+                          />
+                          {church.image && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUpdateChurch(idx, 'image', '');
+                              }}
+                              style={{
+                                position: "absolute",
+                                top: "4px",
+                                right: "4px",
+                                background: "rgba(15,23,42,0.75)",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "50%",
+                                width: "20px",
+                                height: "20px",
+                                fontSize: "11px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "pointer"
+                              }}
+                              title="Remove image"
+                            >
+                              <i className="ti ti-x"></i>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Name, Location, Link Inputs */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                        <div>
+                          <label style={{ fontSize: "11px", fontWeight: 700, color: "#475569", display: "block", marginBottom: "4px" }}>
+                            Church Name {idx === 0 && <span style={{ color: "#ef4444" }}>*</span>}
+                          </label>
+                          <div style={{ position: "relative" }}>
+                            <input
+                              value={church.name}
+                              onChange={(e) => handleUpdateChurch(idx, 'name', e.target.value)}
+                              placeholder="e.g. Kingsway International Christian Centre"
+                              style={{
+                                width: "100%",
+                                padding: "8px 12px 8px 36px",
+                                fontSize: "13px",
+                                fontWeight: 600,
+                                borderRadius: "7px",
+                                border: "1px solid #d1d5db",
+                                outline: "none"
+                              }}
+                            />
+                            <div style={{ position: "absolute", left: "11px", top: "50%", transform: "translateY(-50%)", color: "#7c3aed", pointerEvents: "none" }}>
+                              <i className="ti ti-building-church" style={{ fontSize: "16px" }}></i>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                          <div>
+                            <label style={{ fontSize: "11px", fontWeight: 700, color: "#475569", display: "block", marginBottom: "4px" }}>
+                              Location
+                            </label>
+                            <div style={{ position: "relative" }}>
+                              <input
+                                value={church.location}
+                                onChange={(e) => handleUpdateChurch(idx, 'location', e.target.value)}
+                                placeholder="e.g. London, UK"
+                                style={{
+                                  width: "100%",
+                                  padding: "8px 12px 8px 34px",
+                                  fontSize: "12px",
+                                  borderRadius: "7px",
+                                  border: "1px solid #d1d5db",
+                                  outline: "none"
+                                }}
+                              />
+                              <div style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" }}>
+                                <i className="ti ti-map-pin" style={{ fontSize: "15px" }}></i>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: "11px", fontWeight: 700, color: "#475569", display: "block", marginBottom: "4px" }}>
+                              Link / Website
+                            </label>
+                            <div style={{ position: "relative" }}>
+                              <input
+                                value={church.link}
+                                onChange={(e) => handleUpdateChurch(idx, 'link', e.target.value)}
+                                placeholder="e.g. https://kicc.org.uk"
+                                style={{
+                                  width: "100%",
+                                  padding: "8px 12px 8px 34px",
+                                  fontSize: "12px",
+                                  borderRadius: "7px",
+                                  border: "1px solid #d1d5db",
+                                  outline: "none"
+                                }}
+                              />
+                              <div style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" }}>
+                                <i className="ti ti-link" style={{ fontSize: "15px" }}></i>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  {errors.church_name_cache && <p style={{ color: "#ef4444", fontSize: "12.5px", marginTop: "5px", fontWeight: 600 }}>{errors.church_name_cache}</p>}
-                </Field>
+                ))}
+
+                {/* Plus button to add more church */}
+                <button
+                  type="button"
+                  onClick={handleAddChurch}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    padding: "12px 18px",
+                    borderRadius: "10px",
+                    border: "1.5px dashed #7c3aed",
+                    background: "#fdf4ff",
+                    color: "#7c3aed",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    marginTop: "2px"
+                  }}
+                >
+                  <i className="ti ti-plus" style={{ fontSize: "16px" }}></i> Add More Church
+                </button>
               </div>
             </Card>
 

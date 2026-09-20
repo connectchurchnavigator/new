@@ -228,6 +228,24 @@ export default function TopNav() {
                       Dashboard
                     </Link>
                     <Link
+                      href="/dashboard?tab=my-profile"
+                      onClick={() => setIsDropdownOpen(false)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        padding: "9px 12px",
+                        borderRadius: "10px",
+                        fontSize: "13.5px",
+                        fontWeight: 600,
+                        color: "#334155",
+                        textDecoration: "none"
+                      }}
+                    >
+                      <i className="ti ti-user" style={{ fontSize: "16px", color: "#7c3aed" }}></i>
+                      My Profile
+                    </Link>
+                    <Link
                       href="/admin"
                       onClick={() => setIsDropdownOpen(false)}
                       style={{

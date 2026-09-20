@@ -107,42 +107,6 @@ export default function HeroHeader({
                 </Link>
               )}
             </div>
-
-            {/* Live Reactive Social Links Icons */}
-            <div id="tour-hero-socials" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {instagram && (
-                  <a href={instagram} target="_blank" rel="noreferrer" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e1306c', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
-                    <i className="ti ti-brand-instagram"></i>
-                  </a>
-                )}
-                {facebook && (
-                  <a href={facebook} target="_blank" rel="noreferrer" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1877f2', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
-                    <i className="ti ti-brand-facebook"></i>
-                  </a>
-                )}
-                {youtube && (
-                  <a href={youtube} target="_blank" rel="noreferrer" className="s-icon yt" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
-                    <i className="ti ti-brand-youtube"></i>
-                  </a>
-                )}
-                {twitter && (
-                  <a href={twitter} target="_blank" rel="noreferrer" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
-                    <i className="ti ti-brand-x"></i>
-                  </a>
-                )}
-                {tiktok && (
-                  <a href={tiktok} target="_blank" rel="noreferrer" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
-                    <i className="ti ti-brand-tiktok"></i>
-                  </a>
-                )}
-                {telegram && (
-                  <a href={telegram} target="_blank" rel="noreferrer" style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#24A1DE', textDecoration: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', fontSize: '20px' }}>
-                    <i className="ti ti-brand-telegram"></i>
-                  </a>
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </div>

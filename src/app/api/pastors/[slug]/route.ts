@@ -94,8 +94,9 @@ export async function GET(
 
   const combinedEvents = [...directEvents, ...hostedEvents];
 
-  // Parse core values
+  // Parse core values & associated churches
   let coreValues: string[] = [];
+  let associatedChurches: any[] = [];
   const rawVision = pastor.vision_statement || '';
   if (rawVision.includes('<!--CORE_VALUES:')) {
     try {
@@ -105,12 +106,24 @@ export async function GET(
       }
     } catch {}
   }
-  const cleanVision = rawVision.replace(/<!--CORE_VALUES:.*?-->/g, '').trim();
+  if (rawVision.includes('<!--ASSOCIATED_CHURCHES:')) {
+    try {
+      const match = rawVision.match(/<!--ASSOCIATED_CHURCHES:(.*?)-->/);
+      if (match && match[1]) {
+        associatedChurches = JSON.parse(match[1]);
+      }
+    } catch {}
+  }
+  const cleanVision = rawVision
+    .replace(/<!--CORE_VALUES:.*?-->/g, '')
+    .replace(/<!--ASSOCIATED_CHURCHES:.*?-->/g, '')
+    .trim();
 
   const profile: any = {
     ...pastor,
     vision_statement: cleanVision,
     core_values: coreValues,
+    associated_churches: associatedChurches.length > 0 ? associatedChurches : (pastor.church_name_cache ? [{ name: pastor.church_name_cache, location: pastor.city || '', image: '', link: '' }] : []),
     languages: (languagesRes.data ?? []).map((r) => r.language),
     tags: tagsRes.data ?? [],
     education: educationRes.data ?? [],

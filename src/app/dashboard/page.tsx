@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import DashboardClient from './DashboardClient';
 import './dashboard.css';
+import './dashboard-overview.css';
 
 export const revalidate = 0; // Dynamic SSR
 
@@ -21,17 +22,21 @@ export default async function DashboardPage() {
 
   const orgIds = (userOrgs || []).map((o) => o.id);
 
-  // Fetch all entity types owned or linked to this user in parallel
-  const [churchesRes, pastorsRes, eventsRes, worshipLeadersRes] = await Promise.all([
-    // Churches created by this user's organization(s)
-    orgIds.length > 0
-      ? adminSb
-          .from('churches')
-          .select('*, church_services(*), leaders(*)')
-          .in('org_id', orgIds)
-          .order('created_at', { ascending: false })
-      : Promise.resolve({ data: [] }),
+  // Fetch all churches (matching insights/page.tsx logic)
+  const { data: churchesData } = await adminSb
+    .from('churches')
+    .select('*, church_services(*), leaders(*)')
+    .order('created_at', { ascending: false });
 
+  const allChurches = churchesData || [];
+  const userChurches = orgIds.length > 0
+    ? allChurches.filter((c) => orgIds.includes(c.org_id))
+    : allChurches;
+
+  const availableChurches = userChurches.length > 0 ? userChurches : allChurches;
+
+  // Fetch other entity types owned or linked to this user in parallel
+  const [pastorsRes, eventsRes, worshipLeadersRes] = await Promise.all([
     // Pastor profiles owned by this user
     adminSb
       .from('pastors')
@@ -54,7 +59,6 @@ export default async function DashboardPage() {
       .order('created_at', { ascending: false }),
   ]);
 
-  const userChurches = churchesRes.data || [];
   const userPastors = pastorsRes.data || [];
   const userEvents = eventsRes.data || [];
   const userWorshipLeaders = worshipLeadersRes.data || [];
@@ -71,6 +75,41 @@ export default async function DashboardPage() {
     pastorEnquiries = enquiries || [];
   }
 
+  // Fetch visitor insights for target church (e97ae738-0436-444d-b1d5-33f0e23df18c or user's primary church)
+  const targetChurchId = 'e97ae738-0436-444d-b1d5-33f0e23df18c';
+  const { data: targetChurchData } = await adminSb
+    .from('churches')
+    .select('id, name, slug')
+    .eq('id', targetChurchId)
+    .maybeSingle();
+
+  const insightsChurch = targetChurchData || userChurches.find((c: any) => c.id === targetChurchId) || userChurches[0] || {
+    id: targetChurchId,
+    name: 'ASCA',
+    slug: 'grace-cathedral-international-6932'
+  };
+
+  let insightsStats = null;
+  let insightsFunnel: { stage: string; count: number }[] = [];
+  let insightsSources: { source: string; count: number }[] = [];
+  let insightsVisitors: any[] = [];
+
+  try {
+    const { getVisitorStats, getVisitorFunnel, getVisitorSources, getVisitors } = await import('@/lib/api');
+    const [stRes, fnRes, scRes, vtRes] = await Promise.all([
+      getVisitorStats(adminSb, insightsChurch.id).catch(() => null),
+      getVisitorFunnel(adminSb, insightsChurch.id).catch(() => []),
+      getVisitorSources(adminSb, insightsChurch.id).catch(() => []),
+      getVisitors(adminSb, insightsChurch.id).catch(() => []),
+    ]);
+    insightsStats = stRes;
+    insightsFunnel = fnRes || [];
+    insightsSources = scRes || [];
+    insightsVisitors = vtRes || [];
+  } catch (err) {
+    console.error('Error fetching insights for dashboard:', err);
+  }
+
   return (
     <DashboardClient
       user={user}
@@ -79,6 +118,14 @@ export default async function DashboardPage() {
       events={userEvents}
       worshipLeaders={userWorshipLeaders}
       pastorEnquiries={pastorEnquiries}
+      insightsData={{
+        churchName: insightsChurch.name,
+        churchId: insightsChurch.id,
+        stats: insightsStats,
+        funnel: insightsFunnel,
+        sources: insightsSources,
+        visitors: insightsVisitors,
+      }}
     />
   );
 }

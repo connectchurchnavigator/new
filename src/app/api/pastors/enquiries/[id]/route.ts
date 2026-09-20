@@ -29,7 +29,7 @@ export async function PATCH(
   }
 
   const { status } = body;
-  const validStatuses = ['new', 'read', 'responded', 'archived'];
+  const validStatuses = ['new', 'in_progress', 'read', 'responded', 'archived'];
   if (!status || !validStatuses.includes(status)) {
     return NextResponse.json({ error: 'Invalid status value' }, { status: 422 });
   }

@@ -15,6 +15,10 @@ type ContactSectionProps = {
     twitter?: string | null;
     tiktok?: string | null;
     telegram?: string | null;
+    whatsapp?: string | null;
+    linkedin?: string | null;
+    spotify?: string | null;
+    website?: string | null;
   };
 };
 
@@ -148,6 +152,126 @@ export default function ContactSection({ churchName, email, phone, address, soci
                 <div>
                   <div className="lbl">Email</div>
                   <div className="val">{email}</div>
+                </div>
+              </div>
+            )}
+
+            {socials && Object.values(socials).some(Boolean) && (
+              <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+                <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted)', marginBottom: '12px' }}>
+                  Connect With Us
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                  {socials.facebook && (
+                    <a
+                      href={socials.facebook.startsWith('http') ? socials.facebook : `https://${socials.facebook}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#1877f2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', boxShadow: '0 4px 12px rgba(24, 119, 242, 0.25)', transition: 'transform 0.15s ease' }}
+                      title="Facebook"
+                    >
+                      <i className="ti ti-brand-facebook"></i>
+                    </a>
+                  )}
+                  {socials.instagram && (
+                    <a
+                      href={socials.instagram.startsWith('http') ? socials.instagram : `https://${socials.instagram}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', boxShadow: '0 4px 12px rgba(225, 48, 108, 0.25)', transition: 'transform 0.15s ease' }}
+                      title="Instagram"
+                    >
+                      <i className="ti ti-brand-instagram"></i>
+                    </a>
+                  )}
+                  {socials.youtube && (
+                    <a
+                      href={socials.youtube.startsWith('http') ? socials.youtube : `https://${socials.youtube}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#ff0000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', boxShadow: '0 4px 12px rgba(255, 0, 0, 0.25)', transition: 'transform 0.15s ease' }}
+                      title="YouTube"
+                    >
+                      <i className="ti ti-brand-youtube"></i>
+                    </a>
+                  )}
+                  {socials.twitter && (
+                    <a
+                      href={socials.twitter.startsWith('http') ? socials.twitter : `https://${socials.twitter}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)', transition: 'transform 0.15s ease' }}
+                      title="X / Twitter"
+                    >
+                      <i className="ti ti-brand-x"></i>
+                    </a>
+                  )}
+                  {socials.linkedin && (
+                    <a
+                      href={socials.linkedin.startsWith('http') ? socials.linkedin : `https://${socials.linkedin}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#0a66c2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', boxShadow: '0 4px 12px rgba(10, 102, 194, 0.25)', transition: 'transform 0.15s ease' }}
+                      title="LinkedIn"
+                    >
+                      <i className="ti ti-brand-linkedin"></i>
+                    </a>
+                  )}
+                  {socials.tiktok && (
+                    <a
+                      href={socials.tiktok.startsWith('http') ? socials.tiktok : `https://${socials.tiktok}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)', transition: 'transform 0.15s ease' }}
+                      title="TikTok"
+                    >
+                      <i className="ti ti-brand-tiktok"></i>
+                    </a>
+                  )}
+                  {socials.whatsapp && (
+                    <a
+                      href={socials.whatsapp.startsWith('http') ? socials.whatsapp : `https://wa.me/${socials.whatsapp.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#25d366', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)', transition: 'transform 0.15s ease' }}
+                      title="WhatsApp"
+                    >
+                      <i className="ti ti-brand-whatsapp"></i>
+                    </a>
+                  )}
+                  {socials.spotify && (
+                    <a
+                      href={socials.spotify.startsWith('http') ? socials.spotify : `https://${socials.spotify}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#1db954', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', boxShadow: '0 4px 12px rgba(29, 185, 84, 0.25)', transition: 'transform 0.15s ease' }}
+                      title="Spotify"
+                    >
+                      <i className="ti ti-brand-spotify"></i>
+                    </a>
+                  )}
+                  {socials.telegram && (
+                    <a
+                      href={socials.telegram.startsWith('http') ? socials.telegram : `https://${socials.telegram}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#24A1DE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', boxShadow: '0 4px 12px rgba(36, 161, 222, 0.25)', transition: 'transform 0.15s ease' }}
+                      title="Telegram"
+                    >
+                      <i className="ti ti-brand-telegram"></i>
+                    </a>
+                  )}
+                  {socials.website && (
+                    <a
+                      href={socials.website.startsWith('http') ? socials.website : `https://${socials.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'linear-gradient(135deg, #f43f5e 0%, #7c3aed 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', boxShadow: '0 4px 12px rgba(124, 58, 237, 0.25)', transition: 'transform 0.15s ease' }}
+                      title="Website"
+                    >
+                      <i className="ti ti-world"></i>
+                    </a>
+                  )}
                 </div>
               </div>
             )}

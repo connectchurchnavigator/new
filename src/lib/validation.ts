@@ -50,6 +50,12 @@ export const pastorOnboardingSchema = z.object({
   title: optionalString,
   church_id: z.string().uuid().optional().or(z.literal('')).transform((v) => (v === '' ? undefined : v)),
   church_name_cache: optionalString,
+  associated_churches: z.array(z.object({
+    image: optionalString,
+    name: z.string().trim().max(160).optional().default(''),
+    location: optionalString,
+    link: optionalString,
+  })).optional().default([]),
   city: optionalString,
   country: z.string().trim().max(80).default('United Kingdom'),
 

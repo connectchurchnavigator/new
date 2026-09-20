@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     cover_photo_urls: data.cover_photo_urls || [],
 
       church_id: data.church_id ?? null,
-      church_name_cache: data.church_name_cache ?? null,
+      church_name_cache: (Array.isArray(data.associated_churches) && data.associated_churches.find((c: any) => c.name?.trim())?.name) || data.church_name_cache || null,
 
       city: data.city ?? null,
       country: data.country,
@@ -82,6 +82,9 @@ export async function POST(req: NextRequest) {
         let stmt = data.vision_statement || '';
         if (Array.isArray(data.core_values) && data.core_values.length > 0) {
           stmt = `${stmt.trim()} <!--CORE_VALUES:${JSON.stringify(data.core_values)}-->`;
+        }
+        if (Array.isArray(data.associated_churches) && data.associated_churches.length > 0) {
+          stmt = `${stmt.trim()} <!--ASSOCIATED_CHURCHES:${JSON.stringify(data.associated_churches)}-->`;
         }
         return stmt || null;
       })(),
