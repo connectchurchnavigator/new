@@ -27,13 +27,23 @@ function LoginForm() {
 
   const [authStep, setAuthStep] = useState(0);
 
-  // Auto-redirect if already signed in
+  // Auto-redirect if already signed in or when OAuth completes
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data?.user) {
         router.replace(nextUrl);
       }
     });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+        router.replace(nextUrl);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [nextUrl, router, supabase]);
 
   async function handleAuth(e: React.FormEvent) {
