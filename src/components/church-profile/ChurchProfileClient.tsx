@@ -13,6 +13,7 @@ import VisitorBanner from "./VisitorBanner";
 import ContactSection from "./ContactSection";
 import NearbySection from "./NearbySection";
 import GuidedTourModal from "./GuidedTourModal";
+import ChurchEventsSection from "./ChurchEventsSection";
 
 interface ChurchProfileClientProps {
   initialChurch: any;
@@ -22,6 +23,7 @@ interface ChurchProfileClientProps {
   telegramUrl?: string | null;
   initialBranchesCount: number;
   initialNearbyChurches?: any[];
+  initialEvents?: any[];
 }
 
 export default function ChurchProfileClient({
@@ -32,6 +34,7 @@ export default function ChurchProfileClient({
   telegramUrl,
   initialBranchesCount,
   initialNearbyChurches = [],
+  initialEvents = [],
 }: ChurchProfileClientProps) {
   // ── Single source of truth for all church data ──────────────
   const [church, setChurch] = useState(initialChurch);
@@ -131,7 +134,7 @@ export default function ChurchProfileClient({
           <ClientTabs
             activeTab={activeTab}
             onTabChange={(t) => setActiveTab(t)}
-            counts={{ team: church.church_teams?.length || 0, branches: church.branches?.length || 0, events: 0 }}
+            counts={{ team: church.church_teams?.length || 0, branches: church.branches?.length || 0, events: initialEvents.length }}
             teamContent={
               <OurTeamSection 
                 isEditing={isEditing} 
@@ -146,6 +149,12 @@ export default function ChurchProfileClient({
                 initialBranches={church.branches || []} 
                 onChurchChange={updateChurch} 
                 church={church}
+              />
+            }
+            eventsContent={
+              <ChurchEventsSection
+                events={initialEvents}
+                churchName={church.name}
               />
             }
             profileContent={
@@ -174,6 +183,9 @@ export default function ChurchProfileClient({
           email={church.email}
           phone={church.phone}
           address={church.address_line}
+          church={church}
+          isEditing={isEditing}
+          onChurchChange={updateChurch}
           socials={{
             facebook: church.social_facebook || church.facebook,
             instagram: church.social_instagram || church.instagram,

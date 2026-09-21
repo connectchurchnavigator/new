@@ -76,10 +76,10 @@ export default async function Home() {
         color: "#ffffff",
         padding: "90px 24px 110px",
         textAlign: "center",
-        overflow: "hidden",
+        zIndex: 20,
       }}>
         {/* Background Hero Image */}
-        <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+        <div style={{ position: "absolute", inset: 0, zIndex: 0, overflow: "hidden" }}>
           <Image
             src="/hero-banner.jpg"
             alt="Church Sanctuary Worship"

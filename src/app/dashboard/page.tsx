@@ -7,7 +7,15 @@ import './dashboard-overview.css';
 
 export const revalidate = 0; // Dynamic SSR
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  searchParams?: Promise<{ section?: string; church_id?: string }> | { section?: string; church_id?: string };
+}
+
+export default async function DashboardPage(props: DashboardPageProps) {
+  const resolvedSearchParams = props.searchParams ? await props.searchParams : {};
+  const initialSection = (resolvedSearchParams.section as any) || 'overview';
+  const requestedChurchId = resolvedSearchParams.church_id;
+
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
@@ -75,8 +83,8 @@ export default async function DashboardPage() {
     pastorEnquiries = enquiries || [];
   }
 
-  // Fetch visitor insights for target church (e97ae738-0436-444d-b1d5-33f0e23df18c or user's primary church)
-  const targetChurchId = 'e97ae738-0436-444d-b1d5-33f0e23df18c';
+  // Fetch visitor insights for target church (requestedChurchId or e97ae738-0436-444d-b1d5-33f0e23df18c or user's church)
+  const targetChurchId = requestedChurchId || 'e97ae738-0436-444d-b1d5-33f0e23df18c';
   const { data: targetChurchData } = await adminSb
     .from('churches')
     .select('id, name, slug')
@@ -91,7 +99,7 @@ export default async function DashboardPage() {
 
   let insightsStats = null;
   let insightsFunnel: { stage: string; count: number }[] = [];
-  let insightsSources: { source: string; count: number }[] = [];
+  let insightsSources: any = [];
   let insightsVisitors: any[] = [];
 
   try {
@@ -118,6 +126,7 @@ export default async function DashboardPage() {
       events={userEvents}
       worshipLeaders={userWorshipLeaders}
       pastorEnquiries={pastorEnquiries}
+      initialSection={initialSection}
       insightsData={{
         churchName: insightsChurch.name,
         churchId: insightsChurch.id,

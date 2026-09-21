@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { sendEmailAction } from '@/app/actions/sendEmail';
+import EditContactModal from './EditContactModal';
 
 type ContactSectionProps = {
   churchName: string;
@@ -20,12 +21,16 @@ type ContactSectionProps = {
     spotify?: string | null;
     website?: string | null;
   };
+  church?: any;
+  isEditing?: boolean;
+  onChurchChange?: (church: any) => void;
 };
 
-export default function ContactSection({ churchName, email, phone, address, socials }: ContactSectionProps) {
+export default function ContactSection({ churchName, email, phone, address, socials, church, isEditing, onChurchChange }: ContactSectionProps) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -117,7 +122,32 @@ export default function ContactSection({ churchName, email, phone, address, soci
 
         {/* Right column - Info */}
         <div>
-          <h2>Get in touch</h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <h2 style={{ margin: 0 }}>Get in touch</h2>
+            {isEditing && (
+              <button
+                onClick={() => setShowEditModal(true)}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: '#f8fafc',
+                  border: '1px solid var(--line)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'var(--ink)'
+                }}
+                title="Edit contact and location details"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                </svg>
+              </button>
+            )}
+          </div>
 
           <div className="touch-card">
             {address && (
@@ -276,10 +306,64 @@ export default function ContactSection({ churchName, email, phone, address, soci
               </div>
             )}
           </div>
-
-
         </div>
       </div>
+
+      {showEditModal && church && (
+        <EditContactModal
+          initialContact={{
+            address: church.address_line || "",
+            country: church.country || "GB",
+            city: church.city || "",
+            latitude: church.latitude,
+            longitude: church.longitude,
+            phone: church.phone || "",
+            email: church.email || "",
+            facebook: church.social_facebook || church.facebook || "",
+            instagram: church.social_instagram || church.instagram || "",
+            youtube: (church.social_youtube || church.youtube || "").split('|||')[0] || "",
+            twitter: church.social_twitter || church.twitter || (() => {
+              const yt = church.social_youtube || church.youtube || "";
+              const match = yt.match(/\|\|\|twitter:(.*?)(?:\|\|\||$)/);
+              return match ? match[1] : "";
+            })(),
+            tiktok: church.social_tiktok || church.tiktok || (() => {
+              const yt = church.social_youtube || church.youtube || "";
+              const match = yt.match(/\|\|\|tiktok:(.*?)(?:\|\|\||$)/);
+              return match ? match[1] : "";
+            })(),
+            telegram: church.social_telegram || church.telegram || (() => {
+              const yt = church.social_youtube || church.youtube || "";
+              const match = yt.match(/\|\|\|telegram:(.*?)(?:\|\|\||$)/);
+              return match ? match[1] : "";
+            })()
+          }}
+          onClose={() => setShowEditModal(false)}
+          onSave={(data) => {
+            const updated = {
+              ...church,
+              address_line: data.address,
+              city: data.city || church.city,
+              country: data.country || church.country,
+              latitude: data.latitude ?? church.latitude,
+              longitude: data.longitude ?? church.longitude,
+              phone: data.phone,
+              email: data.email,
+              facebook: data.facebook,
+              instagram: data.instagram,
+              youtube: data.youtube,
+              social_facebook: data.facebook,
+              social_instagram: data.instagram,
+              social_youtube: data.youtube,
+              social_twitter: data.twitter,
+              social_tiktok: data.tiktok,
+              social_telegram: data.telegram
+            };
+            onChurchChange?.(updated);
+            setShowEditModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

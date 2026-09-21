@@ -12,13 +12,18 @@ interface ChurchOption {
   slug: string;
 }
 
+interface SourceItem {
+  source: string;
+  count: number;
+}
+
 interface InsightsClientProps {
   churchName: string;
   churchId: string;
   availableChurches?: ChurchOption[];
   stats: { total: number; new_this_month: number; returning_rate: number; at_risk: number } | null;
   funnel: { stage: string; count: number }[];
-  sources: { source: string; count: number }[];
+  sources: { visitorSources?: SourceItem[]; trafficChannels?: SourceItem[] } | SourceItem[];
   visitors: any[];
   embedded?: boolean;
   onSelectChurch?: (churchId: string) => void;
@@ -126,16 +131,38 @@ export default function InsightsClient({
     setVisitors(initialVisitors);
   }, [initialChurchId, initialStats, initialFunnel, initialSources, initialVisitors]);
 
+  // Church search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredChurches = availableChurches.filter((c) =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const activeChurchName = availableChurches.find(c => c.id === currentChurchId)?.name || initialChurchName;
 
   const handleChurchChange = async (newChurchId: string) => {
     setCurrentChurchId(newChurchId);
+    setSearchQuery('');
+    setIsDropdownOpen(false);
     if (onSelectChurch) {
       onSelectChurch(newChurchId);
     }
 
     if (!embedded) {
-      router.push(`/dashboard/insights?church_id=${newChurchId}`);
+      router.push(`/dashboard?section=visitor-insights&church_id=${newChurchId}`);
       return;
     }
 
@@ -172,8 +199,24 @@ export default function InsightsClient({
     return { ...s, count: found ? found.count : 0 };
   });
 
-  // Process Sources
-  const totalSources = sources.reduce((sum, s) => sum + s.count, 0);
+  // Process Sources (Strictly based on registered visitors)
+  const visitorSourcesList = Array.isArray(sources)
+    ? sources.filter(s => ['Friend', 'Social Media', 'Walk-in', 'Event', 'Online Search', 'Invited by member', 'Word of mouth'].some(k => s.source?.toLowerCase().includes(k.toLowerCase())))
+    : (sources?.visitorSources || []);
+
+  // Fallback: If no visitor sources in array, use visitor records directly
+  const computedVisitorSources = visitorSourcesList.length > 0
+    ? visitorSourcesList
+    : (() => {
+        const counts: Record<string, number> = {};
+        visitors.forEach((v) => {
+          const s = v.source || 'Direct / Unknown';
+          counts[s] = (counts[s] || 0) + 1;
+        });
+        return Object.entries(counts).map(([source, count]) => ({ source, count }));
+      })();
+
+  const totalVisitorSources = computedVisitorSources.reduce((sum, s) => sum + s.count, 0);
 
   const exportToCSV = () => {
     if (!visitors || visitors.length === 0) return;
@@ -262,28 +305,182 @@ export default function InsightsClient({
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '13.5px', fontWeight: 800, color: '#64748b' }}>Select Church:</span>
               {availableChurches.length > 0 ? (
-                <select
-                  value={currentChurchId}
-                  onChange={(e) => handleChurchChange(e.target.value)}
-                  style={{
-                    padding: '8px 14px',
-                    borderRadius: '10px',
-                    border: '1.5px solid #cbd5e1',
-                    background: '#f8fafc',
-                    fontSize: '13.5px',
-                    fontWeight: 700,
-                    color: '#0f172a',
-                    outline: 'none',
-                    cursor: 'pointer',
-                    minWidth: '220px',
-                  }}
-                >
-                  {availableChurches.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <div ref={dropdownRef} style={{ position: 'relative', minWidth: '260px' }}>
+                  <div
+                    onClick={() => setIsDropdownOpen((prev) => !prev)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 14px',
+                      borderRadius: '10px',
+                      border: isDropdownOpen ? '1.5px solid #7c3aed' : '1.5px solid #cbd5e1',
+                      background: '#ffffff',
+                      fontSize: '13.5px',
+                      fontWeight: 700,
+                      color: '#0f172a',
+                      cursor: 'pointer',
+                      boxShadow: isDropdownOpen ? '0 0 0 3px rgba(124, 58, 237, 0.12)' : '0 1px 2px rgba(0,0,0,0.04)',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                      </svg>
+                      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {activeChurchName}
+                      </span>
+                    </div>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#64748b"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{
+                        transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease',
+                        flexShrink: 0,
+                        marginLeft: '8px',
+                      }}
+                    >
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </div>
+
+                  {isDropdownOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 6px)',
+                        left: 0,
+                        right: 0,
+                        background: '#ffffff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                        zIndex: 100,
+                        overflow: 'hidden',
+                        minWidth: '280px',
+                      }}
+                    >
+                      {/* Search box input inside dropdown */}
+                      <div style={{ padding: '8px 10px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: '#ffffff',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            padding: '6px 10px',
+                          }}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                          </svg>
+                          <input
+                            type="text"
+                            placeholder="Search your churches..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            autoFocus
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              border: 'none',
+                              outline: 'none',
+                              fontSize: '12.5px',
+                              fontWeight: 600,
+                              color: '#0f172a',
+                              width: '100%',
+                              background: 'transparent',
+                            }}
+                          />
+                          {searchQuery && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSearchQuery('');
+                              }}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: 0,
+                                color: '#94a3b8',
+                                display: 'flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Dropdown Options List */}
+                      <div style={{ maxHeight: '220px', overflowY: 'auto', padding: '4px 0' }}>
+                        {filteredChurches.length > 0 ? (
+                          filteredChurches.map((c) => {
+                            const isSelected = c.id === currentChurchId;
+                            return (
+                              <div
+                                key={c.id}
+                                onClick={() => handleChurchChange(c.id)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '9px 14px',
+                                  cursor: 'pointer',
+                                  background: isSelected ? '#f5f3ff' : 'transparent',
+                                  transition: 'background 0.15s ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isSelected) e.currentTarget.style.background = '#f8fafc';
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isSelected) e.currentTarget.style.background = 'transparent';
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span
+                                    style={{
+                                      fontSize: '13px',
+                                      fontWeight: isSelected ? 800 : 600,
+                                      color: isSelected ? '#7c3aed' : '#1e293b',
+                                    }}
+                                  >
+                                    {c.name}
+                                  </span>
+                                </div>
+                                {isSelected && (
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                  </svg>
+                                )}
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div style={{ padding: '14px', textAlign: 'center', fontSize: '12.5px', color: '#94a3b8', fontWeight: 600 }}>
+                            No churches match "{searchQuery}"
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <span style={{ color: '#7c3aed', fontWeight: 800, fontSize: '14px' }}>{activeChurchName}</span>
               )}
@@ -348,26 +545,23 @@ export default function InsightsClient({
           </div>
           
           <div className="panel">
-            <div className="ph"><h3>How they found you</h3></div>
+            <div className="ph">
+              <h3>How they found you</h3>
+              <span className="hint">based on registered visitors ({totalVisitorSources} total)</span>
+            </div>
             <div>
-              {sources.length > 0 ? sources.map(s => {
-                const c = SOURCE_COLORS[s.source] || '#94a3b8';
-                const pc = totalSources > 0 ? Math.round((s.count / totalSources) * 100) : 0;
-                let iconClass = 'ti-point-filled';
-                if (s.source === 'Search') iconClass = 'ti-search';
-                else if (s.source === 'Ekklesia directory') iconClass = 'ti-list-search';
-                else if (s.source === 'Shared links') iconClass = 'ti-link';
-                else if (s.source === 'Social media') iconClass = 'ti-brand-instagram';
-                else if (s.source === 'QR / in person') iconClass = 'ti-qrcode';
+              {computedVisitorSources.length > 0 ? computedVisitorSources.map(s => {
+                const c = SOURCE_COLORS[s.source] || '#8b5cf6';
+                const pc = totalVisitorSources > 0 ? Math.round((s.count / totalVisitorSources) * 100) : 0;
                 
                 return (
                   <div className="src" key={s.source}>
-                    <span className="nm"><i style={{ background: c }} className={`ti ${iconClass}`}></i> {s.source || 'Unknown'}</span>
+                    <span className="nm"><i style={{ background: c }} className="ti ti-user-check"></i> {s.source || 'Unknown'}</span>
                     <div className="bar"><i style={{ width: `${pc}%`, background: c }}></i></div>
-                    <span className="pc">{pc}%</span>
+                    <span className="pc">{pc}% <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500 }}>({s.count})</span></span>
                   </div>
                 );
-              }) : <p className="muted" style={{ fontSize: 13 }}>No source data yet.</p>}
+              }) : <p className="muted" style={{ fontSize: 13, margin: 0 }}>No visitor acquisition data yet.</p>}
             </div>
           </div>
         </div>

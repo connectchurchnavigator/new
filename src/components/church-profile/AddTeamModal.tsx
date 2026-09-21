@@ -10,25 +10,52 @@ interface AddTeamModalProps {
 }
 
 export default function AddTeamModal({ onClose, onSave, onDelete, initialData }: AddTeamModalProps) {
+  // Parse any serialized metadata from initialData.about if present
+  let parsedMeta: any = {};
+  let cleanAbout = initialData?.about || "";
+  if (typeof initialData?.about === "string" && initialData.about.trim().startsWith("{")) {
+    try {
+      parsedMeta = JSON.parse(initialData.about);
+      cleanAbout = parsedMeta.about || "";
+    } catch {}
+  }
+
+  const initialMembers = (
+    initialData?.teamMembers ||
+    (initialData?.church_team_members || []).map((m: any) => ({
+      name: m.name || "",
+      photo: m.photo_url || m.photo || "",
+    }))
+  ).map((m: any) => ({
+    name: m.name || "",
+    photo: m.photo || m.photo_url || "",
+  }));
+
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
-    type: initialData?.type || "",
-    tagline: initialData?.tagline || "",
-    about: initialData?.about || "",
-    whatWeDo: initialData?.whatWeDo || "",
-    impact: initialData?.impact || "",
-    whenWeServe: initialData?.whenWeServe || "",
-    leaderName: initialData?.leaderName || "",
-    leaderRole: initialData?.leaderRole || "",
-    youtubeUrl: initialData?.youtubeUrl || ""
+    type: initialData?.type || parsedMeta.type || "",
+    tagline: initialData?.tagline || parsedMeta.tagline || "",
+    about: cleanAbout,
+    whatWeDo: initialData?.whatWeDo || parsedMeta.whatWeDo || "",
+    impact: initialData?.impact || parsedMeta.impact || "",
+    whenWeServe: initialData?.whenWeServe || parsedMeta.whenWeServe || "",
+    leaderName: initialData?.leaderName || parsedMeta.leaderName || "",
+    leaderRole: initialData?.leaderRole || parsedMeta.leaderRole || "",
+    youtubeUrl: initialData?.youtubeUrl || initialData?.youtube_url || "",
   });
 
-  const [coverUrl, setCoverUrl] = useState<string>(initialData?.coverUrl || "");
+  const [coverUrl, setCoverUrl] = useState<string>(initialData?.coverUrl || initialData?.cover_url || "");
   const [coverUrlInput, setCoverUrlInput] = useState("");
   
-  const [leaderPhoto, setLeaderPhoto] = useState<string>(initialData?.leaderPhoto || "");
-  const [teamMembers, setTeamMembers] = useState<{photo: string, name: string}[]>(initialData?.teamMembers || []);
-  const [gallery, setGallery] = useState<string[]>(initialData?.gallery || []);
+  const [leaderPhoto, setLeaderPhoto] = useState<string>(initialData?.leaderPhoto || parsedMeta.leaderPhoto || "");
+  const [teamMembers, setTeamMembers] = useState<{photo: string, name: string}[]>(initialMembers);
+  const [gallery, setGallery] = useState<string[]>(
+    Array.isArray(initialData?.gallery)
+      ? initialData.gallery
+      : Array.isArray(parsedMeta.gallery)
+      ? parsedMeta.gallery
+      : []
+  );
   const [galleryUrlInput, setGalleryUrlInput] = useState("");
 
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -48,6 +75,28 @@ export default function AddTeamModal({ onClose, onSave, onDelete, initialData }:
       };
       reader.readAsDataURL(file);
     }
+    e.target.value = "";
+  };
+
+  const handleMultipleFilesUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    onAddMultiple: (base64s: string[]) => void
+  ) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const fileList = Array.from(files);
+      const readPromises = fileList.map((f) => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(f);
+        });
+      });
+      Promise.all(readPromises).then((results) => {
+        onAddMultiple(results.filter(Boolean));
+      });
+    }
+    e.target.value = "";
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -166,9 +215,23 @@ export default function AddTeamModal({ onClose, onSave, onDelete, initialData }:
                 </div>
               ))}
             </div>
-            <input type="file" accept="image/*" style={{ display: "none" }} ref={memberInputRef} onChange={(e) => handleFileUpload(e, (b64) => setTeamMembers([...teamMembers, { photo: b64, name: "" }]))} />
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: "none" }}
+              ref={memberInputRef}
+              onChange={(e) =>
+                handleMultipleFilesUpload(e, (b64s) =>
+                  setTeamMembers((prev) => [
+                    ...prev,
+                    ...b64s.map((photo) => ({ photo, name: "" })),
+                  ])
+                )
+              }
+            />
             <button onClick={() => memberInputRef.current?.click()} style={{ background: "#f8fafc", color: "var(--ink)", border: "1px solid var(--line)", padding: "8px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer", borderStyle: "solid" }}>
-              + Add member photo
+              + Add member photo(s)
             </button>
           </div>
 
@@ -181,10 +244,19 @@ export default function AddTeamModal({ onClose, onSave, onDelete, initialData }:
                 </div>
               ))}
             </div>
-            <input type="file" accept="image/*" style={{ display: "none" }} ref={galleryInputRef} onChange={(e) => handleFileUpload(e, (b64) => setGallery([...gallery, b64]))} />
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: "none" }}
+              ref={galleryInputRef}
+              onChange={(e) =>
+                handleMultipleFilesUpload(e, (b64s) => setGallery((prev) => [...prev, ...b64s]))
+              }
+            />
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
               <button onClick={() => galleryInputRef.current?.click()} style={{ background: "#f8fafc", color: "var(--ink)", border: "1px solid var(--line)", padding: "8px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer", borderStyle: "solid" }}>
-                + Add gallery image
+                + Add gallery images
               </button>
               <span style={{ fontSize: "12px", color: "var(--muted)" }}>or paste URL</span>
               <input value={galleryUrlInput} onChange={(e) => setGalleryUrlInput(e.target.value)} placeholder="https://..." style={{ flex: 1, minWidth: "150px", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--line)", outline: "none", fontSize: "13px" }} />

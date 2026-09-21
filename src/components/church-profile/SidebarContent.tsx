@@ -81,10 +81,10 @@ export default function SidebarContent({ initialChurch, isEditing, onChurchChang
       {(liveStreamUrl || realYoutube) && (
         <div className="panel" style={{ background: "white", borderRadius: "20px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", marginBottom: "24px", padding: "24px" }}>
           <div className="sec-head" style={{ marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
-            <span className="ic" style={{ width: "30px", height: "30px", background: "#fb7185", color: "white", borderRadius: "9px", display: "grid", placeItems: "center" }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 3l14 9-14 9V3z" fill="currentColor"/></svg>
+            <span className="ic" style={{ width: "30px", height: "30px", background: "#ef4444", color: "white", borderRadius: "9px", display: "grid", placeItems: "center" }}>
+              <i className="ti ti-brand-youtube" style={{ fontSize: "16px" }}></i>
             </span>
-            <h4 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: 0 }}>Watch Live</h4>
+            <h4 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: 0 }}>YouTube Channel</h4>
           </div>
           <div>
             <a href={liveStreamUrl || realYoutube || "#"} target="_blank" rel="noreferrer" style={{ display: "block", position: "relative", borderRadius: "16px", overflow: "hidden", height: "200px", textDecoration: "none" }}>

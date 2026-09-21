@@ -1,9 +1,4 @@
 import { redirect } from 'next/navigation';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { createAdminClient } from '@/lib/supabase-admin';
-import { getVisitorStats, getVisitorFunnel, getVisitorSources, getVisitors } from '@/lib/api';
-import InsightsClient from './InsightsClient';
-import '../dashboard.css'; // Reuse dashboard styles
 
 export const dynamic = 'force-dynamic';
 
@@ -12,97 +7,10 @@ export default async function InsightsPage({
 }: {
   searchParams?: Promise<{ church_id?: string }> | { church_id?: string };
 }) {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const resolvedSearchParams = searchParams ? await searchParams : {};
-  const requestedChurchId = resolvedSearchParams.church_id;
-
-  const adminClient = createAdminClient();
-
-  // 1. Fetch user's organizations
-  const { data: userOrgs } = await adminClient
-    .from('organizations')
-    .select('*')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: false });
-
-  const orgIds = (userOrgs || []).map((o) => o.id);
-
-  // 2. Fetch churches belonging to user's orgs or all churches if none
-  const { data: churchesData } = await adminClient
-    .from('churches')
-    .select('id, name, slug, org_id, is_hq')
-    .order('created_at', { ascending: false });
-
-  const allChurches = churchesData || [];
-  const userChurches = orgIds.length > 0
-    ? allChurches.filter((c) => orgIds.includes(c.org_id))
-    : allChurches;
-
-  if (!userChurches.length && !allChurches.length) {
-    redirect('/onboarding');
+  const resolved = searchParams ? await searchParams : {};
+  const churchId = resolved.church_id;
+  if (churchId) {
+    redirect(`/dashboard?section=visitor-insights&church_id=${churchId}`);
   }
-
-  const availableChurches = userChurches.length > 0 ? userChurches : allChurches;
-
-  // Selected church (from searchParam, or HQ, or first)
-  let activeChurch = requestedChurchId
-    ? availableChurches.find((c) => c.id === requestedChurchId)
-    : null;
-
-  // If requestedChurchId is not in the list, fetch it directly (e.g. admin or created before org linking)
-  if (!activeChurch && requestedChurchId) {
-    const { data: directChurch } = await adminClient
-      .from('churches')
-      .select('id, name, slug, org_id, is_hq')
-      .eq('id', requestedChurchId)
-      .maybeSingle();
-
-    if (directChurch) {
-      activeChurch = directChurch;
-      if (!availableChurches.some(c => c.id === directChurch.id)) {
-        availableChurches.unshift(directChurch);
-      }
-    }
-  }
-
-  if (!activeChurch) {
-    activeChurch = availableChurches.find((b) => b.is_hq) || availableChurches[0];
-  }
-
-  // Fetch insights data for active church safely using admin client
-  let stats = null;
-  let funnel: { stage: string; count: number }[] = [];
-  let sources: { source: string; count: number }[] = [];
-  let visitors: any[] = [];
-
-  try {
-    const [statsRes, funnelRes, sourcesRes, visitorsRes] = await Promise.all([
-      getVisitorStats(adminClient, activeChurch.id).catch(() => null),
-      getVisitorFunnel(adminClient, activeChurch.id).catch(() => []),
-      getVisitorSources(adminClient, activeChurch.id).catch(() => []),
-      getVisitors(adminClient, activeChurch.id).catch(() => []),
-    ]);
-
-    stats = statsRes;
-    funnel = funnelRes || [];
-    sources = sourcesRes || [];
-    visitors = visitorsRes || [];
-  } catch (err) {
-    console.error("Error fetching insights for church:", err);
-  }
-
-  return (
-    <InsightsClient 
-      churchName={activeChurch.name} 
-      churchId={activeChurch.id}
-      availableChurches={availableChurches}
-      stats={stats} 
-      funnel={funnel} 
-      sources={sources} 
-      visitors={visitors} 
-    />
-  );
+  redirect('/dashboard?section=visitor-insights');
 }

@@ -102,16 +102,32 @@ export async function POST(req: NextRequest) {
       await sb.from('church_teams').delete().eq('church_id', churchId);
       if (body.teams.length > 0) {
         for (const t of body.teams) {
+          // Build structured payload for about to preserve rich metadata (type, tagline, whatWeDo, impact, whenWeServe, leader, gallery)
+          // without needing schema changes in Supabase
+          const teamMetadata = {
+            about:       t.about ?? '',
+            type:        t.type ?? '',
+            tagline:     t.tagline ?? '',
+            whatWeDo:    t.whatWeDo ?? '',
+            impact:      t.impact ?? '',
+            whenWeServe: t.whenWeServe ?? '',
+            leaderName:  t.leaderName ?? '',
+            leaderRole:  t.leaderRole ?? '',
+            leaderPhoto: t.leaderPhoto ?? '',
+            gallery:     Array.isArray(t.gallery) ? t.gallery : [],
+          };
+          const serializedAbout = JSON.stringify(teamMetadata);
+
           const { data: insertedTeam, error: tError } = await sb.from('church_teams').insert({
             church_id:   churchId,
             name:        t.name,
-            about:       t.about        ?? null,
+            about:       serializedAbout,
             youtube_url: t.youtubeUrl   ?? t.youtube_url ?? null,
             cover_url:   t.coverUrl     ?? t.cover_url   ?? null,
           }).select().single();
           if (tError) throw tError;
 
-          const members = t.teamMembers ?? t.members ?? [];
+          const members = t.teamMembers ?? t.church_team_members ?? t.members ?? [];
           if (Array.isArray(members) && members.length > 0) {
             const memberRows = members.map((m: any, i: number) => ({
               team_id:       insertedTeam.id,

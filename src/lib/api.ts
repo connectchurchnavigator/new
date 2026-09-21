@@ -276,10 +276,11 @@ export async function getVisitorFunnel(sb: SupabaseClient, churchId: string) {
 }
 
 export async function getVisitorSources(sb: SupabaseClient, churchId: string) {
+  // 1. Registered visitors' acquisition source (from visitors table via rpc)
   const { data: visitorSources, error: visitorError } = await sb.rpc('visitor_sources', { p_church: churchId });
   if (visitorError) throw visitorError;
-  
-  // Fetch anonymous listing views sources
+
+  // 2. Web listing view traffic channels (from listing_views table)
   const { data: viewSources, error: viewError } = await sb
     .from('listing_views')
     .select('source')
@@ -287,18 +288,25 @@ export async function getVisitorSources(sb: SupabaseClient, churchId: string) {
     
   if (viewError) throw viewError;
   
-  // Combine sources manually
-  const sourceMap = new Map<string, number>();
-  (visitorSources || []).forEach((vs: any) => sourceMap.set(vs.source, vs.count));
-  
+  const trafficMap = new Map<string, number>();
   (viewSources || []).forEach(v => {
     const s = v.source || 'Unknown';
-    sourceMap.set(s, (sourceMap.get(s) || 0) + 1);
+    trafficMap.set(s, (trafficMap.get(s) || 0) + 1);
   });
   
-  const combined = Array.from(sourceMap.entries()).map(([source, count]) => ({ source, count }));
-  combined.sort((a, b) => b.count - a.count);
-  return combined;
+  const trafficChannels = Array.from(trafficMap.entries()).map(([source, count]) => ({ source, count }));
+  trafficChannels.sort((a, b) => b.count - a.count);
+
+  const registeredVisitors = (visitorSources || []).map((vs: any) => ({
+    source: vs.source || 'Unknown',
+    count: Number(vs.count) || 0,
+  }));
+  registeredVisitors.sort((a: any, b: any) => b.count - a.count);
+
+  return {
+    visitorSources: registeredVisitors,
+    trafficChannels,
+  };
 }
 
 export async function upsertVisitor(sb: SupabaseClient, churchId: string, v: Record<string, any>) {

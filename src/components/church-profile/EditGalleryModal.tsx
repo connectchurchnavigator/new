@@ -14,14 +14,21 @@ export default function EditGalleryModal({ initialGallery, onClose, onSave }: Ed
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setGallery([...gallery, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const fileList = Array.from(files);
+      const readPromises = fileList.map((f) => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(f);
+        });
+      });
+      Promise.all(readPromises).then((results) => {
+        setGallery((prev) => [...prev, ...results.filter(Boolean)]);
+      });
     }
+    e.target.value = "";
   };
 
   const addUrl = () => {
@@ -64,9 +71,9 @@ export default function EditGalleryModal({ initialGallery, onClose, onSave }: Ed
           <div>
             <label style={{ display: "block", fontSize: "14px", fontWeight: 800, color: "var(--ink)", marginBottom: "8px" }}>Add Image</label>
             <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              <input type="file" accept="image/*" style={{ display: "none" }} ref={fileInputRef} onChange={handleFileUpload} />
+              <input type="file" accept="image/*" multiple style={{ display: "none" }} ref={fileInputRef} onChange={handleFileUpload} />
               <button onClick={() => fileInputRef.current?.click()} style={{ padding: "10px 16px", borderRadius: "10px", background: "#f8fafc", border: "1px solid var(--line)", color: "var(--ink)", fontWeight: 700, fontSize: "14px", cursor: "pointer" }}>
-                Upload File
+                Upload File(s)
               </button>
               <span style={{ fontSize: "14px", color: "var(--muted)", fontWeight: 700 }}>OR</span>
               <div style={{ display: "flex", flex: 1, gap: "8px" }}>

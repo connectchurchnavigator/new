@@ -17,6 +17,7 @@ interface DashboardClientProps {
   events: any[];
   worshipLeaders?: any[];
   pastorEnquiries?: any[];
+  initialSection?: NavSection;
   insightsData?: {
     churchName: string;
     churchId: string;
@@ -38,11 +39,18 @@ export default function DashboardClient({
   events = [],
   worshipLeaders = [],
   pastorEnquiries = [],
+  initialSection = 'overview',
   insightsData,
 }: DashboardClientProps) {
   const router = useRouter();
-  // Main navigation section — defaults to 'overview' per user request
-  const [section, setSection] = useState<NavSection>('overview');
+  // Main navigation section — defaults to initialSection (e.g. 'visitor-insights') or 'overview'
+  const [section, setSection] = useState<NavSection>(initialSection);
+
+  useEffect(() => {
+    if (initialSection) {
+      setSection(initialSection);
+    }
+  }, [initialSection]);
 
   // User menu dropdown state in header
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -1724,85 +1732,6 @@ export default function DashboardClient({
                 </div>
               </div>
 
-              {/* PROFILE COMPLETENESS RING & CHECKLIST */}
-              <div className="d2-card">
-                <div className="d2-card-header">
-                  <div>
-                    <div className="d2-card-title">
-                      <i className="ti ti-rosette-discount-check" style={{ color: 'var(--ek2-purple)' }}></i>
-                      Profile Quality & Completeness
-                    </div>
-                    <div className="d2-card-sub">
-                      {selectedOverviewEntity ? `Optimizing: ${selectedOverviewEntity.title}` : 'Optimizing your portfolio profile'}
-                    </div>
-                  </div>
-                  {selectedOverviewEntity && (
-                    <button
-                      className="d2-btn d2-btn-ghost"
-                      onClick={() => openDrawerForEntity(selectedOverviewEntity)}
-                    >
-                      <i className="ti ti-pencil"></i> Quick Edit
-                    </button>
-                  )}
-                </div>
-
-                <div className="d2-ring-container">
-                  <div className="d2-ring-box">
-                    <svg width="110" height="110" viewBox="0 0 110 110">
-                      <circle
-                        cx="55"
-                        cy="55"
-                        r="44"
-                        fill="none"
-                        stroke="#f1f5f9"
-                        strokeWidth="10"
-                      />
-                      <circle
-                        cx="55"
-                        cy="55"
-                        r="44"
-                        fill="none"
-                        stroke="url(#ek2GradOverview)"
-                        strokeWidth="10"
-                        strokeDasharray={2 * Math.PI * 44}
-                        strokeDashoffset={2 * Math.PI * 44 * (1 - completeness.score / 100)}
-                        strokeLinecap="round"
-                        style={{ transition: 'stroke-dashoffset 0.6s ease' }}
-                      />
-                      <defs>
-                        <linearGradient id="ek2GradOverview" x1="0" y1="0" x2="1" y2="1">
-                          <stop offset="0%" stopColor="#f43f5e" />
-                          <stop offset="100%" stopColor="#7c3aed" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    <div className="d2-ring-inner">
-                      <div className="d2-ring-pct">{completeness.score}%</div>
-                      <div className="d2-ring-label">Ready</div>
-                    </div>
-                  </div>
-
-                  <div className="d2-todo-list">
-                    {completeness.items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className={`d2-todo-item ${item.done ? 'done' : 'todo'}`}
-                      >
-                        <i
-                          className={item.done ? 'ti ti-circle-check-filled' : 'ti ti-circle'}
-                          style={{ fontSize: 18, color: item.done ? '#16a34a' : '#94a3b8' }}
-                        ></i>
-                        <span style={{ flex: 1 }}>{item.label}</span>
-                        {!item.done && (
-                          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ek2-purple)' }}>
-                            {item.gain}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
 
               {/* 6-STAGE VISITOR JOURNEY FUNNEL */}
               <div className="d2-card">

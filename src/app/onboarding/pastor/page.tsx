@@ -610,9 +610,9 @@ function PastorOnboardingContent() {
   }
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-surface" style={{ background: '#f8f8fb' }}>
       <TopNav />
-      <div className="max-w-[900px] mx-auto px-6 py-8">
+      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "32px 24px", width: "100%" }}>
         {/* Form Wizard Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

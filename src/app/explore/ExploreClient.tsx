@@ -1692,8 +1692,8 @@ export default function ExploreClient({
         
         {/* FILTERS COLUMN (Left) */}
         <div style={{
-          width: "280px",
-          minWidth: "280px",
+          width: "250px",
+          minWidth: "250px",
           height: "100%",
           display: "flex",
           flexDirection: "column",
@@ -2207,8 +2207,9 @@ export default function ExploreClient({
 
         {/* LIST COLUMN (Middle / Full if no map) */}
         <div style={{
-          width: (exploreType === "pastors" || exploreType === "worship_leaders") ? "100%" : "400px",
-          minWidth: (exploreType === "pastors" || exploreType === "worship_leaders") ? "0" : "400px",
+          width: (exploreType === "pastors" || exploreType === "worship_leaders") ? "100%" : "590px",
+          minWidth: (exploreType === "pastors" || exploreType === "worship_leaders") ? "0" : "590px",
+          maxWidth: (exploreType === "pastors" || exploreType === "worship_leaders") ? "none" : "590px",
           height: "100%",
           display: "flex",
           flexDirection: "column",
@@ -2321,7 +2322,11 @@ export default function ExploreClient({
                   )}
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: "12px",
+                }}>
                   {filteredChurches.map((church) => {
                     const isSelected = church.id === selectedChurchId;
                     const coverImage = church.cover_url ? church.cover_url.split("|||")[0] : null;
@@ -2337,20 +2342,20 @@ export default function ExploreClient({
                         style={{
                           display: "flex",
                           flexDirection: "column",
-                          borderRadius: "16px",
+                          borderRadius: "14px",
                           border: isSelected ? "2px solid #7c3aed" : "1.5px solid #e2e8f0",
                           background: isSelected ? "#faf5ff" : "#fff",
                           overflow: "hidden",
                           cursor: "pointer",
                           transition: "all 0.2s",
-                          boxShadow: isSelected ? "0 8px 20px rgba(124, 58, 237, 0.12)" : "0 2px 5px rgba(0,0,0,0.03)",
+                          boxShadow: isSelected ? "0 8px 18px rgba(124, 58, 237, 0.12)" : "0 2px 4px rgba(0,0,0,0.03)",
                         }}
                       >
                         {/* Image Thumbnail */}
                         <div
                           style={{
                             width: "100%",
-                            height: "200px",
+                            height: "135px",
                             background: coverImage
                               ? `url('${coverImage}') center/cover`
                               : "#f1f5f9",
@@ -2361,48 +2366,57 @@ export default function ExploreClient({
                           }}
                         >
                           {!coverImage && (
-                            <i className="ti ti-building-church" style={{ fontSize: "64px", color: "#94a3b8" }}></i>
+                            <i className="ti ti-building-church" style={{ fontSize: "40px", color: "#94a3b8" }}></i>
                           )}
                           {church.is_verified && (
-                            <span style={{ position: "absolute", top: "12px", left: "12px", background: "rgba(22, 163, 74, 0.9)", color: "#fff", fontSize: "10px", fontWeight: 800, padding: "4px 8px", borderRadius: "8px", backdropFilter: "blur(4px)" }}>✓ Verified</span>
+                            <span style={{ position: "absolute", top: "8px", left: "8px", background: "rgba(22, 163, 74, 0.9)", color: "#fff", fontSize: "9px", fontWeight: 800, padding: "2px 6px", borderRadius: "6px", backdropFilter: "blur(4px)" }}>✓ Verified</span>
                           )}
                         </div>
 
                         {/* Content Info */}
-                        <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: "8px", flex: 1, justifyContent: "space-between" }}>
                           <div>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
-                              <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: "0 0 4px 0", lineHeight: 1.3 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "6px" }}>
+                              <h3 style={{
+                                fontSize: "14.5px",
+                                fontWeight: 800,
+                                color: "#0f172a",
+                                margin: "0 0 2px 0",
+                                lineHeight: 1.25,
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}>
                                 {church.name}
                               </h3>
                               {typeof church.distance === "number" && (
-                                <span style={{ fontSize: "11px", fontWeight: 700, color: "#7c3aed", background: "#f3e8ff", padding: "2px 8px", borderRadius: "8px", whiteSpace: "nowrap" }}>
-                                  {church.distance < 1 ? `${Math.round(church.distance * 1000)} m` : `${church.distance.toFixed(1)} km`}
+                                <span style={{ fontSize: "10px", fontWeight: 700, color: "#7c3aed", background: "#f3e8ff", padding: "1px 6px", borderRadius: "6px", whiteSpace: "nowrap" }}>
+                                  {church.distance < 1 ? `${Math.round(church.distance * 1000)}m` : `${church.distance.toFixed(1)}km`}
                                 </span>
                               )}
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#64748b" }}>
-                              <i className="ti ti-map-pin" style={{ color: "#e11d48", fontSize: "15px" }}></i>
-                              <span>{church.city || church.address_line || "Location available"}</span>
-                              {church.postcode && <span style={{ color: "#94a3b8" }}>({church.postcode})</span>}
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", color: "#64748b" }}>
+                              <i className="ti ti-map-pin" style={{ color: "#e11d48", fontSize: "13px" }}></i>
+                              <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {church.city || church.address_line || "Location available"}
+                              </span>
                             </div>
                           </div>
 
                           {/* Filter tags preview */}
-                          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                            {church.denomination && <span style={{ fontSize: "11px", fontWeight: 700, background: "#f1f5f9", color: "#475569", padding: "3px 8px", borderRadius: "6px" }}>{church.denomination.split("|||")[0]}</span>}
-                            {worshipLabel && <span style={{ fontSize: "11px", fontWeight: 700, background: "#fef3c7", color: "#b45309", padding: "3px 8px", borderRadius: "6px" }}>🎵 {worshipLabel}</span>}
-                            {church.languages && church.languages.length > 0 && <span style={{ fontSize: "11px", fontWeight: 600, background: "#f8fafc", color: "#64748b", border: "1px solid #e2e8f0", padding: "2px 8px", borderRadius: "6px" }}>🗣 {church.languages[0]}</span>}
-                            {church.ministries && church.ministries.length > 0 && <span style={{ fontSize: "11px", fontWeight: 600, background: "#f0fdf4", color: "#166534", padding: "3px 8px", borderRadius: "6px" }}>🤝 {church.ministries[0]}</span>}
+                          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                            {church.denomination && <span style={{ fontSize: "10.5px", fontWeight: 700, background: "#f1f5f9", color: "#475569", padding: "2px 6px", borderRadius: "5px" }}>{church.denomination.split("|||")[0]}</span>}
+                            {worshipLabel && <span style={{ fontSize: "10.5px", fontWeight: 700, background: "#fef3c7", color: "#b45309", padding: "2px 6px", borderRadius: "5px" }}>🎵 {worshipLabel}</span>}
                           </div>
 
                           {/* Card Footer */}
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "12px", borderTop: "1px solid #f1f5f9", marginTop: "4px" }}>
-                            <span style={{ fontSize: "12px", color: typeof church.latitude === "number" ? "#16a34a" : "#94a3b8", fontWeight: 600 }}>
-                              {typeof church.latitude === "number" ? "📍 Location on map" : "No map coordinates"}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: "1px solid #f1f5f9", marginTop: "2px" }}>
+                            <span style={{ fontSize: "11px", color: typeof church.latitude === "number" ? "#16a34a" : "#94a3b8", fontWeight: 600 }}>
+                              {typeof church.latitude === "number" ? "📍 On map" : "No pin"}
                             </span>
-                            <Link href={`/church/${church.slug}`} style={{ fontSize: "13px", fontWeight: 800, color: "#7c3aed", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }} onClick={(e) => e.stopPropagation()}>
-                              View Profile &rarr;
+                            <Link href={`/church/${church.slug}`} style={{ fontSize: "12px", fontWeight: 800, color: "#7c3aed", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "3px" }} onClick={(e) => e.stopPropagation()}>
+                              View &rarr;
                             </Link>
                           </div>
                         </div>
@@ -2517,7 +2531,15 @@ export default function ExploreClient({
 
         {/* RIGHT COLUMN: Interactive Leaflet Map (for Churches and Events) */}
         {(exploreType === "churches" || exploreType === "events") && (
-          <div style={{ flex: 1, height: "100%", minHeight: "100%", position: "relative", background: "#f1f5f9", overflow: "hidden" }}>
+          <div style={{
+            flex: 1,
+            minWidth: 0,
+            height: "100%",
+            minHeight: "100%",
+            position: "relative",
+            background: "#f1f5f9",
+            overflow: "hidden"
+          }}>
             <ChurchMap
               churches={activeItemsForMap}
               selectedChurchId={selectedChurchId}

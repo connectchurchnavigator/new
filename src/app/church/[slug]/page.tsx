@@ -63,6 +63,22 @@ export default async function ChurchProfilePage({ params, searchParams }: { para
     .eq('status', 'published');
   const branchesCount = branchesCountRes || 1;
 
+  // Fetch events for this church (either host_church_id matches, or host_type is church and host_id matches)
+  let churchEvents: any[] = [];
+  try {
+    const { data: eventsData, error: eventsErr } = await sb
+      .from('events')
+      .select('*')
+      .or(`host_church_id.eq.${church.id},and(host_type.eq.church,host_id.eq.${church.id})`)
+      .order('starts_at', { ascending: true });
+    
+    if (!eventsErr && eventsData) {
+      churchEvents = eventsData;
+    }
+  } catch (evErr) {
+    console.warn('Failed to fetch events for church:', evErr);
+  }
+
   let nearbyChurches: any[] = [];
   try {
     if (church.city) {
@@ -138,7 +154,7 @@ export default async function ChurchProfilePage({ params, searchParams }: { para
           </Link>
           <div style={{ display: 'flex', gap: '12px' }}>
             {isActualOwner && isOwner && (
-              <Link href={`/dashboard/insights?church_id=${church.id}`} style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none' }}>
+              <Link href={`/dashboard?section=visitor-insights&church_id=${church.id}`} style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none' }}>
                 <i className="ti ti-chart-bar"></i> Visitor insights
               </Link>
             )}
@@ -160,6 +176,7 @@ export default async function ChurchProfilePage({ params, searchParams }: { para
         telegramUrl={telegramUrl}
         initialBranchesCount={branchesCount}
         initialNearbyChurches={nearbyChurches}
+        initialEvents={churchEvents}
       />
 
     </main>

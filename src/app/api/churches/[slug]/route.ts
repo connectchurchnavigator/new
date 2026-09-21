@@ -78,12 +78,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ slug: 
       updatedGalleryImages = processedGallery.filter(Boolean);
     }
 
-    // 4. Update the database
-    const { error: updateErr } = await sb.from('churches').update({
+    // 4. Build database update payload
+    const updatePayload: Record<string, any> = {
       logo_url: updatedLogoUrl,
       cover_url: updatedCoverUrls.length > 0 ? updatedCoverUrls.join('|||') : null,
       gallery_images: updatedGalleryImages,
-    }).eq('id', church.id);
+    };
+
+    if (data.name !== undefined) updatePayload.name = data.name;
+    if (data.denomination !== undefined) updatePayload.denomination = data.denomination;
+    if (data.address_line !== undefined) updatePayload.address_line = data.address_line;
+    if (data.city !== undefined) updatePayload.city = data.city;
+    if (data.country !== undefined) updatePayload.country = data.country;
+    if (data.latitude !== undefined) updatePayload.latitude = data.latitude;
+    if (data.longitude !== undefined) updatePayload.longitude = data.longitude;
+
+    const { error: updateErr } = await sb.from('churches').update(updatePayload).eq('id', church.id);
 
     if (updateErr) {
       throw updateErr;
