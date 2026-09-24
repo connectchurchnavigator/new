@@ -47,13 +47,12 @@ export default async function Home() {
   // 3. Fetch worship leaders
   const { data: rawWorshipLeaders } = await supabase
     .from("worship_leaders")
-    .select("id, slug, display_name, full_name, stage_name, title, avatar_url, cover_photo_urls, city, country, is_verified, tagline, primary_church_name")
-    .eq("is_published", true)
-    .order("is_verified", { ascending: false });
+    .select("id, display_name, slug, tagline, city, country, is_verified, is_published, created_at, avatar_url")
+    .order("created_at", { ascending: false });
 
-  const allWorshipLeaders = rawWorshipLeaders || [];
-  const worshipLeaders = featuredConfig.worshipLeaderIds.length > 0
-    ? allWorshipLeaders.filter((w) => featuredConfig.worshipLeaderIds.includes(w.id))
+  const allWorshipLeaders = (rawWorshipLeaders || []).filter((w) => w.is_published !== false);
+  const worshipLeaders = featuredConfig.worshipLeaderIds && featuredConfig.worshipLeaderIds.length > 0
+    ? (rawWorshipLeaders || []).filter((w) => featuredConfig.worshipLeaderIds.includes(w.id))
     : allWorshipLeaders.slice(0, 8);
 
   // 4. Fetch upcoming events

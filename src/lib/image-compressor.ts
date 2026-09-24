@@ -61,7 +61,7 @@ export async function compressImage(
       if (!ctx) {
         // If canvas context fails and image is too large, throw helpful error
         if (isFile && fileOrDataUrl.size > maxFileSizeMB * 1024 * 1024) {
-          reject(new Error(`The uploaded image exceeds the allowed capacity (${(fileOrDataUrl.size / (1024 * 1024)).toFixed(1)}MB). Please reduce the image resolution or file size before uploading.`));
+          reject(new Error(`The uploaded image exceeds the allowed capacity (${(fileOrDataUrl.size / (1024 * 1024)).toFixed(1)}MB). Please reduce the image resolution or file size to less than 2 MB before uploading.`));
           return;
         }
         resolve(typeof fileOrDataUrl === "string" ? fileOrDataUrl : srcUrl);
