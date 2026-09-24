@@ -33,3 +33,29 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const pastorId = searchParams.get("pastorId");
+
+    if (!pastorId) {
+      return NextResponse.json({ error: "Missing pastorId" }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+    const { error } = await supabase
+      .from("pastors")
+      .delete()
+      .eq("id", pastorId);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
+  }
+}
+

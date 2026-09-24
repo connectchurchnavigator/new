@@ -48,6 +48,9 @@ export default function AdminClient({
   const [usersList, setUsersList] = useState<any[]>(initialUsers);
   const [featured, setFeatured] = useState<{ churchIds: string[]; pastorIds: string[]; worshipLeaderIds: string[]; eventIds: string[] }>(initialFeatured);
   const [togglingFeaturedId, setTogglingFeaturedId] = useState<string | null>(null);
+  const [togglingVerifyId, setTogglingVerifyId] = useState<string | null>(null);
+  const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // User Role update handler
   const handleUserRoleChange = async (userId: string, newRole: "super_admin" | "listing_manager" | "visitor") => {
@@ -111,6 +114,7 @@ export default function AdminClient({
 
   // 1. Toggle Church Verification
   const handleToggleChurchVerification = async (churchId: string, currentStatus: boolean) => {
+    setTogglingVerifyId(churchId);
     try {
       const res = await fetch("/api/admin/churches", {
         method: "PATCH",
@@ -124,12 +128,15 @@ export default function AdminClient({
       }
     } catch (err) {
       alert("Failed to update verification status");
+    } finally {
+      setTogglingVerifyId(null);
     }
   };
 
   // 2. Toggle Church Publish Status
   const handleToggleChurchStatus = async (churchId: string, currentStatus: string) => {
     const nextStatus = currentStatus === "published" ? "draft" : "published";
+    setTogglingStatusId(churchId);
     try {
       const res = await fetch("/api/admin/churches", {
         method: "PATCH",
@@ -143,6 +150,8 @@ export default function AdminClient({
       }
     } catch (err) {
       alert("Failed to update status");
+    } finally {
+      setTogglingStatusId(null);
     }
   };
 
@@ -151,6 +160,7 @@ export default function AdminClient({
     if (!confirm(`Are you sure you want to delete "${churchName}"? This cannot be undone.`)) {
       return;
     }
+    setDeletingId(churchId);
     try {
       const res = await fetch(`/api/admin/churches?churchId=${churchId}`, {
         method: "DELETE",
@@ -160,6 +170,8 @@ export default function AdminClient({
       }
     } catch (err) {
       alert("Failed to delete church");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -206,6 +218,7 @@ export default function AdminClient({
 
   // 4. Toggle Pastor Verification
   const handleTogglePastorVerification = async (pastorId: string, currentStatus: boolean) => {
+    setTogglingVerifyId(pastorId);
     try {
       const res = await fetch("/api/admin/pastors", {
         method: "PATCH",
@@ -219,11 +232,55 @@ export default function AdminClient({
       }
     } catch (err) {
       alert("Failed to update verification status");
+    } finally {
+      setTogglingVerifyId(null);
     }
   };
 
-  // 4b. Toggle Worship Leader Verification
+  // 4a. Toggle Pastor Publish Status
+  const handleTogglePastorStatus = async (pastorId: string, currentPublished: boolean) => {
+    setTogglingStatusId(pastorId);
+    try {
+      const res = await fetch("/api/admin/pastors", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pastorId, is_published: !currentPublished }),
+      });
+      if (res.ok) {
+        setPastors((prev) =>
+          prev.map((p) => (p.id === pastorId ? { ...p, is_published: !currentPublished } : p))
+        );
+      }
+    } catch (err) {
+      alert("Failed to update status");
+    } finally {
+      setTogglingStatusId(null);
+    }
+  };
+
+  // 4b. Delete Pastor
+  const handleDeletePastor = async (pastorId: string, pastorName: string) => {
+    if (!confirm(`Are you sure you want to delete pastor "${pastorName}"? This cannot be undone.`)) {
+      return;
+    }
+    setDeletingId(pastorId);
+    try {
+      const res = await fetch(`/api/admin/pastors?pastorId=${pastorId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setPastors((prev) => prev.filter((p) => p.id !== pastorId));
+      }
+    } catch (err) {
+      alert("Failed to delete pastor");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // 4c. Toggle Worship Leader Verification
   const handleToggleWorshipLeaderVerification = async (leaderId: string, currentStatus: boolean) => {
+    setTogglingVerifyId(leaderId);
     try {
       const res = await fetch("/api/admin/worship-leaders", {
         method: "PATCH",
@@ -237,6 +294,91 @@ export default function AdminClient({
       }
     } catch (err) {
       alert("Failed to update verification status");
+    } finally {
+      setTogglingVerifyId(null);
+    }
+  };
+
+  // 4d. Toggle Worship Leader Publish Status
+  const handleToggleWorshipLeaderStatus = async (leaderId: string, currentPublished: boolean) => {
+    setTogglingStatusId(leaderId);
+    try {
+      const res = await fetch("/api/admin/worship-leaders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leaderId, is_published: !currentPublished }),
+      });
+      if (res.ok) {
+        setWorshipLeaders((prev) =>
+          prev.map((w) => (w.id === leaderId ? { ...w, is_published: !currentPublished } : w))
+        );
+      }
+    } catch (err) {
+      alert("Failed to update status");
+    } finally {
+      setTogglingStatusId(null);
+    }
+  };
+
+  // 4e. Delete Worship Leader
+  const handleDeleteWorshipLeader = async (leaderId: string, leaderName: string) => {
+    if (!confirm(`Are you sure you want to delete worship leader "${leaderName}"? This cannot be undone.`)) {
+      return;
+    }
+    setDeletingId(leaderId);
+    try {
+      const res = await fetch(`/api/admin/worship-leaders?worshipLeaderId=${leaderId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setWorshipLeaders((prev) => prev.filter((w) => w.id !== leaderId));
+      }
+    } catch (err) {
+      alert("Failed to delete worship leader");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // 4f. Toggle Event Status
+  const handleToggleEventStatus = async (eventId: string, currentStatus: string) => {
+    const nextStatus = currentStatus === "draft" ? "published" : "draft";
+    setTogglingStatusId(eventId);
+    try {
+      const res = await fetch("/api/admin/events", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId, status: nextStatus }),
+      });
+      if (res.ok) {
+        setEvents((prev) =>
+          prev.map((ev) => (ev.id === eventId ? { ...ev, status: nextStatus } : ev))
+        );
+      }
+    } catch (err) {
+      alert("Failed to update event status");
+    } finally {
+      setTogglingStatusId(null);
+    }
+  };
+
+  // 4g. Delete Event
+  const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
+    if (!confirm(`Are you sure you want to delete event "${eventTitle}"? This cannot be undone.`)) {
+      return;
+    }
+    setDeletingId(eventId);
+    try {
+      const res = await fetch(`/api/admin/events?eventId=${eventId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setEvents((prev) => prev.filter((ev) => ev.id !== eventId));
+      }
+    } catch (err) {
+      alert("Failed to delete event");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -897,6 +1039,7 @@ export default function AdminClient({
                       <td style={{ padding: "14px", color: "#475569" }}>{c.denomination?.split("|||")[0] || "—"}</td>
                       <td style={{ padding: "14px" }}>
                         <button
+                          disabled={togglingVerifyId === c.id}
                           onClick={() => handleToggleChurchVerification(c.id, Boolean(c.is_verified))}
                           style={{
                             border: "none",
@@ -904,15 +1047,23 @@ export default function AdminClient({
                             padding: "6px 12px",
                             fontSize: "12px",
                             fontWeight: 800,
-                            cursor: "pointer",
+                            cursor: togglingVerifyId === c.id ? "wait" : "pointer",
+                            opacity: togglingVerifyId === c.id ? 0.75 : 1,
                             background: c.is_verified ? "#f0fdf4" : "#f8fafc",
                             color: c.is_verified ? "#16a34a" : "#64748b",
                             borderWidth: "1px",
                             borderStyle: "solid",
                             borderColor: c.is_verified ? "#bbf7d0" : "#e2e8f0",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
                           }}
                         >
-                          {c.is_verified ? "✓ Verified" : "+ Not Verified"}
+                          {togglingVerifyId === c.id ? (
+                            <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: "14px" }}></i> Updating...</>
+                          ) : (
+                            c.is_verified ? "✓ Verified" : "+ Not Verified"
+                          )}
                         </button>
                       </td>
                       <td style={{ padding: "14px" }}>
@@ -926,7 +1077,8 @@ export default function AdminClient({
                             padding: "6px 12px",
                             fontSize: "12px",
                             fontWeight: 800,
-                            cursor: "pointer",
+                            cursor: togglingFeaturedId === c.id ? "wait" : "pointer",
+                            opacity: togglingFeaturedId === c.id ? 0.75 : 1,
                             background: featured.churchIds?.includes(c.id) ? "#fef3c7" : "#f8fafc",
                             color: featured.churchIds?.includes(c.id) ? "#b45309" : "#64748b",
                             borderWidth: "1px",
@@ -937,11 +1089,16 @@ export default function AdminClient({
                             gap: "5px",
                           }}
                         >
-                          ⭐ {featured.churchIds?.includes(c.id) ? "Featured" : "Feature"}
+                          {togglingFeaturedId === c.id ? (
+                            <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: "14px" }}></i> Updating...</>
+                          ) : (
+                            <>⭐ {featured.churchIds?.includes(c.id) ? "Featured" : "Feature"}</>
+                          )}
                         </button>
                       </td>
                       <td style={{ padding: "14px" }}>
                         <button
+                          disabled={togglingStatusId === c.id}
                           onClick={() => handleToggleChurchStatus(c.id, c.status || "published")}
                           style={{
                             border: "none",
@@ -949,12 +1106,20 @@ export default function AdminClient({
                             padding: "6px 12px",
                             fontSize: "12px",
                             fontWeight: 800,
-                            cursor: "pointer",
+                            cursor: togglingStatusId === c.id ? "wait" : "pointer",
+                            opacity: togglingStatusId === c.id ? 0.75 : 1,
                             background: c.status === "published" ? "#f0fdf4" : "#fffbeb",
                             color: c.status === "published" ? "#16a34a" : "#d97706",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
                           }}
                         >
-                          {c.status === "published" ? "Published" : "Draft"}
+                          {togglingStatusId === c.id ? (
+                            <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: "14px" }}></i> Updating...</>
+                          ) : (
+                            c.status === "published" ? "Published" : "Draft"
+                          )}
                         </button>
                       </td>
                       <td style={{ padding: "14px", textAlign: "right" }}>
@@ -965,6 +1130,7 @@ export default function AdminClient({
                           Edit
                         </Link>
                         <button
+                          disabled={deletingId === c.id}
                           onClick={() => handleDeleteChurch(c.id, c.name)}
                           style={{
                             background: "none",
@@ -972,10 +1138,11 @@ export default function AdminClient({
                             color: "#e11d48",
                             fontSize: "13px",
                             fontWeight: 700,
-                            cursor: "pointer",
+                            cursor: deletingId === c.id ? "wait" : "pointer",
+                            opacity: deletingId === c.id ? 0.6 : 1,
                           }}
                         >
-                          Delete
+                          {deletingId === c.id ? "Deleting..." : "Delete"}
                         </button>
                       </td>
                     </tr>
@@ -1048,8 +1215,9 @@ export default function AdminClient({
                     <th style={{ padding: "12px 14px" }}>Pastor / Minister</th>
                     <th style={{ padding: "12px 14px" }}>Title & Role</th>
                     <th style={{ padding: "12px 14px" }}>Location</th>
-                    <th style={{ padding: "12px 14px" }}>Verification</th>
+                    <th style={{ padding: "12px 14px" }}>Verification Badge</th>
                     <th style={{ padding: "12px 14px" }}>Featured</th>
+                    <th style={{ padding: "12px 14px" }}>Visibility</th>
                     <th style={{ padding: "12px 14px", textAlign: "right" }}>Actions</th>
                   </tr>
                 </thead>
@@ -1076,6 +1244,7 @@ export default function AdminClient({
                       <td style={{ padding: "14px", color: "#475569" }}>{p.city || p.country || "—"}</td>
                       <td style={{ padding: "14px" }}>
                         <button
+                          disabled={togglingVerifyId === p.id}
                           onClick={() => handleTogglePastorVerification(p.id, Boolean(p.is_verified))}
                           style={{
                             border: "none",
@@ -1083,15 +1252,23 @@ export default function AdminClient({
                             padding: "6px 12px",
                             fontSize: "12px",
                             fontWeight: 800,
-                            cursor: "pointer",
+                            cursor: togglingVerifyId === p.id ? "wait" : "pointer",
+                            opacity: togglingVerifyId === p.id ? 0.75 : 1,
                             background: p.is_verified ? "#f0fdf4" : "#f8fafc",
                             color: p.is_verified ? "#16a34a" : "#64748b",
                             borderWidth: "1px",
                             borderStyle: "solid",
                             borderColor: p.is_verified ? "#bbf7d0" : "#e2e8f0",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
                           }}
                         >
-                          {p.is_verified ? "✓ Verified" : "+ Not Verified"}
+                          {togglingVerifyId === p.id ? (
+                            <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: "14px" }}></i> Updating...</>
+                          ) : (
+                            p.is_verified ? "✓ Verified" : "+ Not Verified"
+                          )}
                         </button>
                       </td>
                       <td style={{ padding: "14px" }}>
@@ -1105,7 +1282,8 @@ export default function AdminClient({
                             padding: "6px 12px",
                             fontSize: "12px",
                             fontWeight: 800,
-                            cursor: "pointer",
+                            cursor: togglingFeaturedId === p.id ? "wait" : "pointer",
+                            opacity: togglingFeaturedId === p.id ? 0.75 : 1,
                             background: featured.pastorIds?.includes(p.id) ? "#fef3c7" : "#f8fafc",
                             color: featured.pastorIds?.includes(p.id) ? "#b45309" : "#64748b",
                             borderWidth: "1px",
@@ -1116,13 +1294,61 @@ export default function AdminClient({
                             gap: "5px",
                           }}
                         >
-                          ⭐ {featured.pastorIds?.includes(p.id) ? "Featured" : "Feature"}
+                          {togglingFeaturedId === p.id ? (
+                            <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: "14px" }}></i> Updating...</>
+                          ) : (
+                            <>⭐ {featured.pastorIds?.includes(p.id) ? "Featured" : "Feature"}</>
+                          )}
+                        </button>
+                      </td>
+                      <td style={{ padding: "14px" }}>
+                        <button
+                          disabled={togglingStatusId === p.id}
+                          onClick={() => handleTogglePastorStatus(p.id, p.is_published !== false)}
+                          style={{
+                            border: "none",
+                            borderRadius: "10px",
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            cursor: togglingStatusId === p.id ? "wait" : "pointer",
+                            opacity: togglingStatusId === p.id ? 0.75 : 1,
+                            background: p.is_published !== false ? "#f0fdf4" : "#fffbeb",
+                            color: p.is_published !== false ? "#16a34a" : "#d97706",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                          }}
+                        >
+                          {togglingStatusId === p.id ? (
+                            <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: "14px" }}></i> Updating...</>
+                          ) : (
+                            p.is_published !== false ? "Published" : "Draft"
+                          )}
                         </button>
                       </td>
                       <td style={{ padding: "14px", textAlign: "right" }}>
-                        <Link href={`/pastor/${p.slug}`} target="_blank" style={{ fontSize: "13px", color: "#7c3aed", fontWeight: 700, textDecoration: "none" }}>
-                          View Profile &rarr;
+                        <Link href={`/pastor/${p.slug}`} target="_blank" style={{ fontSize: "13px", color: "#7c3aed", fontWeight: 700, textDecoration: "none", marginRight: "12px" }}>
+                          View
                         </Link>
+                        <Link href={`/onboarding/pastor?edit=${p.slug}`} target="_blank" style={{ fontSize: "13px", color: "#0284c7", fontWeight: 700, textDecoration: "none", marginRight: "12px" }}>
+                          Edit
+                        </Link>
+                        <button
+                          disabled={deletingId === p.id}
+                          onClick={() => handleDeletePastor(p.id, p.full_name)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#e11d48",
+                            fontSize: "13px",
+                            fontWeight: 700,
+                            cursor: deletingId === p.id ? "wait" : "pointer",
+                            opacity: deletingId === p.id ? 0.6 : 1,
+                          }}
+                        >
+                          {deletingId === p.id ? "Deleting..." : "Delete"}
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1194,8 +1420,9 @@ export default function AdminClient({
                     <th style={{ padding: "12px 14px" }}>Worship Leader</th>
                     <th style={{ padding: "12px 14px" }}>Title & Tagline</th>
                     <th style={{ padding: "12px 14px" }}>Location</th>
-                    <th style={{ padding: "12px 14px" }}>Verification</th>
+                    <th style={{ padding: "12px 14px" }}>Verification Badge</th>
                     <th style={{ padding: "12px 14px" }}>Featured</th>
+                    <th style={{ padding: "12px 14px" }}>Visibility</th>
                     <th style={{ padding: "12px 14px", textAlign: "right" }}>Actions</th>
                   </tr>
                 </thead>
@@ -1226,22 +1453,31 @@ export default function AdminClient({
                       <td style={{ padding: "14px" }}>
                         <button
                           type="button"
+                          disabled={togglingVerifyId === w.id}
                           onClick={() => handleToggleWorshipLeaderVerification(w.id, !!w.is_verified)}
                           style={{
                             border: "none",
-                            borderRadius: "8px",
+                            borderRadius: "10px",
                             padding: "6px 12px",
                             fontSize: "12px",
                             fontWeight: 800,
-                            cursor: "pointer",
-                            background: w.is_verified ? "#f0fdf4" : "#f1f5f9",
+                            cursor: togglingVerifyId === w.id ? "wait" : "pointer",
+                            opacity: togglingVerifyId === w.id ? 0.75 : 1,
+                            background: w.is_verified ? "#f0fdf4" : "#f8fafc",
                             color: w.is_verified ? "#16a34a" : "#64748b",
+                            borderWidth: "1px",
+                            borderStyle: "solid",
+                            borderColor: w.is_verified ? "#bbf7d0" : "#e2e8f0",
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: "4px"
+                            gap: "5px",
                           }}
                         >
-                          {w.is_verified ? "✓ Verified" : "○ Not Verified"}
+                          {togglingVerifyId === w.id ? (
+                            <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: "14px" }}></i> Updating...</>
+                          ) : (
+                            w.is_verified ? "✓ Verified" : "+ Not Verified"
+                          )}
                         </button>
                       </td>
                       <td style={{ padding: "14px" }}>
@@ -1255,7 +1491,8 @@ export default function AdminClient({
                             padding: "6px 12px",
                             fontSize: "12px",
                             fontWeight: 800,
-                            cursor: "pointer",
+                            cursor: togglingFeaturedId === w.id ? "wait" : "pointer",
+                            opacity: togglingFeaturedId === w.id ? 0.75 : 1,
                             background: featured.worshipLeaderIds?.includes(w.id) ? "#fef3c7" : "#f8fafc",
                             color: featured.worshipLeaderIds?.includes(w.id) ? "#b45309" : "#64748b",
                             borderWidth: "1px",
@@ -1266,13 +1503,61 @@ export default function AdminClient({
                             gap: "5px",
                           }}
                         >
-                          ⭐ {featured.worshipLeaderIds?.includes(w.id) ? "Featured" : "Feature"}
+                          {togglingFeaturedId === w.id ? (
+                            <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: "14px" }}></i> Updating...</>
+                          ) : (
+                            <>⭐ {featured.worshipLeaderIds?.includes(w.id) ? "Featured" : "Feature"}</>
+                          )}
+                        </button>
+                      </td>
+                      <td style={{ padding: "14px" }}>
+                        <button
+                          disabled={togglingStatusId === w.id}
+                          onClick={() => handleToggleWorshipLeaderStatus(w.id, w.is_published !== false)}
+                          style={{
+                            border: "none",
+                            borderRadius: "10px",
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            cursor: togglingStatusId === w.id ? "wait" : "pointer",
+                            opacity: togglingStatusId === w.id ? 0.75 : 1,
+                            background: w.is_published !== false ? "#f0fdf4" : "#fffbeb",
+                            color: w.is_published !== false ? "#16a34a" : "#d97706",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                          }}
+                        >
+                          {togglingStatusId === w.id ? (
+                            <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: "14px" }}></i> Updating...</>
+                          ) : (
+                            w.is_published !== false ? "Published" : "Draft"
+                          )}
                         </button>
                       </td>
                       <td style={{ padding: "14px", textAlign: "right" }}>
-                        <Link href={`/worship-leader/${w.slug}`} target="_blank" style={{ fontSize: "13px", color: "#e11d48", fontWeight: 700, textDecoration: "none" }}>
-                          View Profile &rarr;
+                        <Link href={`/worship-leader/${w.slug}`} target="_blank" style={{ fontSize: "13px", color: "#7c3aed", fontWeight: 700, textDecoration: "none", marginRight: "12px" }}>
+                          View
                         </Link>
+                        <Link href={`/onboarding/worship-leader/${w.slug}/edit`} target="_blank" style={{ fontSize: "13px", color: "#0284c7", fontWeight: 700, textDecoration: "none", marginRight: "12px" }}>
+                          Edit
+                        </Link>
+                        <button
+                          disabled={deletingId === w.id}
+                          onClick={() => handleDeleteWorshipLeader(w.id, w.display_name)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#e11d48",
+                            fontSize: "13px",
+                            fontWeight: 700,
+                            cursor: deletingId === w.id ? "wait" : "pointer",
+                            opacity: deletingId === w.id ? 0.6 : 1,
+                          }}
+                        >
+                          {deletingId === w.id ? "Deleting..." : "Delete"}
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1346,6 +1631,7 @@ export default function AdminClient({
                     <th style={{ padding: "12px 14px" }}>Location / Venue</th>
                     <th style={{ padding: "12px 14px" }}>Price</th>
                     <th style={{ padding: "12px 14px" }}>Featured</th>
+                    <th style={{ padding: "12px 14px" }}>Visibility</th>
                     <th style={{ padding: "12px 14px", textAlign: "right" }}>Actions</th>
                   </tr>
                 </thead>
@@ -1373,7 +1659,8 @@ export default function AdminClient({
                             padding: "6px 12px",
                             fontSize: "12px",
                             fontWeight: 800,
-                            cursor: "pointer",
+                            cursor: togglingFeaturedId === ev.id ? "wait" : "pointer",
+                            opacity: togglingFeaturedId === ev.id ? 0.75 : 1,
                             background: featured.eventIds?.includes(ev.id) ? "#fef3c7" : "#f8fafc",
                             color: featured.eventIds?.includes(ev.id) ? "#b45309" : "#64748b",
                             borderWidth: "1px",
@@ -1384,13 +1671,61 @@ export default function AdminClient({
                             gap: "5px",
                           }}
                         >
-                          ⭐ {featured.eventIds?.includes(ev.id) ? "Featured" : "Feature"}
+                          {togglingFeaturedId === ev.id ? (
+                            <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: "14px" }}></i> Updating...</>
+                          ) : (
+                            <>⭐ {featured.eventIds?.includes(ev.id) ? "Featured" : "Feature"}</>
+                          )}
+                        </button>
+                      </td>
+                      <td style={{ padding: "14px" }}>
+                        <button
+                          disabled={togglingStatusId === ev.id}
+                          onClick={() => handleToggleEventStatus(ev.id, ev.status || "published")}
+                          style={{
+                            border: "none",
+                            borderRadius: "10px",
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            cursor: togglingStatusId === ev.id ? "wait" : "pointer",
+                            opacity: togglingStatusId === ev.id ? 0.75 : 1,
+                            background: ev.status === "draft" ? "#fffbeb" : "#f0fdf4",
+                            color: ev.status === "draft" ? "#d97706" : "#16a34a",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                          }}
+                        >
+                          {togglingStatusId === ev.id ? (
+                            <><i className="ti ti-loader-2 ti-spin" style={{ fontSize: "14px" }}></i> Updating...</>
+                          ) : (
+                            ev.status === "draft" ? "Draft" : "Published"
+                          )}
                         </button>
                       </td>
                       <td style={{ padding: "14px", textAlign: "right" }}>
-                        <Link href={`/events/${ev.slug}`} target="_blank" style={{ fontSize: "13px", color: "#7c3aed", fontWeight: 700, textDecoration: "none" }}>
-                          View Event &rarr;
+                        <Link href={`/events/${ev.slug}`} target="_blank" style={{ fontSize: "13px", color: "#7c3aed", fontWeight: 700, textDecoration: "none", marginRight: "12px" }}>
+                          View
                         </Link>
+                        <Link href={`/onboarding/events?id=${ev.id}`} target="_blank" style={{ fontSize: "13px", color: "#0284c7", fontWeight: 700, textDecoration: "none", marginRight: "12px" }}>
+                          Edit
+                        </Link>
+                        <button
+                          disabled={deletingId === ev.id}
+                          onClick={() => handleDeleteEvent(ev.id, ev.title)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#e11d48",
+                            fontSize: "13px",
+                            fontWeight: 700,
+                            cursor: deletingId === ev.id ? "wait" : "pointer",
+                            opacity: deletingId === ev.id ? 0.6 : 1,
+                          }}
+                        >
+                          {deletingId === ev.id ? "Deleting..." : "Delete"}
+                        </button>
                       </td>
                     </tr>
                   ))}

@@ -6,21 +6,20 @@ export const dynamic = "force-dynamic";
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { worshipLeaderId, is_verified, is_published } = body;
+    const { eventId, status } = body;
 
-    if (!worshipLeaderId) {
-      return NextResponse.json({ error: "Missing worshipLeaderId" }, { status: 400 });
+    if (!eventId) {
+      return NextResponse.json({ error: "Missing eventId" }, { status: 400 });
     }
 
     const updatePayload: Record<string, any> = {};
-    if (typeof is_verified === "boolean") updatePayload.is_verified = is_verified;
-    if (typeof is_published === "boolean") updatePayload.is_published = is_published;
+    if (status) updatePayload.status = status;
 
     const supabase = createAdminClient();
     const { data, error } = await supabase
-      .from("worship_leaders")
+      .from("events")
       .update(updatePayload)
-      .eq("id", worshipLeaderId)
+      .eq("id", eventId)
       .select()
       .single();
 
@@ -28,7 +27,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, worshipLeader: data });
+    return NextResponse.json({ success: true, event: data });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
   }
@@ -37,17 +36,24 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const worshipLeaderId = searchParams.get("worshipLeaderId");
+    const eventId = searchParams.get("eventId");
 
-    if (!worshipLeaderId) {
-      return NextResponse.json({ error: "Missing worshipLeaderId" }, { status: 400 });
+    if (!eventId) {
+      return NextResponse.json({ error: "Missing eventId" }, { status: 400 });
     }
 
     const supabase = createAdminClient();
+
+    // Clean up dependent tables if any before deleting event
+    await supabase.from("event_sessions").delete().eq("event_id", eventId);
+    await supabase.from("event_speakers").delete().eq("event_id", eventId);
+    await supabase.from("event_tickets").delete().eq("event_id", eventId);
+    await supabase.from("event_faqs").delete().eq("event_id", eventId);
+
     const { error } = await supabase
-      .from("worship_leaders")
+      .from("events")
       .delete()
-      .eq("id", worshipLeaderId);
+      .eq("id", eventId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -58,4 +64,3 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
   }
 }
-
