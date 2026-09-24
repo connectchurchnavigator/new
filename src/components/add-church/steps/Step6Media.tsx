@@ -53,13 +53,21 @@ export default function Step6Media({ onBack }: Step6MediaProps) {
   const [youtubeError, setYoutubeError] = useState<string | null>(validateYouTubeUrl(formData.youtube || ""));
   const router = useRouter();
 
+  const [mediaCapacityError, setMediaCapacityError] = useState<string | null>(null);
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, setPreview: React.Dispatch<React.SetStateAction<string | null>>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setMediaCapacityError(null);
       try {
         const compressed = await compressImage(file, { maxWidth: 600, maxHeight: 600, quality: 0.85 });
         setPreview(compressed);
-      } catch (err) {
+      } catch (err: any) {
+        if (file.size > 2.5 * 1024 * 1024) {
+          setMediaCapacityError(err?.message || "The uploaded image exceeds capacity. Please compress or choose a smaller file.");
+          alert(err?.message || "The uploaded image exceeds capacity. Please compress or choose a smaller file.");
+          return;
+        }
         const reader = new FileReader();
         reader.onloadend = () => {
           setPreview(reader.result as string);
@@ -71,21 +79,33 @@ export default function Step6Media({ onBack }: Step6MediaProps) {
 
   const handleCoverPhotosUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
+      setMediaCapacityError(null);
       const files = Array.from(e.target.files);
-      const compressPromises = files.map(async (file) => {
+      const validImages: string[] = [];
+
+      for (const file of files) {
         try {
-          return await compressImage(file, { maxWidth: 1600, maxHeight: 900, quality: 0.8 });
-        } catch {
-          return new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
+          const comp = await compressImage(file, { maxWidth: 1600, maxHeight: 900, quality: 0.8 });
+          validImages.push(comp);
+        } catch (err: any) {
+          if (file.size > 2.5 * 1024 * 1024) {
+            const msg = `"${file.name}" exceeds the allowed upload capacity (${(file.size / (1024 * 1024)).toFixed(1)}MB). Please reduce the image resolution or quality.`;
+            setMediaCapacityError(msg);
+            alert(msg);
+          } else {
+            const raw = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(file);
+            });
+            validImages.push(raw);
+          }
         }
-      });
+      }
       
-      const results = await Promise.all(compressPromises);
-      updateFormData({ coverBanners: [...(formData.coverBanners || []), ...results] });
+      if (validImages.length > 0) {
+        updateFormData({ coverBanners: [...(formData.coverBanners || []), ...validImages] });
+      }
     }
   };
 

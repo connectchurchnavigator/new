@@ -9,6 +9,7 @@ interface CompressionOptions {
   maxHeight?: number;
   quality?: number;
   mimeType?: string;
+  maxFileSizeMB?: number;
 }
 
 export async function compressImage(
@@ -20,12 +21,13 @@ export async function compressImage(
     maxHeight = 1400,
     quality = 0.8,
     mimeType = "image/jpeg",
+    maxFileSizeMB = 2.5,
   } = options;
 
   return new Promise((resolve, reject) => {
-    // 1. Get raw source url
     let srcUrl = "";
     let isObjectUrl = false;
+    const isFile = typeof fileOrDataUrl !== "string" && fileOrDataUrl instanceof File;
 
     if (typeof fileOrDataUrl === "string") {
       srcUrl = fileOrDataUrl;
@@ -57,27 +59,39 @@ export async function compressImage(
 
       const ctx = canvas.getContext("2d");
       if (!ctx) {
-        // Fallback to original if canvas fails
+        // If canvas context fails and image is too large, throw helpful error
+        if (isFile && fileOrDataUrl.size > maxFileSizeMB * 1024 * 1024) {
+          reject(new Error(`The uploaded image exceeds the allowed capacity (${(fileOrDataUrl.size / (1024 * 1024)).toFixed(1)}MB). Please reduce the image resolution or file size before uploading.`));
+          return;
+        }
         resolve(typeof fileOrDataUrl === "string" ? fileOrDataUrl : srcUrl);
         return;
       }
 
       // Draw and compress
-      ctx.drawImage(img, 0, 0, width, height);
       try {
+        ctx.drawImage(img, 0, 0, width, height);
         const compressedDataUrl = canvas.toDataURL(mimeType, quality);
         resolve(compressedDataUrl);
       } catch (err) {
-        console.warn("Canvas compression failed, falling back to original string", err);
+        console.warn("Canvas compression failed:", err);
+        if (isFile && fileOrDataUrl.size > maxFileSizeMB * 1024 * 1024) {
+          reject(new Error(`The uploaded image exceeds the allowed capacity (${(fileOrDataUrl.size / (1024 * 1024)).toFixed(1)}MB). Please reduce the image resolution or file size before uploading.`));
+          return;
+        }
         resolve(typeof fileOrDataUrl === "string" ? fileOrDataUrl : srcUrl);
       }
     };
 
-    img.onerror = (e) => {
+    img.onerror = () => {
       if (isObjectUrl) {
         URL.revokeObjectURL(srcUrl);
       }
-      reject(new Error("Failed to load image for compression"));
+      if (isFile && fileOrDataUrl.size > maxFileSizeMB * 1024 * 1024) {
+        reject(new Error(`The uploaded image exceeds the allowed capacity (${(fileOrDataUrl.size / (1024 * 1024)).toFixed(1)}MB). Please reduce the image resolution or file size before uploading.`));
+        return;
+      }
+      reject(new Error("Unable to read or process the selected image file. Please try another image."));
     };
 
     img.src = srcUrl;

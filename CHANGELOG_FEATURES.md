@@ -76,22 +76,32 @@ Every select box and dropdown has been alphabetized (case-insensitive A-Z) to ma
 
 ---
 
-## 4. New "Users" / Team Management Tab in User Dashboard
+## 4. Live Supabase Auth Team Management ("Users" Tab)
 
-Admins who manage churches, ministries, pastors, or events can now grant access to teammates without waiting for email verification codes.
+Admins who manage churches, ministries, pastors, or events can now provision team members directly into **Supabase Auth** with passwords and multi-entity permissions.
 
-### Changes Made in `src/app/dashboard/DashboardClient.tsx`:
-- **New Tab Added**: **"Users"** (`ti-users` icon) in the dashboard left sidebar navigation.
-- **Instant Team Addition Form**:
-  - Full Name
-  - Email Address
-  - Associated Church (alphabetically sorted list of user's churches)
-  - **Granular Roles**:
-    - `1. Add Events Only`: Can submit and manage calendar events and services only.
-    - `2. Add Events & Edit Church Data`: Full access to update church profile information, contact info, media, and events.
-  - **Instant Activation**: Automatically active upon form submission (`Active` badge shown immediately with no verification required).
-  - **Team Directory Table**: Displays all assigned team members, roles, associated churches, date added, and allows instant removal.
-  - **Persistence**: Team members are saved in `localStorage` under `cn_team_members` for instant state recovery.
+### 🔑 How do teammates log in?
+1. The admin fills in:
+   - **Full Name**
+   - **Email Address**
+   - **Login Password** (entered by admin, minimum 6 characters)
+   - **Multi-Select Churches**: Can assign 1, multiple, or all churches (with Select All / Clear shortcuts).
+   - **Multi-Select Pastors**: Can assign 1, multiple, or all pastors (with Select All / Clear shortcuts).
+   - **Role**: `1. Add Events Only` OR `2. Add Events & Edit Church Data`.
+2. Upon submitting, the new user account is **instantly created inside Supabase Auth** via the secure server-side Admin API ([`src/app/api/dashboard/team/route.ts`](file:///c:/Users/DELL/Downloads/chruch/src/app/api/dashboard/team/route.ts)) with `email_confirm: true`.
+3. The teammate can immediately go to `/sign-in`, enter their email and the password provided by the admin, and log straight into the dashboard without waiting for any confirmation email or link!
+
+### ☁️ Does it save in Supabase automatically?
+**Yes!**
+- The new endpoint `POST /api/dashboard/team` uses `supabase.auth.admin.createUser()` to store the user's email, hashed password, and metadata directly in Supabase's `auth.users` database table.
+- Assigned church IDs, pastor IDs, church names, and pastor names are stored securely in `user_metadata` and synchronized across sessions.
+- Removing a user calls `DELETE /api/dashboard/team` which removes them from Supabase Auth.
+
+### 📋 How do you view all team members assigned across all churches & pastors?
+1. **In the User Dashboard** (`/dashboard` &rarr; **Users** tab):
+   - The directory table displays every team member with visual badges for each assigned church (⛪ *Church Name*) and pastor (👤 *Pastor Name*).
+2. **In Super Admin** (`/admin` &rarr; **Registered Users** tab):
+   - A dedicated column **"Assigned Churches & Pastors"** displays every registered user's assigned churches and pastors across the entire platform.
 
 ---
 

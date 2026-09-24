@@ -214,20 +214,28 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
   const handleCoverPhotosUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      const compressPromises = Array.from(files).map(async (file) => {
+      const validImages: string[] = [];
+      for (const file of Array.from(files)) {
         try {
-          return await compressImage(file, { maxWidth: 1600, maxHeight: 900, quality: 0.8 });
-        } catch {
-          return new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
+          const comp = await compressImage(file, { maxWidth: 1600, maxHeight: 900, quality: 0.8 });
+          validImages.push(comp);
+        } catch (err: any) {
+          if (file.size > 2.5 * 1024 * 1024) {
+            alert(`The uploaded cover image "${file.name}" exceeds the allowed upload capacity (${(file.size / (1024 * 1024)).toFixed(1)}MB). Please reduce the image resolution or quality before uploading.`);
+          } else {
+            const raw = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(file);
+            });
+            validImages.push(raw);
+          }
         }
-      });
-      const newImages = await Promise.all(compressPromises);
-      const updated = [...(formData.coverBanners || []), ...newImages];
-      updateFormData({ coverBanners: updated });
+      }
+      if (validImages.length > 0) {
+        const updated = [...(formData.coverBanners || []), ...validImages];
+        updateFormData({ coverBanners: updated });
+      }
     }
   };
 
@@ -239,20 +247,28 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
   const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      const compressPromises = Array.from(files).map(async (file) => {
+      const validImages: string[] = [];
+      for (const file of Array.from(files)) {
         try {
-          return await compressImage(file, { maxWidth: 1200, maxHeight: 900, quality: 0.8 });
-        } catch {
-          return new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
+          const comp = await compressImage(file, { maxWidth: 1200, maxHeight: 900, quality: 0.8 });
+          validImages.push(comp);
+        } catch (err: any) {
+          if (file.size > 2.5 * 1024 * 1024) {
+            alert(`The uploaded gallery photo "${file.name}" exceeds the allowed upload capacity (${(file.size / (1024 * 1024)).toFixed(1)}MB). Please reduce the image resolution or quality before uploading.`);
+          } else {
+            const raw = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(file);
+            });
+            validImages.push(raw);
+          }
         }
-      });
-      const newImages = await Promise.all(compressPromises);
-      setGalleryImages((prev) => [...prev, ...newImages]);
-      updateFormData({ galleryImages: [...(formData.galleryImages || []), ...newImages] });
+      }
+      if (validImages.length > 0) {
+        setGalleryImages((prev) => [...prev, ...validImages]);
+        updateFormData({ galleryImages: [...(formData.galleryImages || []), ...validImages] });
+      }
     }
   };
 
