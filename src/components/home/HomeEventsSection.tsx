@@ -10,8 +10,8 @@ interface HomeEventsSectionProps {
 export function HomeEventsSection({ events }: HomeEventsSectionProps) {
   const [showAll, setShowAll] = useState(false);
 
-  // 2 rows in a minmax(270px, 1fr) grid = maximum 6 items initially
-  const DISPLAY_LIMIT = 6;
+  // Show up to 8 events initially before View More
+  const DISPLAY_LIMIT = 8;
   const hasMore = events && events.length > DISPLAY_LIMIT;
   const displayedEvents = showAll || !hasMore
     ? (events || [])
@@ -23,7 +23,7 @@ export function HomeEventsSection({ events }: HomeEventsSectionProps) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "28px" }}>
           <div>
             <div style={{ fontSize: "12px", fontWeight: 800, color: "#e11d48", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "4px" }}>
-              Upcoming Gatherings
+              Gatherings
             </div>
             <h2 style={{ fontSize: "28px", fontWeight: 900, color: "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>
               Events & Conferences

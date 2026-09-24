@@ -10,8 +10,8 @@ interface HomeWorshipLeadersSectionProps {
 export function HomeWorshipLeadersSection({ worshipLeaders }: HomeWorshipLeadersSectionProps) {
   const [showAll, setShowAll] = useState(false);
 
-  // 2 rows in a minmax(270px, 1fr) grid = maximum 6 items initially
-  const DISPLAY_LIMIT = 6;
+  // 2 rows in a 4-col grid = maximum 8 items initially
+  const DISPLAY_LIMIT = 8;
   const hasMore = worshipLeaders && worshipLeaders.length > DISPLAY_LIMIT;
   const displayedLeaders = showAll || !hasMore
     ? (worshipLeaders || [])

@@ -9,7 +9,7 @@ interface HomePastorsSectionProps {
 
 export default function HomePastorsSection({ pastors }: HomePastorsSectionProps) {
   const [showAll, setShowAll] = useState(false);
-  const displayedPastors = showAll ? pastors : (pastors || []).slice(0, 6);
+  const displayedPastors = showAll ? pastors : (pastors || []).slice(0, 8);
 
   return (
     <section id="pastors-section" style={{ maxWidth: "1200px", margin: "0 auto", padding: "60px 24px" }}>
@@ -139,8 +139,8 @@ export default function HomePastorsSection({ pastors }: HomePastorsSectionProps)
         })}
       </div>
 
-      {/* View More button if more than 2 lines (6 cards) */}
-      {(pastors || []).length > 6 && (
+      {/* View More button if more than 8 cards */}
+      {(pastors || []).length > 8 && (
         <div style={{ display: "flex", justifyContent: "center", marginTop: "32px" }}>
           <button
             type="button"
@@ -164,7 +164,7 @@ export default function HomePastorsSection({ pastors }: HomePastorsSectionProps)
             {showAll ? (
               <>Show Less <i className="ti ti-chevron-up"></i></>
             ) : (
-              <>View More ({pastors.length - 6} more) <i className="ti ti-chevron-down"></i></>
+              <>View More ({pastors.length - 8} more) <i className="ti ti-chevron-down"></i></>
             )}
           </button>
         </div>

@@ -55,16 +55,46 @@ export default async function Home() {
     ? (rawWorshipLeaders || []).filter((w) => featuredConfig.worshipLeaderIds.includes(w.id))
     : allWorshipLeaders.slice(0, 8);
 
-  // 4. Fetch upcoming events
+  // 4. Fetch events & apply sequence sorting
   const { data: rawEvents } = await supabase
     .from("events")
-    .select("id, slug, title, type, venue_name, city, starts_at, ends_at, price_label, is_free, cover_url, host_church:churches(name, slug)")
-    .order("starts_at", { ascending: true });
+    .select("id, slug, title, type, venue_name, city, starts_at, ends_at, price_label, is_free, cover_url, host_church:churches(name, slug)");
 
   const allEvents = rawEvents || [];
-  const events = featuredConfig.eventIds.length > 0
+  const selectedEvents = featuredConfig.eventIds.length > 0
     ? allEvents.filter((e) => featuredConfig.eventIds.includes(e.id))
-    : allEvents.slice(0, 8);
+    : allEvents;
+
+  // Sorting sequence:
+  // 1. Near future events (starts_at >= now && starts_at <= now + 30 days) in chronological order
+  // 2. Far future events (starts_at > now + 30 days) in chronological order
+  // 3. Past events (starts_at < now) ordered from recent past to far past (descending)
+  const nowMs = Date.now();
+  const thirtyDaysMs = nowMs + 30 * 24 * 60 * 60 * 1000;
+
+  const nearFutureEvents: any[] = [];
+  const farFutureEvents: any[] = [];
+  const pastEvents: any[] = [];
+
+  selectedEvents.forEach((ev) => {
+    const evTime = ev.starts_at ? new Date(ev.starts_at).getTime() : 0;
+    if (isNaN(evTime) || evTime < nowMs) {
+      pastEvents.push(ev);
+    } else if (evTime <= thirtyDaysMs) {
+      nearFutureEvents.push(ev);
+    } else {
+      farFutureEvents.push(ev);
+    }
+  });
+
+  // Sort near future ascending (closest upcoming first)
+  nearFutureEvents.sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+  // Sort far future ascending (upcoming chronologically)
+  farFutureEvents.sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+  // Sort past descending (most recent past event first)
+  pastEvents.sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
+
+  const events = [...nearFutureEvents, ...farFutureEvents, ...pastEvents];
 
   return (
     <div style={{ background: "#ffffff", minHeight: "100vh", color: "#0f172a", fontFamily: "inherit" }}>
