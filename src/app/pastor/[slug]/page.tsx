@@ -13,6 +13,7 @@ import ShareButton from '@/components/church-profile/ShareButton';
 import TopNav from '@/components/layout/TopNav';
 import ContactSection from '@/components/church-profile/ContactSection';
 import { GalleryLightbox } from '@/components/GalleryLightbox';
+import PastorEventsSection from '@/components/pastor-profile/PastorEventsSection';
 import '@/app/church/[slug]/church.css';
 import './pastor.css';
 
@@ -388,7 +389,7 @@ export default async function PastorProfilePage(props: {
               sermons: <SermonsPane pastor={pastor} />,
               vision: <VisionPane pastor={pastor} />,
               education: <EducationPane pastor={pastor} />,
-              events: <EventsPane pastor={pastor} />,
+              events: <PastorEventsSection pastor={pastor} />,
               gallery: <GalleryPane pastor={pastor} />,
             }}
             sidebar={<Sidebar pastor={pastor} />}

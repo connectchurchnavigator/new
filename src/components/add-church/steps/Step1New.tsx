@@ -218,13 +218,14 @@ export default function Step1New({ onNext }: Step1NewProps) {
               onChange={(e) => updateFormData({ denomination: e.target.value })}
             >
               <option value="">Select denomination</option>
-              <option value="Pentecostal">Pentecostal</option>
+              <option value="Anglican">Anglican</option>
               <option value="Baptist">Baptist</option>
               <option value="Catholic">Catholic</option>
-              <option value="Anglican">Anglican</option>
               <option value="Methodist">Methodist</option>
               <option value="Non-Denominational">Non-Denominational</option>
               <option value="Orthodox">Orthodox</option>
+              <option value="Pentecostal">Pentecostal</option>
+              <option value="Presbyterian">Presbyterian</option>
               <option value="Other">Other</option>
             </select>
           </div>

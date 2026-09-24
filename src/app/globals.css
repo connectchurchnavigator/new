@@ -36,7 +36,9 @@ body {
 .screen.on { display: block; }
 
 /* Inputs */
-input, textarea, select {
+input:not(.nav-search input):not(.clean-input),
+textarea,
+select:not(.clean-select) {
   width: 100%;
   padding: 13px 16px;
   font-size: 14px;
@@ -48,10 +50,22 @@ input, textarea, select {
   transition: all 0.2s;
   color: var(--cn-ink);
 }
-input::placeholder, textarea::placeholder { color: #aeb0bd; }
-input:focus, textarea:focus, select:focus {
+input:not(.nav-search input):not(.clean-input)::placeholder,
+textarea::placeholder {
+  color: #aeb0bd;
+}
+input:not(.nav-search input):not(.clean-input):focus,
+textarea:focus,
+select:not(.clean-select):focus {
   border-color: var(--cn-purple);
   box-shadow: 0 0 0 4px var(--cn-glow2);
+}
+.clean-input {
+  border: none !important;
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 input.verified { border-color: #16a34a; background: #f0fdf4; }
 input.error { border-color: #ef4444; background: #fff1f2; }

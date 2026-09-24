@@ -93,19 +93,39 @@ export default function TopNav() {
           <form 
             onSubmit={handleSearch}
             className="nav-search" 
-            style={{ width: "360px", background: "var(--cn-surface, #f6f5fb)", borderRadius: "24px", padding: "8px 18px", display: "flex", alignItems: "center", gap: "10px", border: isSearching ? "1.5px solid #7c3aed" : "1px solid var(--cn-border, #ececf2)", transition: "all 0.2s" }}
+            style={{
+              width: "360px",
+              background: "#f8fafc",
+              borderRadius: "20px",
+              padding: "7px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "9px",
+              border: isSearching ? "1.5px solid #7c3aed" : "1px solid #e2e8f0",
+              transition: "all 0.2s",
+            }}
           >
             {isSearching ? (
-              <i className="ti ti-loader-2" style={{ fontSize: "16px", color: "#7c3aed", animation: "spin 1s linear infinite" }}></i>
+              <i className="ti ti-loader-2" style={{ fontSize: "15px", color: "#7c3aed", animation: "spin 1s linear infinite", flexShrink: 0 }}></i>
             ) : (
-              <i className="ti ti-search" style={{ fontSize: "16px", color: "var(--cn-gray-light, #6b7280)" }}></i>
+              <i className="ti ti-search" style={{ fontSize: "15px", color: "#94a3b8", flexShrink: 0 }}></i>
             )}
             <input 
+              className="clean-input"
               placeholder={isSearching ? "Searching..." : "Search churches, cities, ministries..."} 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               disabled={isSearching}
-              style={{ border: "none", background: "transparent", padding: 0, fontSize: "13.5px", outline: "none", width: "100%", color: "var(--cn-ink, #14142b)" }}
+              style={{
+                border: "none",
+                background: "transparent",
+                outline: "none",
+                boxShadow: "none",
+                padding: 0,
+                fontSize: "13.5px",
+                width: "100%",
+                color: "#0f172a",
+              }}
             />
           </form>
 

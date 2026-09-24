@@ -2,7 +2,9 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import logoImg from '@/Assets/logo (1).png';
 import { createClient } from '@/lib/supabase-browser';
 import PastorVisitorMap, { VisitorLocation } from '@/components/dashboard/PastorVisitorMap';
 
@@ -28,7 +30,7 @@ interface DashboardClientProps {
   };
 }
 
-type NavSection = 'overview' | 'visitor-insights' | 'all' | 'churches' | 'pastors' | 'worship-leaders' | 'events' | 'enquiries' | 'my-profile';
+type NavSection = 'overview' | 'visitor-insights' | 'all' | 'churches' | 'pastors' | 'worship-leaders' | 'events' | 'enquiries' | 'users' | 'my-profile';
 type TimeRange = '7d' | '14d' | '1m' | '3m' | '6m' | '9m' | '12m' | 'all';
 type EnquiryCategory = 'all' | 'pastor' | 'church' | 'event' | 'worship-leader';
 
@@ -164,6 +166,103 @@ export default function DashboardClient({
   });
   const [isSavingDrawer, setIsSavingDrawer] = useState(false);
   const [saveSuccessNotice, setSaveSuccessNotice] = useState<string | null>(null);
+
+  // ── TEAM MEMBERS & USER ROLES STATE ────────────────────────────────
+  interface TeamMember {
+    id: string;
+    name: string;
+    email: string;
+    role: 'events_only' | 'events_and_church_edit';
+    churchId?: string;
+    churchName?: string;
+    status: 'active' | 'pending';
+    addedAt: string;
+  }
+
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => {
+    // Initial sample team members or load from storage
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('cn_dashboard_team_members');
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return [
+      {
+        id: 'tm-1',
+        name: 'Sarah Jenkins',
+        email: 'sarah.j@example.com',
+        role: 'events_and_church_edit',
+        churchName: churches[0]?.name || 'Grace Community Church',
+        status: 'active',
+        addedAt: '2026-02-14',
+      },
+      {
+        id: 'tm-2',
+        name: 'David Adeleke',
+        email: 'david.a@example.com',
+        role: 'events_only',
+        churchName: churches[0]?.name || 'Grace Community Church',
+        status: 'active',
+        addedAt: '2026-03-01',
+      },
+    ];
+  });
+
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberRole, setNewMemberRole] = useState<'events_only' | 'events_and_church_edit'>('events_only');
+  const [newMemberChurchId, setNewMemberChurchId] = useState(churches[0]?.id || '');
+  const [teamSuccessMsg, setTeamSuccessMsg] = useState<string | null>(null);
+  const [teamErrorMsg, setTeamErrorMsg] = useState<string | null>(null);
+
+  const handleAddTeamMember = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMemberName.trim() || !newMemberEmail.trim()) {
+      setTeamErrorMsg('Please provide both full name and email address.');
+      return;
+    }
+
+    const churchObj = churches.find((c) => c.id === newMemberChurchId) || churches[0];
+    const newMember: TeamMember = {
+      id: 'tm-' + Date.now(),
+      name: newMemberName.trim(),
+      email: newMemberEmail.trim().toLowerCase(),
+      role: newMemberRole,
+      churchId: churchObj?.id,
+      churchName: churchObj?.name || 'All Assigned Churches',
+      status: 'active',
+      addedAt: new Date().toISOString().split('T')[0],
+    };
+
+    const updated = [newMember, ...teamMembers];
+    setTeamMembers(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cn_dashboard_team_members', JSON.stringify(updated));
+    }
+
+    setNewMemberName('');
+    setNewMemberEmail('');
+    setTeamErrorMsg(null);
+    setTeamSuccessMsg(`Successfully added ${newMember.name} as team member with ${newMember.role === 'events_only' ? 'Add Events Only' : 'Add Events & Edit Church Data'} access.`);
+    setTimeout(() => setTeamSuccessMsg(null), 4500);
+  };
+
+  const handleRemoveTeamMember = (id: string) => {
+    const updated = teamMembers.filter((m) => m.id !== id);
+    setTeamMembers(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cn_dashboard_team_members', JSON.stringify(updated));
+    }
+  };
+
+  const handleChangeMemberRole = (id: string, newRole: 'events_only' | 'events_and_church_edit') => {
+    const updated = teamMembers.map((m) => m.id === id ? { ...m, role: newRole } : m);
+    setTeamMembers(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cn_dashboard_team_members', JSON.stringify(updated));
+    }
+  };
 
   const openDrawerForEntity = (entity: any) => {
     setDrawerEntity(entity);
@@ -330,8 +429,14 @@ export default function DashboardClient({
   // All listings table state
   const [allSearch, setAllSearch] = useState('');
   const [allTypeFilter, setAllTypeFilter] = useState<string>('all');
+  const [allDenomFilter, setAllDenomFilter] = useState<string>('all');
   const [allStatusFilter, setAllStatusFilter] = useState<'all' | 'published' | 'unpublished'>('all');
   const [selectedAllIds, setSelectedAllIds] = useState<string[]>([]);
+
+  // Section-specific search states (name, zip code, denomination)
+  const [pastorSearch, setPastorSearch] = useState('');
+  const [worshipLeaderSearch, setWorshipLeaderSearch] = useState('');
+  const [eventSearch, setEventSearch] = useState('');
 
   // Local overrides for listings (status toggle & deletes)
   const [deletedListingIds, setDeletedListingIds] = useState<string[]>([]);
@@ -901,12 +1006,20 @@ export default function DashboardClient({
   const filteredChurches = useMemo(() => {
     return churches.filter((c) => {
       const q = churchSearch.toLowerCase().trim();
+      const qClean = q.replace(/\s+/g, '');
+      const matchesPostcode = c.postcode
+        ? c.postcode.toLowerCase().includes(q) || c.postcode.toLowerCase().replace(/\s+/g, '').includes(qClean)
+        : false;
+      const matchesDenomQuery = c.denomination ? c.denomination.toLowerCase().includes(q) : false;
+
       const matchesSearch =
         !q ||
         (c.name && c.name.toLowerCase().includes(q)) ||
         (c.city && c.city.toLowerCase().includes(q)) ||
         (c.email && c.email.toLowerCase().includes(q)) ||
-        (c.slug && c.slug.toLowerCase().includes(q));
+        (c.slug && c.slug.toLowerCase().includes(q)) ||
+        matchesPostcode ||
+        matchesDenomQuery;
 
       const matchesStatus =
         churchStatusFilter === 'all' || (c.status || 'published') === churchStatusFilter;
@@ -918,6 +1031,71 @@ export default function DashboardClient({
       return matchesSearch && matchesStatus && matchesDenom;
     });
   }, [churches, churchSearch, churchStatusFilter, churchDenomFilter]);
+
+  // Filtered pastors for Pastors section selector (name, city, postcode, denomination)
+  const filteredPastors = useMemo(() => {
+    return pastors.filter((p) => {
+      const q = pastorSearch.toLowerCase().trim();
+      if (!q) return true;
+      const qClean = q.replace(/\s+/g, '');
+      const postcode = p.postcode || p.church?.postcode || '';
+      const matchesPostcode = postcode
+        ? postcode.toLowerCase().includes(q) || postcode.toLowerCase().replace(/\s+/g, '').includes(qClean)
+        : false;
+      const denomination = p.denomination || p.title || '';
+      const matchesDenom = denomination ? denomination.toLowerCase().includes(q) : false;
+
+      return (
+        (p.full_name && p.full_name.toLowerCase().includes(q)) ||
+        (p.city && p.city.toLowerCase().includes(q)) ||
+        (p.email && p.email.toLowerCase().includes(q)) ||
+        matchesPostcode ||
+        matchesDenom
+      );
+    });
+  }, [pastors, pastorSearch]);
+
+  // Filtered worship leaders for Worship Leaders section selector (name, city, postcode, denomination/tagline)
+  const filteredWorshipLeaders = useMemo(() => {
+    return worshipLeaders.filter((wl) => {
+      const q = worshipLeaderSearch.toLowerCase().trim();
+      if (!q) return true;
+      const qClean = q.replace(/\s+/g, '');
+      const matchesPostcode = wl.postcode
+        ? wl.postcode.toLowerCase().includes(q) || wl.postcode.toLowerCase().replace(/\s+/g, '').includes(qClean)
+        : false;
+      const denomination = wl.denomination || wl.tagline || '';
+      const matchesDenom = denomination ? denomination.toLowerCase().includes(q) : false;
+
+      return (
+        (wl.display_name && wl.display_name.toLowerCase().includes(q)) ||
+        (wl.city && wl.city.toLowerCase().includes(q)) ||
+        (wl.email && wl.email.toLowerCase().includes(q)) ||
+        matchesPostcode ||
+        matchesDenom
+      );
+    });
+  }, [worshipLeaders, worshipLeaderSearch]);
+
+  // Filtered events for Events section selector (title, city, postcode — strictly NO denomination)
+  const filteredEvents = useMemo(() => {
+    return events.filter((e) => {
+      const q = eventSearch.toLowerCase().trim();
+      if (!q) return true;
+      const qClean = q.replace(/\s+/g, '');
+      const postcode = e.postcode || e.venue_postcode || '';
+      const matchesPostcode = postcode
+        ? postcode.toLowerCase().includes(q) || postcode.toLowerCase().replace(/\s+/g, '').includes(qClean)
+        : false;
+
+      return (
+        (e.title && e.title.toLowerCase().includes(q)) ||
+        (e.city && e.city.toLowerCase().includes(q)) ||
+        (e.venue_name && e.venue_name.toLowerCase().includes(q)) ||
+        matchesPostcode
+      );
+    });
+  }, [events, eventSearch]);
 
   // Combined and filtered listings for All Listings section
   const filteredAllListings = useMemo(() => {
@@ -934,6 +1112,7 @@ export default function DashboardClient({
         email: c.email || '',
         slug: c.slug,
         location: c.city || c.address_line || 'UK',
+        postcode: c.postcode || '',
         denomination: c.denomination?.split('|||')[0] || '—',
         status: normStatus,
         is_verified: c.is_verified,
@@ -953,6 +1132,7 @@ export default function DashboardClient({
         email: p.email || '',
         slug: p.slug,
         location: p.city || p.country || 'UK',
+        postcode: p.postcode || p.church?.postcode || '',
         denomination: p.denomination || p.title || 'Minister',
         status: normStatus,
         is_verified: p.verified || p.is_verified,
@@ -972,6 +1152,7 @@ export default function DashboardClient({
         email: wl.email || '',
         slug: wl.slug,
         location: wl.city || wl.country || 'UK',
+        postcode: wl.postcode || '',
         denomination: wl.tagline || 'Worship',
         status: normStatus,
         is_verified: wl.is_verified,
@@ -991,6 +1172,7 @@ export default function DashboardClient({
         email: '',
         slug: e.slug,
         location: e.venue_name || e.city || 'UK',
+        postcode: e.postcode || e.venue_postcode || '',
         denomination: e.type || 'Event',
         status: normStatus,
         is_verified: true,
@@ -1003,18 +1185,41 @@ export default function DashboardClient({
       if (deletedListingIds.includes(item.id)) return false;
 
       const q = allSearch.toLowerCase().trim();
+      const qClean = q.replace(/\s+/g, '');
+
+      // Space-insensitive postcode / zip code matching for all 4 types
+      const matchesPostcode = item.postcode
+        ? item.postcode.toLowerCase().includes(q) ||
+          item.postcode.toLowerCase().replace(/\s+/g, '').includes(qClean)
+        : false;
+
+      // Denomination match only for non-events (churches, pastors, worship leaders)
+      const matchesDenomQuery =
+        item.type !== 'event' && item.denomination && item.denomination !== '—'
+          ? item.denomination.toLowerCase().includes(q)
+          : false;
+
       const matchesSearch =
         !q ||
         (item.name && item.name.toLowerCase().includes(q)) ||
         (item.email && item.email.toLowerCase().includes(q)) ||
-        (item.location && item.location.toLowerCase().includes(q));
+        (item.location && item.location.toLowerCase().includes(q)) ||
+        matchesPostcode ||
+        matchesDenomQuery;
 
       const matchesType = allTypeFilter === 'all' || item.type === allTypeFilter;
       const matchesStatus = allStatusFilter === 'all' || item.status === allStatusFilter;
 
-      return matchesSearch && matchesType && matchesStatus;
+      // Denomination dropdown filter (only applies to non-events; events are excluded from denomination matching)
+      const matchesDenomFilter =
+        allDenomFilter === 'all' ||
+        (item.type !== 'event' &&
+          item.denomination &&
+          item.denomination.toLowerCase().includes(allDenomFilter.toLowerCase()));
+
+      return matchesSearch && matchesType && matchesStatus && matchesDenomFilter;
     });
-  }, [churches, pastors, worshipLeaders, events, allSearch, allTypeFilter, allStatusFilter, statusOverrides, deletedListingIds]);
+  }, [churches, pastors, worshipLeaders, events, allSearch, allTypeFilter, allDenomFilter, allStatusFilter, statusOverrides, deletedListingIds]);
 
   // Export Churches CSV
   const handleExportChurchesCSV = () => {
@@ -1300,6 +1505,29 @@ export default function DashboardClient({
       >
 
 
+        {/* ── LOGO (Redirect to Homepage) ───────────────────────────── */}
+        <Link
+          href="/"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            textDecoration: 'none',
+            padding: '4px 8px 18px',
+            marginBottom: '10px',
+            borderBottom: '1px solid #f1f5f9',
+          }}
+          title="Return to Home"
+        >
+          <Image
+            src={logoImg}
+            alt="ChurchNavigator Logo"
+            width={165}
+            height={38}
+            style={{ objectFit: 'contain' }}
+            priority
+          />
+        </Link>
+
         {/* ── MAIN SECTIONS NAVIGATION (User Requested Order) ──────── */}
         <div style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.08em', padding: '0 10px', marginBottom: '8px' }}>
           Menu
@@ -1315,6 +1543,7 @@ export default function DashboardClient({
             { id: 'worship-leaders', label: 'Worship leaders', icon: 'ti-microphone-2', unread: null },
             { id: 'events', label: 'Events', icon: 'ti-calendar-event', unread: null },
             { id: 'enquiries', label: 'Enquiries', icon: 'ti-mail', unread: unreadEnquiriesCount },
+            { id: 'users', label: 'Users', icon: 'ti-users', unread: null },
           ].map((item) => {
             const isSel = section === item.id;
             return (
@@ -1404,6 +1633,8 @@ export default function DashboardClient({
                 ? 'Hosted Events'
                 : section === 'enquiries'
                 ? 'Enquiries'
+                : section === 'users'
+                ? 'Team Members & Roles'
                 : 'My Profile'}
             </h1>
 
@@ -1786,7 +2017,14 @@ export default function DashboardClient({
               <InsightsClient
                 churchName={insightsData?.churchName || churches.find((c) => c.id === 'e97ae738-0436-444d-b1d5-33f0e23df18c')?.name || 'ASCA'}
                 churchId={insightsData?.churchId || 'e97ae738-0436-444d-b1d5-33f0e23df18c'}
-                availableChurches={churches.map((c) => ({ id: c.id, name: c.name, slug: c.slug || c.id }))}
+                availableChurches={churches.map((c) => ({
+                  id: c.id,
+                  name: c.name,
+                  slug: c.slug || c.id,
+                  city: c.city,
+                  postcode: c.postcode,
+                  denomination: c.denomination,
+                }))}
                 stats={insightsData?.stats || null}
                 funnel={insightsData?.funnel || []}
                 sources={insightsData?.sources || []}
@@ -1802,30 +2040,108 @@ export default function DashboardClient({
           {section === 'pastors' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              {/* Profile Selector if more than 1 pastor */}
-              {pastors.length > 1 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+              {/* Profile Selector & Search Bar */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '14px',
+                  background: '#ffffff',
+                  borderRadius: '18px',
+                  padding: '16px 20px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '13px', fontWeight: 800, color: '#64748b' }}>Select Profile:</span>
-                  {pastors.map((p, i) => (
+                  {filteredPastors.length === 0 ? (
+                    <span style={{ fontSize: '12.5px', color: '#94a3b8', fontStyle: 'italic' }}>
+                      No pastors match search
+                    </span>
+                  ) : (
+                    filteredPastors.map((p) => {
+                      const origIndex = pastors.findIndex((item) => item.id === p.id);
+                      const isSelected = selectedPastorIndex === origIndex;
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => setSelectedPastorIndex(origIndex >= 0 ? origIndex : 0)}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            border: isSelected ? '1.5px solid #a855f7' : '1px solid #cbd5e1',
+                            background: isSelected ? '#faf5ff' : '#ffffff',
+                            color: isSelected ? '#9333ea' : '#64748b',
+                            fontWeight: 800,
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                          }}
+                        >
+                          {p.full_name}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Pastor Search Input */}
+                <div style={{ position: 'relative', minWidth: '240px', flex: '0 1 300px' }}>
+                  <i
+                    className="ti ti-search"
+                    style={{
+                      position: 'absolute',
+                      left: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#94a3b8',
+                      fontSize: '15px',
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search pastors by name, zip code, denomination..."
+                    value={pastorSearch}
+                    onChange={(e) => setPastorSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 32px 8px 34px',
+                      borderRadius: '10px',
+                      border: '1.5px solid #e2e8f0',
+                      fontSize: '12.5px',
+                      color: '#0f172a',
+                      outline: 'none',
+                      background: '#f8fafc',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  {pastorSearch && (
                     <button
-                      key={p.id}
-                      onClick={() => setSelectedPastorIndex(i)}
+                      type="button"
+                      onClick={() => setPastorSearch('')}
                       style={{
-                        padding: '5px 12px',
-                        borderRadius: '20px',
-                        border: selectedPastorIndex === i ? '1.5px solid #a855f7' : '1px solid #cbd5e1',
-                        background: selectedPastorIndex === i ? '#faf5ff' : '#ffffff',
-                        color: selectedPastorIndex === i ? '#9333ea' : '#64748b',
-                        fontWeight: 800,
-                        fontSize: '12px',
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: '#94a3b8',
                         cursor: 'pointer',
+                        padding: 0,
+                        fontSize: '13px',
                       }}
                     >
-                      {p.full_name}
+                      <i className="ti ti-x" />
                     </button>
-                  ))}
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* Profile Completeness Status Banner & Edit Prompt */}
               {currentPastor && (() => {
@@ -2726,7 +3042,7 @@ export default function DashboardClient({
                   ></i>
                   <input
                     type="text"
-                    placeholder="Search by name, city, or email..."
+                    placeholder="Search by name, city, zip code, denomination, or email..."
                     value={allSearch}
                     onChange={(e) => setAllSearch(e.target.value)}
                     style={{
@@ -2800,6 +3116,35 @@ export default function DashboardClient({
                   </select>
                 </div>
 
+                {/* Denomination Filter (for non-events) */}
+                {allTypeFilter !== 'event' && denominations.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Denom:</span>
+                    <select
+                      value={allDenomFilter}
+                      onChange={(e) => setAllDenomFilter(e.target.value)}
+                      style={{
+                        padding: '9px 14px',
+                        borderRadius: '10px',
+                        border: '1.5px solid #e2e8f0',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: '#1e293b',
+                        background: '#ffffff',
+                        cursor: 'pointer',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="all">All Denominations</option>
+                      {denominations.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {/* Status Filter */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                   <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Status:</span>
@@ -2825,12 +3170,13 @@ export default function DashboardClient({
                 </div>
 
                 {/* Reset Filters if active */}
-                {(allSearch || allTypeFilter !== 'all' || allStatusFilter !== 'all') && (
+                {(allSearch || allTypeFilter !== 'all' || allDenomFilter !== 'all' || allStatusFilter !== 'all') && (
                   <button
                     type="button"
                     onClick={() => {
                       setAllSearch('');
                       setAllTypeFilter('all');
+                      setAllDenomFilter('all');
                       setAllStatusFilter('all');
                     }}
                     style={{
@@ -3221,24 +3567,86 @@ export default function DashboardClient({
                   >
                     All Churches ({churches.length})
                   </button>
-                  {churches.map((c, i) => (
+                  {filteredChurches.length === 0 ? (
+                    <span style={{ fontSize: '12.5px', color: '#94a3b8', fontStyle: 'italic' }}>
+                      No churches match search
+                    </span>
+                  ) : (
+                    filteredChurches.map((c) => {
+                      const origIndex = churches.findIndex((item) => item.id === c.id);
+                      const isSelected = selectedChurchIndex === origIndex;
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => setSelectedChurchIndex(origIndex >= 0 ? origIndex : 0)}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            border: isSelected ? '1.5px solid #7c3aed' : '1px solid #cbd5e1',
+                            background: isSelected ? '#faf5ff' : '#ffffff',
+                            color: isSelected ? '#7c3aed' : '#64748b',
+                            fontWeight: 800,
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {c.name}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Church Search Input */}
+                <div style={{ position: 'relative', minWidth: '240px', flex: '0 1 300px' }}>
+                  <i
+                    className="ti ti-search"
+                    style={{
+                      position: 'absolute',
+                      left: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#94a3b8',
+                      fontSize: '15px',
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search churches by name, zip code, denomination..."
+                    value={churchSearch}
+                    onChange={(e) => setChurchSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 32px 8px 34px',
+                      borderRadius: '10px',
+                      border: '1.5px solid #e2e8f0',
+                      fontSize: '12.5px',
+                      color: '#0f172a',
+                      outline: 'none',
+                      background: '#f8fafc',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  {churchSearch && (
                     <button
-                      key={c.id}
-                      onClick={() => setSelectedChurchIndex(i)}
+                      type="button"
+                      onClick={() => setChurchSearch('')}
                       style={{
-                        padding: '6px 14px',
-                        borderRadius: '20px',
-                        border: selectedChurchIndex === i ? '1.5px solid #7c3aed' : '1px solid #cbd5e1',
-                        background: selectedChurchIndex === i ? '#faf5ff' : '#ffffff',
-                        color: selectedChurchIndex === i ? '#7c3aed' : '#64748b',
-                        fontWeight: 800,
-                        fontSize: '12px',
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: '#94a3b8',
                         cursor: 'pointer',
+                        padding: 0,
+                        fontSize: '13px',
                       }}
                     >
-                      {c.name}
+                      <i className="ti ti-x" />
                     </button>
-                  ))}
+                  )}
                 </div>
               </div>
 
@@ -3603,43 +4011,107 @@ export default function DashboardClient({
                   >
                     All Leaders ({worshipLeaders.length})
                   </button>
-                  {worshipLeaders.map((wl, i) => (
-                    <button
-                      key={wl.id}
-                      onClick={() => setSelectedWorshipLeaderIndex(i)}
-                      style={{
-                        padding: '6px 14px',
-                        borderRadius: '20px',
-                        border: selectedWorshipLeaderIndex === i ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
-                        background: selectedWorshipLeaderIndex === i ? '#f0f9ff' : '#ffffff',
-                        color: selectedWorshipLeaderIndex === i ? '#0284c7' : '#64748b',
-                        fontWeight: 800,
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {wl.display_name}
-                    </button>
-                  ))}
+                  {filteredWorshipLeaders.length === 0 ? (
+                    <span style={{ fontSize: '12.5px', color: '#94a3b8', fontStyle: 'italic' }}>
+                      No leaders match search
+                    </span>
+                  ) : (
+                    filteredWorshipLeaders.map((wl) => {
+                      const origIndex = worshipLeaders.findIndex((item) => item.id === wl.id);
+                      const isSelected = selectedWorshipLeaderIndex === origIndex;
+                      return (
+                        <button
+                          key={wl.id}
+                          onClick={() => setSelectedWorshipLeaderIndex(origIndex >= 0 ? origIndex : 0)}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            border: isSelected ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                            background: isSelected ? '#f0f9ff' : '#ffffff',
+                            color: isSelected ? '#0284c7' : '#64748b',
+                            fontWeight: 800,
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {wl.display_name}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
 
-                <Link
-                  href="/onboarding/worship-leader"
-                  style={{
-                    background: '#0284c7',
-                    color: '#fff',
-                    padding: '8px 16px',
-                    borderRadius: '10px',
-                    fontSize: '13px',
-                    fontWeight: 800,
-                    textDecoration: 'none',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  + Add Worship Leader
-                </Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  {/* Worship Leader Search Input */}
+                  <div style={{ position: 'relative', minWidth: '240px', flex: '0 1 300px' }}>
+                    <i
+                      className="ti ti-search"
+                      style={{
+                        position: 'absolute',
+                        left: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#94a3b8',
+                        fontSize: '15px',
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Search leaders by name, zip code, denomination..."
+                      value={worshipLeaderSearch}
+                      onChange={(e) => setWorshipLeaderSearch(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 32px 8px 34px',
+                        borderRadius: '10px',
+                        border: '1.5px solid #e2e8f0',
+                        fontSize: '12.5px',
+                        color: '#0f172a',
+                        outline: 'none',
+                        background: '#f8fafc',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                    {worshipLeaderSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setWorshipLeaderSearch('')}
+                        style={{
+                          position: 'absolute',
+                          right: '10px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          color: '#94a3b8',
+                          cursor: 'pointer',
+                          padding: 0,
+                          fontSize: '13px',
+                        }}
+                      >
+                        <i className="ti ti-x" />
+                      </button>
+                    )}
+                  </div>
+
+                  <Link
+                    href="/onboarding/worship-leader"
+                    style={{
+                      background: '#0284c7',
+                      color: '#fff',
+                      padding: '8px 16px',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    + Add Worship Leader
+                  </Link>
+                </div>
               </div>
 
               {/* Profile Completeness Status Banner & Edit Prompt */}
@@ -4003,43 +4475,107 @@ export default function DashboardClient({
                   >
                     All Events ({events.length})
                   </button>
-                  {events.map((e, i) => (
-                    <button
-                      key={e.id}
-                      onClick={() => setSelectedEventIndex(i)}
-                      style={{
-                        padding: '6px 14px',
-                        borderRadius: '20px',
-                        border: selectedEventIndex === i ? '1.5px solid #16a34a' : '1px solid #cbd5e1',
-                        background: selectedEventIndex === i ? '#f0fdf4' : '#ffffff',
-                        color: selectedEventIndex === i ? '#16a34a' : '#64748b',
-                        fontWeight: 800,
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {e.title}
-                    </button>
-                  ))}
+                  {filteredEvents.length === 0 ? (
+                    <span style={{ fontSize: '12.5px', color: '#94a3b8', fontStyle: 'italic' }}>
+                      No events match search
+                    </span>
+                  ) : (
+                    filteredEvents.map((e) => {
+                      const origIndex = events.findIndex((item) => item.id === e.id);
+                      const isSelected = selectedEventIndex === origIndex;
+                      return (
+                        <button
+                          key={e.id}
+                          onClick={() => setSelectedEventIndex(origIndex >= 0 ? origIndex : 0)}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            border: isSelected ? '1.5px solid #16a34a' : '1px solid #cbd5e1',
+                            background: isSelected ? '#f0fdf4' : '#ffffff',
+                            color: isSelected ? '#16a34a' : '#64748b',
+                            fontWeight: 800,
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {e.title}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
 
-                <Link
-                  href="/onboarding/events"
-                  style={{
-                    background: '#16a34a',
-                    color: '#fff',
-                    padding: '8px 16px',
-                    borderRadius: '10px',
-                    fontSize: '13px',
-                    fontWeight: 800,
-                    textDecoration: 'none',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  + Host Event
-                </Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  {/* Event Search Input (Strictly no denomination) */}
+                  <div style={{ position: 'relative', minWidth: '240px', flex: '0 1 300px' }}>
+                    <i
+                      className="ti ti-search"
+                      style={{
+                        position: 'absolute',
+                        left: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#94a3b8',
+                        fontSize: '15px',
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Search events by title, city, zip code..."
+                      value={eventSearch}
+                      onChange={(e) => setEventSearch(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 32px 8px 34px',
+                        borderRadius: '10px',
+                        border: '1.5px solid #e2e8f0',
+                        fontSize: '12.5px',
+                        color: '#0f172a',
+                        outline: 'none',
+                        background: '#f8fafc',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                    {eventSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setEventSearch('')}
+                        style={{
+                          position: 'absolute',
+                          right: '10px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          color: '#94a3b8',
+                          cursor: 'pointer',
+                          padding: 0,
+                          fontSize: '13px',
+                        }}
+                      >
+                        <i className="ti ti-x" />
+                      </button>
+                    )}
+                  </div>
+
+                  <Link
+                    href="/onboarding/events"
+                    style={{
+                      background: '#16a34a',
+                      color: '#fff',
+                      padding: '8px 16px',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    + Host Event
+                  </Link>
+                </div>
               </div>
 
               {/* Event Completeness Status Banner & Edit Prompt */}
@@ -4610,6 +5146,393 @@ export default function DashboardClient({
                     </button>
                   </div>
                 </form>
+              </div>
+
+            </div>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════ */}
+          {/* ── USERS & TEAM ROLES SECTION ──────────────────────────── */}
+          {/* ═════════════════════════════════════════════════════════ */}
+          {section === 'users' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', maxWidth: '1080px' }}>
+              
+              {/* Header Banner */}
+              <div style={{
+                background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+                borderRadius: '24px',
+                padding: '32px 36px',
+                color: '#ffffff',
+                boxShadow: '0 10px 25px -5px rgba(49, 46, 129, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '20px',
+              }}>
+                <div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 800, marginBottom: '12px', backdropFilter: 'blur(8px)' }}>
+                    <i className="ti ti-shield-lock" style={{ color: '#a5b4fc' }}></i> Team Access & Delegated Permissions
+                  </div>
+                  <h2 style={{ margin: '0 0 8px 0', fontSize: '26px', fontWeight: 900 }}>
+                    Manage Team Users & Roles
+                  </h2>
+                  <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.82)', fontSize: '14.5px', maxWidth: '620px', lineHeight: 1.5 }}>
+                    Invite associates, assistants, and co-leaders to help manage your churches and publish events. No verification code required — users are granted instantaneous access.
+                  </p>
+                </div>
+
+                <div style={{ background: 'rgba(255,255,255,0.1)', padding: '16px 22px', borderRadius: '16px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.15)' }}>
+                  <div style={{ fontSize: '28px', fontWeight: 900, color: '#38bdf8' }}>{teamMembers.length}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>Active Teammates</div>
+                </div>
+              </div>
+
+              {/* Notification Alerts */}
+              {teamSuccessMsg && (
+                <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '14px', padding: '14px 20px', color: '#065f46', fontSize: '13.5px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <i className="ti ti-circle-check-filled" style={{ fontSize: '18px', color: '#10b981' }}></i>
+                  <span>{teamSuccessMsg}</span>
+                </div>
+              )}
+
+              {teamErrorMsg && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '14px', padding: '14px 20px', color: '#991b1b', fontSize: '13.5px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <i className="ti ti-alert-triangle-filled" style={{ fontSize: '18px', color: '#ef4444' }}></i>
+                  <span>{teamErrorMsg}</span>
+                </div>
+              )}
+
+              {/* Grid: Add User Form + Roles Guide */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '24px' }}>
+                
+                {/* 1. Add User Card */}
+                <div style={{ background: '#ffffff', borderRadius: '20px', padding: '28px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
+                      <i className="ti ti-user-plus" style={{ fontSize: '20px' }}></i>
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>Add New Team User</h3>
+                      <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#64748b' }}>Immediately grants access without requiring confirmation</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleAddTeamMember} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                        Full Name <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Pastor John Doe or Mary Jane"
+                        value={newMemberName}
+                        onChange={(e) => setNewMemberName(e.target.value)}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '11px 14px',
+                          borderRadius: '12px',
+                          border: '1.5px solid #cbd5e1',
+                          fontSize: '14px',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                        Email Address <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="teammate@example.com"
+                        value={newMemberEmail}
+                        onChange={(e) => setNewMemberEmail(e.target.value)}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '11px 14px',
+                          borderRadius: '12px',
+                          border: '1.5px solid #cbd5e1',
+                          fontSize: '14px',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+
+                    {churches.length > 0 && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                          Assign to Church
+                        </label>
+                        <select
+                          value={newMemberChurchId}
+                          onChange={(e) => setNewMemberChurchId(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '11px 14px',
+                            borderRadius: '12px',
+                            border: '1.5px solid #cbd5e1',
+                            fontSize: '14px',
+                            background: '#ffffff',
+                            outline: 'none',
+                            cursor: 'pointer',
+                            boxSizing: 'border-box',
+                          }}
+                        >
+                          {/* Sorted Alphabetically */}
+                          {[...churches]
+                            .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                            .map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name || 'Unnamed Church'}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>
+                        Select Permission Level <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <label
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '12px',
+                            padding: '12px 14px',
+                            borderRadius: '12px',
+                            border: `1.5px solid ${newMemberRole === 'events_only' ? '#7c3aed' : '#e2e8f0'}`,
+                            background: newMemberRole === 'events_only' ? '#f5f3ff' : '#f8fafc',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="user_role"
+                            checked={newMemberRole === 'events_only'}
+                            onChange={() => setNewMemberRole('events_only')}
+                            style={{ marginTop: '3px' }}
+                          />
+                          <div>
+                            <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#1e293b' }}>
+                              1. Add Events Only
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                              User can publish, edit, and organize church conferences, workshops, and worship sessions.
+                            </div>
+                          </div>
+                        </label>
+
+                        <label
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '12px',
+                            padding: '12px 14px',
+                            borderRadius: '12px',
+                            border: `1.5px solid ${newMemberRole === 'events_and_church_edit' ? '#7c3aed' : '#e2e8f0'}`,
+                            background: newMemberRole === 'events_and_church_edit' ? '#f5f3ff' : '#f8fafc',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="user_role"
+                            checked={newMemberRole === 'events_and_church_edit'}
+                            onChange={() => setNewMemberRole('events_and_church_edit')}
+                            style={{ marginTop: '3px' }}
+                          />
+                          <div>
+                            <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#1e293b' }}>
+                              2. Add Events & Edit Church Data
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                              Full co-editor rights: can update service times, ministries, contact details, gallery, and publish events.
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      style={{
+                        marginTop: '8px',
+                        background: 'linear-gradient(135deg, #7c3aed, #6366f1)',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '13px 24px',
+                        borderRadius: '12px',
+                        fontWeight: 800,
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <i className="ti ti-plus"></i> Add Team User Now
+                    </button>
+                  </form>
+                </div>
+
+                {/* 2. Permission Explanations & Quick Info */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ background: '#ffffff', borderRadius: '20px', padding: '24px', border: '1px solid #e2e8f0' }}>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <i className="ti ti-info-circle" style={{ color: '#7c3aed' }}></i> About Team Permissions
+                    </h4>
+                    <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.6, margin: '0 0 14px 0' }}>
+                      As the primary administrator, you retain absolute ownership over your accounts and superadmin privileges. Delegated users receive scoped access to assist with day-to-day church activities.
+                    </p>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12.5px' }}>
+                      <div style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <span style={{ fontWeight: 800, color: '#059669' }}>✓ Add Events:</span> Publish calendar gatherings, set ticket prices, manage RSVPs.
+                      </div>
+                      <div style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <span style={{ fontWeight: 800, color: '#7c3aed' }}>✓ Edit Church Data:</span> Modify service timings, photo banners, pastor info, and facilities.
+                      </div>
+                      <div style={{ padding: '10px 12px', background: '#fef2f2', borderRadius: '10px', border: '1px solid #fee2e2' }}>
+                        <span style={{ fontWeight: 800, color: '#dc2626' }}>✕ Protected:</span> Only you can delete churches or alter billing subscriptions.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', borderRadius: '20px', padding: '20px', border: '1px solid #bbf7d0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#166534', fontWeight: 800, fontSize: '13.5px', marginBottom: '6px' }}>
+                      <i className="ti ti-bolt"></i> Instant User Provisioning
+                    </div>
+                    <div style={{ fontSize: '12.5px', color: '#15803d', lineHeight: 1.5 }}>
+                      No waiting for verification links or email confirmation tokens. The entered email is matched automatically upon login.
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Teammates List Table */}
+              <div style={{ background: '#ffffff', borderRadius: '20px', padding: '28px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>Current Team Members</h3>
+                    <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748b' }}>Active delegated users who can perform updates on your behalf</p>
+                  </div>
+                  <span style={{ fontSize: '12px', fontWeight: 700, background: '#f1f5f9', color: '#475569', padding: '4px 12px', borderRadius: '12px' }}>
+                    {teamMembers.length} users
+                  </span>
+                </div>
+
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1.5px solid #e2e8f0', fontSize: '12px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <th style={{ padding: '12px 14px' }}>Name & Email</th>
+                        <th style={{ padding: '12px 14px' }}>Assigned Church</th>
+                        <th style={{ padding: '12px 14px' }}>Access Role</th>
+                        <th style={{ padding: '12px 14px' }}>Status</th>
+                        <th style={{ padding: '12px 14px' }}>Added Date</th>
+                        <th style={{ padding: '12px 14px', textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {teamMembers.map((member) => (
+                        <tr key={member.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13.5px' }}>
+                          <td style={{ padding: '16px 14px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '10px',
+                                background: member.role === 'events_and_church_edit' ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : 'linear-gradient(135deg, #0ea5e9, #38bdf8)',
+                                color: '#ffffff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 800,
+                                fontSize: '14px',
+                                flexShrink: 0,
+                              }}>
+                                {member.name.slice(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 800, color: '#0f172a' }}>{member.name}</div>
+                                <div style={{ fontSize: '12px', color: '#64748b' }}>{member.email}</div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '16px 14px', color: '#334155', fontWeight: 600 }}>
+                            {member.churchName || 'All Churches'}
+                          </td>
+
+                          <td style={{ padding: '16px 14px' }}>
+                            <select
+                              value={member.role}
+                              onChange={(e) => handleChangeMemberRole(member.id, e.target.value as any)}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: '8px',
+                                fontSize: '12.5px',
+                                fontWeight: 700,
+                                border: '1px solid #cbd5e1',
+                                background: member.role === 'events_and_church_edit' ? '#faf5ff' : '#f0f9ff',
+                                color: member.role === 'events_and_church_edit' ? '#6b21a8' : '#0369a1',
+                                outline: 'none',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <option value="events_only">Add Events Only</option>
+                              <option value="events_and_church_edit">Add Events & Edit Church Data</option>
+                            </select>
+                          </td>
+
+                          <td style={{ padding: '16px 14px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 800, color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '3px 8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16a34a' }} />
+                              Active Access
+                            </span>
+                          </td>
+
+                          <td style={{ padding: '16px 14px', color: '#64748b', fontSize: '12.5px' }}>
+                            {member.addedAt}
+                          </td>
+
+                          <td style={{ padding: '16px 14px', textAlign: 'right' }}>
+                            <button
+                              onClick={() => handleRemoveTeamMember(member.id)}
+                              title="Revoke access"
+                              style={{
+                                background: '#fef2f2',
+                                color: '#dc2626',
+                                border: '1px solid #fecaca',
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              <i className="ti ti-trash"></i> Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
             </div>

@@ -2,18 +2,19 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
-interface ChurchSuggestion {
+export type SearchCategory = "church" | "pastor" | "event" | "worshipleader";
+
+interface SuggestionItem {
   id: string;
   name: string;
+  subtext?: string;
   slug: string;
   city: string | null;
-  postcode: string | null;
   denomination: string | null;
-  logo_url: string | null;
-  cover_url: string | null;
+  thumb_url: string | null;
   is_verified?: boolean;
+  category: string;
 }
 
 interface HomeSearchBarProps {
@@ -23,21 +24,72 @@ interface HomeSearchBarProps {
   setCity?: (val: string) => void;
   denomination?: string;
   setDenomination?: (val: string) => void;
+  category?: SearchCategory | "";
+  setCategory?: (val: SearchCategory | "") => void;
   onSearch?: () => void;
 }
 
+const CATEGORY_META: Record<SearchCategory, { label: string; plural: string; icon: string; namePlaceholder: string; color: string; badgeBg: string }> = {
+  church: {
+    label: "Church",
+    plural: "Churches",
+    icon: "ti ti-building-church",
+    namePlaceholder: "Church name or keyword...",
+    color: "#7c3aed",
+    badgeBg: "#ede9fe",
+  },
+  pastor: {
+    label: "Pastor",
+    plural: "Pastors",
+    icon: "ti ti-user",
+    namePlaceholder: "Pastor or minister name...",
+    color: "#2563eb",
+    badgeBg: "#dbeafe",
+  },
+  event: {
+    label: "Event",
+    plural: "Events",
+    icon: "ti ti-calendar-event",
+    namePlaceholder: "Event name or gathering...",
+    color: "#e11d48",
+    badgeBg: "#ffe4e6",
+  },
+  worshipleader: {
+    label: "Worship Leader",
+    plural: "Worship Leaders",
+    icon: "ti ti-microphone",
+    namePlaceholder: "Worship leader or artist...",
+    color: "#059669",
+    badgeBg: "#d1fae5",
+  },
+};
+
 export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
   const router = useRouter();
+  const [internalCategory, setInternalCategory] = useState<SearchCategory | "">("church");
   const [internalKeyword, setInternalKeyword] = useState("");
   const [internalCity, setInternalCity] = useState("");
   const [internalDenom, setInternalDenom] = useState("all");
   const [isSearching, setIsSearching] = useState(false);
 
   // Auto-complete suggestion state
-  const [suggestions, setSuggestions] = useState<ChurchSuggestion[]>([]);
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showCatMenu, setShowCatMenu] = useState(false);
+
+  // Location suggestions state
+  const [locationSuggestions, setLocationSuggestions] = useState<Array<{ name: string; detail?: string }>>([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const locationContainerRef = useRef<HTMLDivElement>(null);
+  const catMenuRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedCategory = (props.category !== undefined && props.category !== "") ? props.category : (internalCategory || "church");
+  const setSelectedCategory = props.setCategory || setInternalCategory;
 
   const keyword = props.keyword !== undefined ? props.keyword : internalKeyword;
   const setKeyword = props.setKeyword || setInternalKeyword;
@@ -48,10 +100,19 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
   const denomination = props.denomination !== undefined ? props.denomination : internalDenom;
   const setDenomination = props.setDenomination || setInternalDenom;
 
-  // Debounce query to fetch matching churches
+  // Auto-focus name input when category is chosen
+  useEffect(() => {
+    if (selectedCategory && nameInputRef.current) {
+      setTimeout(() => {
+        nameInputRef.current?.focus();
+      }, 50);
+    }
+  }, [selectedCategory]);
+
+  // Debounce query to fetch suggestions according to chosen category
   useEffect(() => {
     const trimmed = keyword.trim();
-    if (trimmed.length < 2) {
+    if (!selectedCategory || trimmed.length < 2) {
       setSuggestions([]);
       setShowDropdown(false);
       return;
@@ -60,21 +121,84 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
     const timer = setTimeout(async () => {
       setIsLoadingSuggestions(true);
       try {
-        const res = await fetch(`/api/churches/search?q=${encodeURIComponent(trimmed)}&limit=6`);
+        const res = await fetch(
+          `/api/search/suggest?category=${encodeURIComponent(selectedCategory)}&q=${encodeURIComponent(trimmed)}&limit=6`
+        );
         if (res.ok) {
           const data = await res.json();
           setSuggestions(Array.isArray(data) ? data : []);
           setShowDropdown(true);
         }
       } catch (err) {
-        console.error("Failed to fetch church suggestions:", err);
+        console.error("Failed to fetch suggestions:", err);
       } finally {
         setIsLoadingSuggestions(false);
       }
     }, 250);
 
     return () => clearTimeout(timer);
-  }, [keyword]);
+  }, [keyword, selectedCategory]);
+
+  // Debounce location query to fetch matching UK locations & cities
+  useEffect(() => {
+    const trimmed = city.trim();
+    if (trimmed.length < 2) {
+      setLocationSuggestions([]);
+      setShowLocationDropdown(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsLoadingLocations(true);
+      try {
+        // Check UK postcodes if pattern matches
+        const cleanPc = trimmed.replace(/\s+/g, "");
+        if (/^[A-Z]{1,2}\d/i.test(cleanPc)) {
+          const pcRes = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(cleanPc)}/autocomplete`);
+          if (pcRes.ok) {
+            const pcData = await pcRes.json();
+            if (Array.isArray(pcData.result) && pcData.result.length > 0) {
+              setLocationSuggestions(
+                pcData.result.slice(0, 5).map((pc: string) => ({ name: pc, detail: "UK Postcode" }))
+              );
+              setShowLocationDropdown(true);
+              setIsLoadingLocations(false);
+              return;
+            }
+          }
+        }
+
+        // Search places / cities via Nominatim
+        const nomRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(trimmed)}&countrycodes=gb&addressdetails=1&limit=5`
+        );
+        if (nomRes.ok) {
+          const nomData = await nomRes.json();
+          if (Array.isArray(nomData) && nomData.length > 0) {
+            const places = nomData.map((item: any) => {
+              const addr = item.address || {};
+              const placeName = addr.city || addr.town || addr.village || addr.suburb || item.name;
+              const detail = [addr.county || addr.state, addr.country].filter(Boolean).join(", ");
+              return { name: placeName || item.display_name.split(",")[0], detail };
+            });
+
+            // De-duplicate places by name
+            const unique = places.filter(
+              (p, idx, self) => idx === self.findIndex((t) => t.name.toLowerCase() === p.name.toLowerCase())
+            );
+            setLocationSuggestions(unique.slice(0, 5));
+            setShowLocationDropdown(true);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch location suggestions:", err);
+      } finally {
+        setIsLoadingLocations(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [city]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -82,70 +206,193 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
       }
+      if (locationContainerRef.current && !locationContainerRef.current.contains(e.target as Node)) {
+        setShowLocationDropdown(false);
+      }
+      if (catMenuRef.current && !catMenuRef.current.contains(e.target as Node)) {
+        setShowCatMenu(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSelectChurch = (church: ChurchSuggestion) => {
+  const handleSelectSuggestion = (item: SuggestionItem) => {
     setShowDropdown(false);
-    if (church.slug) {
-      router.push(`/church/${church.slug}`);
+    if (item.slug) {
+      router.push(item.slug);
     } else {
-      setKeyword(church.name);
-      router.push(`/explore?q=${encodeURIComponent(church.name)}`);
+      setKeyword(item.name);
+      executeSearch(item.name);
     }
+  };
+
+  const executeSearch = (customKeyword?: string) => {
+    if (props.onSearch) {
+      props.onSearch();
+    }
+    setIsSearching(true);
+
+    const activeCat = selectedCategory || "church";
+    const typeParam =
+      activeCat === "church"
+        ? "churches"
+        : activeCat === "pastor"
+        ? "pastors"
+        : activeCat === "event"
+        ? "events"
+        : "worship_leaders";
+
+    const params = new URLSearchParams();
+    params.set("type", typeParam);
+
+    const term = customKeyword !== undefined ? customKeyword.trim() : keyword.trim();
+    if (term) params.set("q", term);
+    if (city.trim()) params.set("city", city.trim());
+    if (activeCat !== "event" && denomination !== "all") {
+      params.set("denomination", denomination);
+    }
+
+    router.push(`/explore?${params.toString()}`);
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setShowDropdown(false);
-    if (props.onSearch) {
-      props.onSearch();
-    }
-    setIsSearching(true);
-    const params = new URLSearchParams();
-    if (keyword.trim()) params.set("q", keyword.trim());
-    if (city.trim()) params.set("city", city.trim());
-    if (denomination !== "all") params.set("denomination", denomination);
-    
-    router.push(`/explore?${params.toString()}`);
+    executeSearch();
   };
+
+  const catMeta = CATEGORY_META[selectedCategory as SearchCategory] || CATEGORY_META.church;
 
   return (
     <form
       onSubmit={handleSearch}
       style={{
         background: "#ffffff",
-        padding: "10px 14px",
-        borderRadius: "20px",
+        padding: "8px 12px",
+        borderRadius: "24px",
         boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.35)",
         display: "flex",
         alignItems: "center",
         gap: "10px",
-        maxWidth: "880px",
+        width: "100%",
+        maxWidth: "960px",
         margin: "0 auto",
-        flexWrap: "wrap",
+        flexWrap: "nowrap",
         border: "1px solid rgba(255,255,255,0.2)",
         position: "relative",
       }}
     >
-      {/* Search Input with Autocomplete Dropdown */}
+      {/* Category Pill with Dropdown Trigger */}
+      <div ref={catMenuRef} style={{ position: "relative", flexShrink: 0 }}>
+        <button
+          type="button"
+          onClick={() => setShowCatMenu((prev) => !prev)}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "7px",
+            background: catMeta.badgeBg,
+            color: catMeta.color,
+            padding: "8px 14px",
+            borderRadius: "14px",
+            fontSize: "13.5px",
+            fontWeight: 800,
+            border: "1px solid rgba(124, 58, 237, 0.15)",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+            outline: "none",
+          }}
+        >
+          <i className={catMeta.icon} style={{ fontSize: "15px" }} />
+          <span>{catMeta.label}</span>
+          <i className="ti ti-chevron-down" style={{ fontSize: "13px", marginLeft: "2px", opacity: 0.8 }} />
+        </button>
+
+        {/* Custom Category Dropdown Menu */}
+        {showCatMenu && (
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 10px)",
+              left: 0,
+              minWidth: "220px",
+              background: "#ffffff",
+              borderRadius: "16px",
+              boxShadow: "0 20px 40px -10px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.08)",
+              zIndex: 99999,
+              padding: "6px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+              animation: "fadeIn 0.15s ease-out",
+            }}
+          >
+            {(["church", "pastor", "event", "worshipleader"] as SearchCategory[]).map((catKey) => {
+              const meta = CATEGORY_META[catKey];
+              const isSelected = selectedCategory === catKey;
+              return (
+                <button
+                  key={catKey}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory(catKey);
+                    setShowCatMenu(false);
+                    setSuggestions([]);
+                    setShowDropdown(false);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "9px 12px",
+                    borderRadius: "10px",
+                    border: "none",
+                    background: isSelected ? meta.badgeBg : "transparent",
+                    color: isSelected ? meta.color : "#334155",
+                    fontSize: "13.5px",
+                    fontWeight: isSelected ? 800 : 600,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "all 0.12s",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) e.currentTarget.style.background = "#f8fafc";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  <i className={meta.icon} style={{ fontSize: "16px", color: meta.color }} />
+                  <span style={{ flex: 1 }}>{meta.plural}</span>
+                  {isSelected && <i className="ti ti-check" style={{ fontSize: "14px", color: meta.color }} />}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div style={{ width: "1px", height: "30px", background: "#e2e8f0", flexShrink: 0 }} />
+
+      {/* Field 1: Name Input with Autocomplete Dropdown */}
       <div
         ref={searchContainerRef}
         style={{
-          flex: "1 1 240px",
+          flex: "1 1 210px",
           display: "flex",
           alignItems: "center",
-          gap: "10px",
-          padding: "6px 12px",
+          gap: "8px",
+          padding: "6px 8px",
           position: "relative",
         }}
       >
-        <i className="ti ti-search" style={{ fontSize: "18px", color: "var(--cn-purple, #7c3aed)" }}></i>
+        <i className="ti ti-search" style={{ fontSize: "17px", color: catMeta.color }}></i>
         <input
+          ref={nameInputRef}
           type="text"
-          placeholder="Church name or keyword..."
+          className="clean-input"
+          placeholder={catMeta.namePlaceholder}
           value={keyword}
           onChange={(e) => {
             setKeyword(e.target.value);
@@ -161,6 +408,7 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
           style={{
             border: "none",
             outline: "none",
+            boxShadow: "none",
             width: "100%",
             fontSize: "14px",
             color: "#0f172a",
@@ -169,8 +417,8 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
           }}
         />
 
-        {/* Live Dropdown Results */}
-        {showDropdown && (keyword.trim().length >= 2) && (
+        {/* Live Dropdown Suggestions */}
+        {showDropdown && keyword.trim().length >= 2 && (
           <div
             style={{
               position: "absolute",
@@ -187,128 +435,152 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
               animation: "fadeIn 0.15s ease-out",
             }}
           >
-            <div style={{
-              padding: "10px 14px 6px",
-              fontSize: "11px",
-              fontWeight: 800,
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              color: "#94a3b8",
-              borderBottom: "1px solid #f1f5f9",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}>
-              <span>Matching Churches</span>
+            <div
+              style={{
+                padding: "10px 14px 6px",
+                fontSize: "11px",
+                fontWeight: 800,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                color: "#94a3b8",
+                borderBottom: "1px solid #f1f5f9",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span>Matching {catMeta.plural}</span>
               {isLoadingSuggestions && (
-                <i className="ti ti-loader-2" style={{ animation: "spin 1s linear infinite", fontSize: "13px", color: "#7c3aed" }} />
+                <i
+                  className="ti ti-loader-2"
+                  style={{ animation: "spin 1s linear infinite", fontSize: "13px", color: catMeta.color }}
+                />
               )}
             </div>
 
             <div style={{ maxHeight: "320px", overflowY: "auto" }}>
               {isLoadingSuggestions && suggestions.length === 0 ? (
                 <div style={{ padding: "20px 16px", textAlign: "center", color: "#64748b", fontSize: "13px" }}>
-                  <i className="ti ti-loader-2" style={{ animation: "spin 1s linear infinite", fontSize: "18px", display: "inline-block", marginBottom: "6px", color: "#7c3aed" }} />
-                  <div>Searching churches...</div>
+                  <i
+                    className="ti ti-loader-2"
+                    style={{
+                      animation: "spin 1s linear infinite",
+                      fontSize: "18px",
+                      display: "inline-block",
+                      marginBottom: "6px",
+                      color: catMeta.color,
+                    }}
+                  />
+                  <div>Searching {catMeta.plural.toLowerCase()}...</div>
                 </div>
               ) : suggestions.length > 0 ? (
-                suggestions.map((church) => {
-                  const thumb = church.logo_url || church.cover_url;
-                  return (
+                suggestions.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleSelectSuggestion(item)}
+                    style={{
+                      padding: "10px 14px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      cursor: "pointer",
+                      transition: "background 0.15s",
+                      borderBottom: "1px solid #f8fafc",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    {/* Thumbnail / Icon */}
                     <div
-                      key={church.id}
-                      onClick={() => handleSelectChurch(church)}
                       style={{
-                        padding: "10px 14px",
+                        width: "38px",
+                        height: "38px",
+                        borderRadius: "10px",
+                        background: catMeta.badgeBg,
                         display: "flex",
                         alignItems: "center",
-                        gap: "12px",
-                        cursor: "pointer",
-                        transition: "background 0.15s",
-                        borderBottom: "1px solid #f8fafc",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        overflow: "hidden",
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
-                      {/* Avatar / Thumbnail */}
-                      <div
-                        style={{
-                          width: "38px",
-                          height: "38px",
-                          borderRadius: "10px",
-                          background: "linear-gradient(135deg, #ede9fe, #ddd6fe)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                          overflow: "hidden",
-                          position: "relative",
-                        }}
-                      >
-                        {thumb ? (
-                          <img
-                            src={thumb}
-                            alt={church.name}
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                          />
-                        ) : (
-                          <i className="ti ti-building-church" style={{ fontSize: "19px", color: "#7c3aed" }}></i>
-                        )}
-                      </div>
+                      {item.thumb_url ? (
+                        <img
+                          src={item.thumb_url}
+                          alt={item.name}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      ) : (
+                        <i className={catMeta.icon} style={{ fontSize: "19px", color: catMeta.color }}></i>
+                      )}
+                    </div>
 
-                      {/* Info */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <span style={{
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span
+                          style={{
                             fontSize: "13.5px",
                             fontWeight: 700,
                             color: "#0f172a",
                             whiteSpace: "nowrap",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
-                          }}>
-                            {church.name}
-                          </span>
-                          {church.is_verified && (
-                            <i className="ti ti-circle-check-filled" style={{ color: "#3b82f6", fontSize: "14px", flexShrink: 0 }}></i>
-                          )}
-                        </div>
-                        <div style={{
+                          }}
+                        >
+                          {item.name}
+                        </span>
+                        {item.is_verified && (
+                          <i
+                            className="ti ti-circle-check-filled"
+                            style={{ color: "#3b82f6", fontSize: "14px", flexShrink: 0 }}
+                          />
+                        )}
+                      </div>
+                      <div
+                        style={{
                           fontSize: "12px",
                           color: "#64748b",
                           display: "flex",
                           alignItems: "center",
                           gap: "8px",
                           marginTop: "2px",
-                        }}>
-                          {church.city && (
-                            <span>
-                              <i className="ti ti-map-pin" style={{ fontSize: "11px", marginRight: "2px" }} />
-                              {church.city}
-                            </span>
-                          )}
-                          {church.denomination && (
-                            <span style={{
+                        }}
+                      >
+                        {item.city && (
+                          <span>
+                            <i className="ti ti-map-pin" style={{ fontSize: "11px", marginRight: "2px" }} />
+                            {item.city}
+                          </span>
+                        )}
+                        {item.denomination && (
+                          <span
+                            style={{
                               background: "#f1f5f9",
                               padding: "1px 6px",
                               borderRadius: "6px",
                               fontSize: "11px",
                               fontWeight: 600,
                               color: "#475569",
-                            }}>
-                              {church.denomination}
-                            </span>
-                          )}
-                        </div>
+                            }}
+                          >
+                            {item.denomination}
+                          </span>
+                        )}
+                        {item.subtext && !item.denomination && (
+                          <span style={{ fontSize: "11px", color: "#64748b" }}>{item.subtext}</span>
+                        )}
                       </div>
-
-                      <i className="ti ti-chevron-right" style={{ color: "#cbd5e1", fontSize: "15px" }}></i>
                     </div>
-                  );
-                })
+
+                    <i className="ti ti-chevron-right" style={{ color: "#cbd5e1", fontSize: "15px" }}></i>
+                  </div>
+                ))
               ) : (
                 <div style={{ padding: "18px 14px", textAlign: "center", color: "#64748b", fontSize: "13px" }}>
-                  <p style={{ margin: 0, fontWeight: 500 }}>No church found matching &ldquo;{keyword}&rdquo;</p>
+                  <p style={{ margin: 0, fontWeight: 500 }}>
+                    No {catMeta.label.toLowerCase()} found matching &ldquo;{keyword}&rdquo;
+                  </p>
                   <button
                     type="button"
                     onClick={handleSearch}
@@ -316,20 +588,20 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
                       marginTop: "8px",
                       background: "none",
                       border: "none",
-                      color: "#7c3aed",
+                      color: catMeta.color,
                       fontSize: "12.5px",
                       fontWeight: 700,
                       cursor: "pointer",
                       padding: 0,
                     }}
                   >
-                    Search on map anyway &rarr;
+                    Search in explore directory &rarr;
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Footer option: View all results */}
+            {/* Footer option */}
             {suggestions.length > 0 && (
               <div
                 onClick={handleSearch}
@@ -348,7 +620,7 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
                 onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f3ff")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "#faf5ff")}
               >
-                <span>See all results on map for &ldquo;{keyword}&rdquo;</span>
+                <span>See all {catMeta.plural.toLowerCase()} for &ldquo;{keyword}&rdquo;</span>
                 <i className="ti ti-arrow-right" style={{ fontSize: "13px" }}></i>
               </div>
             )}
@@ -356,19 +628,42 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
         )}
       </div>
 
-      <div style={{ width: "1px", height: "30px", background: "#e2e8f0" }} className="hidden sm:block" />
+      <div style={{ width: "1px", height: "30px", background: "#e2e8f0", flexShrink: 0 }} className="hidden sm:block" />
 
-      {/* Location / Postcode Input */}
-      <div style={{ flex: "1 1 200px", display: "flex", alignItems: "center", gap: "8px", padding: "6px 12px" }}>
-        <i className="ti ti-map-pin" style={{ fontSize: "18px", color: "#e11d48" }}></i>
+      {/* Field 2: Location / Postcode Input with Auto-complete Dropdown */}
+      <div
+        ref={locationContainerRef}
+        style={{
+          flex: "1 1 170px",
+          minWidth: "140px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "6px 8px",
+          position: "relative",
+        }}
+      >
+        <i className="ti ti-map-pin" style={{ fontSize: "18px", color: "#e11d48", flexShrink: 0 }}></i>
         <input
           type="text"
+          className="clean-input"
           placeholder="City or UK postcode..."
           value={city}
-          onChange={(e) => setCity(e.target.value)}
+          onChange={(e) => {
+            setCity(e.target.value);
+            if (e.target.value.trim().length >= 2) {
+              setShowLocationDropdown(true);
+            }
+          }}
+          onFocus={() => {
+            if (city.trim().length >= 2 && locationSuggestions.length > 0) {
+              setShowLocationDropdown(true);
+            }
+          }}
           style={{
             border: "none",
             outline: "none",
+            boxShadow: "none",
             width: "100%",
             fontSize: "14px",
             color: "#0f172a",
@@ -376,39 +671,163 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
             background: "transparent",
           }}
         />
+
+        {/* Live Location Dropdown Suggestions */}
+        {showLocationDropdown && city.trim().length >= 2 && (
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 14px)",
+              left: 0,
+              minWidth: "260px",
+              width: "max(100%, 280px)",
+              background: "#ffffff",
+              borderRadius: "16px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(15, 23, 42, 0.12)",
+              zIndex: 99999,
+              overflow: "hidden",
+              textAlign: "left",
+              animation: "fadeIn 0.15s ease-out",
+            }}
+          >
+            <div
+              style={{
+                padding: "10px 14px 6px",
+                fontSize: "11px",
+                fontWeight: 800,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                color: "#94a3b8",
+                borderBottom: "1px solid #f1f5f9",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span>Matching Locations</span>
+              {isLoadingLocations && (
+                <i
+                  className="ti ti-loader-2"
+                  style={{ animation: "spin 1s linear infinite", fontSize: "13px", color: "#e11d48" }}
+                />
+              )}
+            </div>
+
+            <div style={{ maxHeight: "260px", overflowY: "auto" }}>
+              {isLoadingLocations && locationSuggestions.length === 0 ? (
+                <div style={{ padding: "16px 14px", textAlign: "center", color: "#64748b", fontSize: "13px" }}>
+                  <i
+                    className="ti ti-loader-2"
+                    style={{
+                      animation: "spin 1s linear infinite",
+                      fontSize: "17px",
+                      display: "inline-block",
+                      marginBottom: "4px",
+                      color: "#e11d48",
+                    }}
+                  />
+                  <div>Searching locations...</div>
+                </div>
+              ) : locationSuggestions.length > 0 ? (
+                locationSuggestions.map((item, idx) => (
+                  <div
+                    key={`${item.name}-${idx}`}
+                    onClick={() => {
+                      setCity(item.name);
+                      setShowLocationDropdown(false);
+                    }}
+                    style={{
+                      padding: "10px 14px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      cursor: "pointer",
+                      transition: "background 0.15s",
+                      borderBottom: "1px solid #f8fafc",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#fff1f2")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <div
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        borderRadius: "8px",
+                        background: "#ffe4e6",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <i className="ti ti-map-pin" style={{ color: "#e11d48", fontSize: "15px" }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: "13.5px",
+                          fontWeight: 700,
+                          color: "#0f172a",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {item.name}
+                      </div>
+                      {item.detail && (
+                        <div style={{ fontSize: "11px", color: "#64748b", marginTop: "1px" }}>
+                          {item.detail}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: "14px", textAlign: "center", color: "#64748b", fontSize: "12.5px" }}>
+                  No locations found for &ldquo;{city}&rdquo;
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      <div style={{ width: "1px", height: "30px", background: "#e2e8f0" }} className="hidden sm:block" />
+      {/* Field 3: Denomination Select (EXCLUDED for Event only) */}
+      {selectedCategory !== "event" && (
+        <>
+          <div style={{ width: "1px", height: "30px", background: "#e2e8f0", flexShrink: 0 }} className="hidden sm:block" />
+          <div style={{ flex: "0 1 160px", minWidth: "130px", padding: "6px 8px" }}>
+            <select
+              value={denomination}
+              onChange={(e) => setDenomination(e.target.value)}
+              style={{
+                border: "none",
+                outline: "none",
+                width: "100%",
+                fontSize: "13.5px",
+                fontWeight: 600,
+                color: "#334155",
+                padding: 0,
+                background: "transparent",
+                cursor: "pointer",
+              }}
+            >
+              <option value="all">All Denominations</option>
+              <option value="Anglican">Anglican</option>
+              <option value="Baptist">Baptist</option>
+              <option value="Catholic">Catholic</option>
+              <option value="Methodist">Methodist</option>
+              <option value="Non-Denominational">Non-Denominational</option>
+              <option value="Orthodox">Orthodox</option>
+              <option value="Pentecostal">Pentecostal</option>
+              <option value="Presbyterian">Presbyterian</option>
+            </select>
+          </div>
+        </>
+      )}
 
-      {/* Denomination Select */}
-      <div style={{ flex: "0 1 180px", padding: "6px 12px" }}>
-        <select
-          value={denomination}
-          onChange={(e) => setDenomination(e.target.value)}
-          style={{
-            border: "none",
-            outline: "none",
-            width: "100%",
-            fontSize: "13.5px",
-            fontWeight: 600,
-            color: "#334155",
-            padding: 0,
-            background: "transparent",
-            cursor: "pointer",
-          }}
-        >
-          <option value="all">All Denominations</option>
-          <option value="Pentecostal">Pentecostal</option>
-          <option value="Baptist">Baptist</option>
-          <option value="Catholic">Catholic</option>
-          <option value="Anglican">Anglican</option>
-          <option value="Non-Denominational">Non-Denominational</option>
-          <option value="Methodist">Methodist</option>
-          <option value="Orthodox">Orthodox</option>
-        </select>
-      </div>
-
-      {/* Submit Button */}
+      {/* Action Button: Renamed to "Search", strictly 1-line flex-shrink: 0 */}
       <button
         type="submit"
         disabled={isSearching}
@@ -417,13 +836,15 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
           color: "#ffffff",
           border: "none",
           borderRadius: "14px",
-          padding: "12px 26px",
-          fontSize: "14.5px",
+          padding: "11px 24px",
+          fontSize: "14px",
           fontWeight: 800,
           cursor: isSearching ? "not-allowed" : "pointer",
           display: "inline-flex",
           alignItems: "center",
           gap: "8px",
+          flexShrink: 0,
+          marginLeft: "auto",
           transition: "all 0.2s",
           boxShadow: "0 4px 14px rgba(124, 58, 237, 0.3)",
           whiteSpace: "nowrap",
@@ -432,13 +853,13 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
       >
         {isSearching ? (
           <>
-            <i className="ti ti-loader-2" style={{ fontSize: "17px", animation: "spin 1s linear infinite" }}></i>
-            Opening Map...
+            <i className="ti ti-loader-2" style={{ fontSize: "16px", animation: "spin 1s linear infinite" }}></i>
+            Searching...
           </>
         ) : (
           <>
-            <i className="ti ti-map-2" style={{ fontSize: "17px" }}></i>
-            Find on Map
+            <i className="ti ti-search" style={{ fontSize: "16px" }}></i>
+            Search
           </>
         )}
       </button>
@@ -471,7 +892,7 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
               border: "1px solid #ede9fe",
             }}
           >
-            {/* Animated Pin and Ripple */}
+            {/* Animated Icon */}
             <div
               style={{
                 width: "68px",
@@ -483,19 +904,18 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
                 alignItems: "center",
                 justifyContent: "center",
                 boxShadow: "0 10px 25px -5px rgba(124, 58, 237, 0.45)",
-                position: "relative",
               }}
             >
-              <i className="ti ti-map-2" style={{ fontSize: "32px", color: "#ffffff" }}></i>
+              <i className="ti ti-search" style={{ fontSize: "32px", color: "#ffffff" }}></i>
             </div>
 
             <h3 style={{ fontSize: "20px", fontWeight: 900, color: "#0f172a", marginBottom: "8px" }}>
-              Locating Churches On Map...
+              Searching {catMeta.plural}...
             </h3>
             <p style={{ fontSize: "13.5px", color: "#64748b", margin: "0 0 20px", lineHeight: 1.5 }}>
               {city.trim() || keyword.trim()
-                ? `Searching ${[keyword.trim(), city.trim()].filter(Boolean).join(" in ")} across interactive map & directory.`
-                : "Loading interactive map, verified churches, and active service times..."}
+                ? `Finding ${[keyword.trim(), city.trim()].filter(Boolean).join(" in ")} across directory & map.`
+                : `Loading verified ${catMeta.plural.toLowerCase()} and real-time listings...`}
             </p>
 
             {/* Spinner Pill */}
@@ -514,7 +934,7 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
               }}
             >
               <i className="ti ti-loader-2" style={{ fontSize: "16px", animation: "spin 1s linear infinite" }}></i>
-              <span>Opening Map View...</span>
+              <span>Loading results...</span>
             </div>
           </div>
         </div>

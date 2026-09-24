@@ -1,8 +1,9 @@
 import React, { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useFormContext } from "@/context/FormContext";
+import { compressImage } from "@/lib/image-compressor";
 
-const ALL_LANGUAGES = ['English','Spanish','French','Portuguese','German','Italian','Dutch','Polish','Romanian','Hungarian','Czech','Slovak','Bulgarian','Serbian','Croatian','Bosnian','Slovenian','Macedonian','Montenegrin','Albanian','Greek','Turkish','Russian','Ukrainian','Belarusian','Lithuanian','Latvian','Estonian','Finnish','Swedish','Norwegian','Danish','Icelandic','Irish','Welsh','Scottish Gaelic','Manx','Cornish','Breton','Catalan','Basque','Galician','Luxembourgish','Frisian','Maltese','Romani','Yiddish','Ladino','Sorbian','Yoruba','Igbo','Hausa','Twi','Ga','Ewe','Fante','Akan','Fula','Wolof','Mandinka','Bambara','Mossi','Krio','Mende','Temne','Kanuri','Tiv','Edo','Efik','Ibibio','Nupe','Kpelle','Dan','Amharic','Tigrinya','Tigre','Oromo','Somali','Afar','Harari','Sidamo','Swahili','Lingala','Kikongo','Tshiluba','Kinyarwanda','Kirundi','Luganda','Runyankole','Acholi','Lango','Ateso','Chichewa','Bemba','Tonga','Lozi','Nyanja','Shona','Ndebele','Zulu','Xhosa','Swazi','Sesotho','Setswana','Sepedi','Tsonga','Venda','Afrikaans','Sango','Berber','Tamazight','Tashelhit','Kabyle','Malagasy','Comorian','Arabic','Hebrew','Aramaic','Kurdish','Sorani','Kurmanji','Farsi','Dari','Pashto','Balochi','Brahui','Luri','Persian','Azerbaijani','Armenian','Georgian','Turkmen','Uzbek','Kazakh','Kyrgyz','Tajik','Uyghur','Mongolian','Tibetan','Dzongkha','Urdu','Punjabi','Saraiki','Sindhi','Gujarati','Marathi','Konkani','Hindi','Bhojpuri','Maithili','Awadhi','Rajasthani','Bengali','Sylheti','Chittagonian','Assamese','Odia','Tamil','Telugu','Kannada','Malayalam','Tulu','Sinhala','Nepali','Newari','Santali','Kashmiri','Dogri','Manipuri','Mizo','Khasi','Bodo','Garo','Naga','Dhivehi','Mandarin','Cantonese','Hakka','Hokkien','Teochew','Shanghainese','Korean','Japanese','Vietnamese','Thai','Lao','Khmer','Burmese','Shan','Karen','Mon','Chin','Kachin','Rohingya','Hmong','Mien','Tagalog','Cebuano','Ilocano','Hiligaynon','Waray','Bikol','Kapampangan','Pangasinan','Maranao','Chavacano','Indonesian','Javanese','Sundanese','Balinese','Minangkabau','Buginese','Madurese','Acehnese','Batak','Malay','Tetum','Maori','Samoan','Tongan','Fijian','Hawaiian','Tahitian','Bislama','Tok Pisin','Hiri Motu','Chamorro','Marshallese','Palauan','Gilbertese','Nauruan','Quechua','Aymara','Guarani','Nahuatl','Maya','Mapudungun','Haitian Creole','Papiamento','Jamaican Patois','Trinidadian Creole','Cape Verdean Creole','Sranan Tongo','Garifuna','Belizean Creole'];
+const ALL_LANGUAGES = ['Acholi','Afar','Afrikaans','Akan','Albanian','Amharic','Arabic','Aramaic','Armenian','Assamese','Ateso','Awadhi','Aymara','Azerbaijani','Balinese','Balochi','Bambara','Basque','Batak','Belarusian','Belizean Creole','Bemba','Bengali','Berber','Bhojpuri','Bikol','Bislama','Bodo','Bosnian','Brahui','Breton','Buginese','Bulgarian','Burmese','Cantonese','Cape Verdean Creole','Catalan','Cebuano','Chamorro','Chichewa','Chin','Chittagonian','Choir','Cornish','Croatian','Czech','Dan','Danish','Dari','Dhivehi','Dogri','Dutch','Dzongkha','Edo','Efik','English','Estonian','Ewe','Fante','Farsi','Fijian','Finnish','French','Frisian','Fula','Ga','Galician','Garifuna','Georgian','German','Gilbertese','Greek','Guarani','Gujarati','Haitian Creole','Hakka','Harari','Hausa','Hawaiian','Hebrew','Hiligaynon','Hindi','Hiri Motu','Hmong','Hokkien','Hungarian','Ibibio','Icelandic','Igbo','Ilocano','Indonesian','Irish','Italian','Jamaican Patois','Japanese','Javanese','Kabyle','Kachin','Kannada','Kanuri','Kapampangan','Karen','Kashmiri','Kazakh','Khasi','Khmer','Kikongo','Kinyarwanda','Kirundi','Konkani','Korean','Kpelle','Krio','Kurdish','Kurmanji','Kyrgyz','Ladino','Lango','Lao','Latvian','Lingala','Lithuanian','Lozi','Luganda','Luxembourgish','Macedonian','Madurese','Maithili','Malagasy','Malay','Malayalam','Maltese','Mandarin','Mandinka','Manipuri','Manx','Maori','Mapudungun','Maranao','Marathi','Marshallese','Maya','Mende','Mien','Minangkabau','Mizo','Mon','Mongolian','Montenegrin','Mossi','Naga','Nahuatl','Nauruan','Ndebele','Nepali','Newari','Norwegian','Nupe','Nyanja','Odia','Oromo','Palauan','Pangasinan','Papiamento','Pashto','Persian','Polish','Portuguese','Punjabi','Quechua','Rajasthani','Rohingya','Romani','Romanian','Runyankole','Russian','Samoan','Sango','Santali','Saraiki','Scottish Gaelic','Seniors Ministry','Sepedi','Serbian','Sesotho','Setswana','Shan','Shona','Sidamo','Sindhi','Sinhala','Slovak','Slovenian','Somali','Sorbian','Sorani','Spanish','Sranan Tongo','Sundanese','Swahili','Swazi','Swedish','Sylheti','Tagalog','Tahitian','Tajik','Tamazight','Tamil','Tashelhit','Telugu','Temne','Tetum','Teochew','Thai','Tibetan','Tigre','Tigrinya','Tiv','Tok Pisin','Tonga','Trinidadian Creole','Tshiluba','Tsonga','Tulu','Turkish','Turkmen','Twi','Ukrainian','Urdu','Uyghur','Uzbek','Venda','Vietnamese','Waray','Welsh','Wolof','Xhosa','Yiddish','Yoruba','Zulu'];
 
 const SOCIAL_RULES: { [key: string]: { rx: RegExp, others: RegExp, name: string, ex: string } } = {
   facebook: { rx: /^(https?:\/\/)?(www\.)?(facebook\.com|fb\.com|fb\.me)\/[A-Za-z0-9._\-\/?=&%]+$/i, others: /(instagram\.com|linkedin\.com|youtube\.com|youtu\.be|twitter\.com|x\.com|tiktok\.com|t\.me)/i, name: 'Facebook', ex: 'facebook.com/yourchurch' },
@@ -85,16 +86,22 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
   const [pastorName, setPastorName] = useState(formData.pastorName || formData.pastor_name || "");
   const [pastorBio, setPastorBio] = useState(formData.pastorBio || formData.pastor_bio || "");
 
-  const handlePastorPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePastorPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const res = reader.result as string;
-        setPastorPhotoPreview(res);
-        updateFormData({ pastorPhoto: res, pastor_photo: res });
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImage(file, { maxWidth: 600, maxHeight: 600, quality: 0.85 });
+        setPastorPhotoPreview(compressed);
+        updateFormData({ pastorPhoto: compressed, pastor_photo: compressed });
+      } catch {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const res = reader.result as string;
+          setPastorPhotoPreview(res);
+          updateFormData({ pastorPhoto: res, pastor_photo: res });
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -107,30 +114,31 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
 
   // Ministries
   const POPULAR_MINISTRIES = [
-    "Youth Ministry",
-    "Children's Church",
-    "Food Bank",
     "Bible Study",
-    "Outreach",
-    "Worship Team",
-    "Ushering",
-    "Prayer & Intercession",
+    "Children's Church",
     "Evangelism",
-    "Women's Ministry",
+    "Food Bank",
+    "Marriage & Family",
     "Men's Ministry",
+    "Outreach",
+    "Prayer & Intercession",
+    "Ushering",
+    "Women's Ministry",
+    "Worship Team",
     "Young Adults",
-    "Marriage & Family"
+    "Youth Ministry"
   ];
 
   const ALL_MINISTRIES = [
-    "Youth Ministry", "Children's Church", "Worship Team", "Ushering", "Technical / Media", 
-    "Prayer & Intercession", "Evangelism", "Women's Ministry", "Men's Ministry", "Young Adults", "Marriage & Family",
-    "Crèche / Nursery", "Junior Church", "Teen Ministry", "Parent & Toddler", "Seniors Ministry", "Singles Ministry",
-    "Food Bank", "Community Café", "Prison Ministry", "Street Ministry",
-    "Praise & Worship", "Dance Ministry", "Drama & Theatre", "Choir",
-    "Global Missions", "Church Planting", "Evangelism Team", "Local Outreach", "Bible Study", "Outreach",
-    "Hospital Visitation", "Discipleship", "Media & Tech", "Single Parents", "Addiction Recovery",
-    "Homeless Ministry", "Benevolence", "Grief Care", "Missions", "Student Ministry", "College & Career"
+    "Addiction Recovery", "Benevolence", "Bible Study", "Children's Church", "Choir", 
+    "Church Planting", "College & Career", "Community Café", "Crèche / Nursery", 
+    "Dance Ministry", "Discipleship", "Drama & Theatre", "Evangelism", "Evangelism Team", 
+    "Food Bank", "Global Missions", "Grief Care", "Homeless Ministry", "Hospital Visitation", 
+    "Junior Church", "Local Outreach", "Marriage & Family", "Media & Tech", "Men's Ministry", 
+    "Missions", "Outreach", "Parent & Toddler", "Praise & Worship", "Prayer & Intercession", 
+    "Prison Ministry", "Seniors Ministry", "Single Parents", "Singles Ministry", 
+    "Street Ministry", "Student Ministry", "Technical / Media", "Teen Ministry", 
+    "Ushering", "Women's Ministry", "Worship Team", "Young Adults", "Youth Ministry"
   ];
 
   const [activeMinistries, setActiveMinistries] = useState<string[]>(formData.ministries?.length ? formData.ministries : []);
@@ -143,7 +151,7 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
   const [langSearchQuery, setLangSearchQuery] = useState("");
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const langContainerRef = useRef<HTMLDivElement>(null);
-  const quickPicks = ["English", "Spanish", "French", "Portuguese", "German", "Mandarin", "Arabic", "Hindi"];
+  const quickPicks = ["Arabic", "English", "French", "German", "Hindi", "Mandarin", "Portuguese", "Spanish"];
 
   // Facilities
   const [activeFacilities, setActiveFacilities] = useState<string[]>(formData.facilities || []);
@@ -178,15 +186,21 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
   }, []);
 
   // Handlers for media
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setPreview: React.Dispatch<React.SetStateAction<string | null>>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, setPreview: React.Dispatch<React.SetStateAction<string | null>>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-        updateFormData({ logo: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImage(file, { maxWidth: 600, maxHeight: 600, quality: 0.85 });
+        setPreview(compressed);
+        updateFormData({ logo: compressed });
+      } catch {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreview(reader.result as string);
+          updateFormData({ logo: reader.result as string });
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -197,23 +211,23 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
     if (logoInputRef.current) logoInputRef.current.value = "";
   };
 
-  const handleCoverPhotosUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverPhotosUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
-      const newImages: string[] = [];
-      Array.from(files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (typeof reader.result === 'string') {
-            newImages.push(reader.result);
-            if (newImages.length === files.length) {
-              const updated = [...(formData.coverBanners || []), ...newImages];
-              updateFormData({ coverBanners: updated });
-            }
-          }
-        };
-        reader.readAsDataURL(file);
+    if (files && files.length > 0) {
+      const compressPromises = Array.from(files).map(async (file) => {
+        try {
+          return await compressImage(file, { maxWidth: 1600, maxHeight: 900, quality: 0.8 });
+        } catch {
+          return new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
+        }
       });
+      const newImages = await Promise.all(compressPromises);
+      const updated = [...(formData.coverBanners || []), ...newImages];
+      updateFormData({ coverBanners: updated });
     }
   };
 
@@ -222,27 +236,30 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
     updateFormData({ coverBanners: updated });
   };
 
-  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
-      const newImages: string[] = [];
-      Array.from(files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (typeof reader.result === 'string') {
-            newImages.push(reader.result);
-            if (newImages.length === files.length) {
-              setGalleryImages((prev) => [...prev, ...newImages]);
-            }
-          }
-        };
-        reader.readAsDataURL(file);
+    if (files && files.length > 0) {
+      const compressPromises = Array.from(files).map(async (file) => {
+        try {
+          return await compressImage(file, { maxWidth: 1200, maxHeight: 900, quality: 0.8 });
+        } catch {
+          return new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
+        }
       });
+      const newImages = await Promise.all(compressPromises);
+      setGalleryImages((prev) => [...prev, ...newImages]);
+      updateFormData({ galleryImages: [...(formData.galleryImages || []), ...newImages] });
     }
   };
 
   const removeGalleryImage = (index: number) => {
-    setGalleryImages((prev) => prev.filter((_, i) => i !== index));
+    const updated = (galleryImages || []).filter((_, i) => i !== index);
+    setGalleryImages(updated);
+    updateFormData({ galleryImages: updated });
   };
 
   // AI Description Generator state

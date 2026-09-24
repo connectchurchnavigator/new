@@ -73,6 +73,7 @@ interface ExploreClientProps {
   initialSearchQuery?: string;
   initialCity?: string;
   initialDenom?: string;
+  initialType?: "churches" | "pastors" | "events" | "worship_leaders";
 }
 
 interface FilterOptionItem {
@@ -392,8 +393,9 @@ export default function ExploreClient({
   initialSearchQuery = "",
   initialCity = "",
   initialDenom = "",
+  initialType = "churches",
 }: ExploreClientProps) {
-  const [exploreType, setExploreType] = useState<"churches" | "pastors" | "events" | "worship_leaders">("churches");
+  const [exploreType, setExploreType] = useState<"churches" | "pastors" | "events" | "worship_leaders">(initialType);
   const [cardVersion, setCardVersion] = useState<"v0" | "v1" | "v2" | "v3" | "v4">("v0");
 
   // Lazy-loaded data state with in-memory cache
@@ -488,7 +490,7 @@ export default function ExploreClient({
   const [selectedWorshipStyles, setSelectedWorshipStyles] = useState<string[]>([]);
   const [selectedMinistries, setSelectedMinistries] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>(initialCity ? [initialCity] : []);
-  const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "nearby" | "latest">("latest");
+  const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "nearby" | "latest" | "oldest">("latest");
 
   // Event specific filters
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
@@ -497,7 +499,7 @@ export default function ExploreClient({
 
   // Pastor specific filters (Name, City [universal], Denomination, Ministries, Education, Languages)
   const [selectedPastorNames, setSelectedPastorNames] = useState<string[]>([]);
-  const [selectedPastorDenoms, setSelectedPastorDenoms] = useState<string[]>([]);
+  const [selectedPastorDenoms, setSelectedPastorDenoms] = useState<string[]>(initialDenom ? [initialDenom] : []);
   const [selectedPastorMinistries, setSelectedPastorMinistries] = useState<string[]>([]);
   const [selectedPastorEducations, setSelectedPastorEducations] = useState<string[]>([]);
   const [selectedPastorLanguages, setSelectedPastorLanguages] = useState<string[]>([]);
@@ -515,7 +517,7 @@ export default function ExploreClient({
   const [maxDistance, setMaxDistance] = useState<number>(30); // in kilometers
   const [isLocating, setIsLocating] = useState(false);
 
-  // Extract distinct filter values with counts (sorted by count desc, then name asc)
+  // Extract distinct filter values with counts (sorted Alphabetically A-Z)
   const denominations = useMemo(() => {
     const counts: Record<string, number> = {};
     initialChurches.forEach((c) => {
@@ -524,7 +526,7 @@ export default function ExploreClient({
     });
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [initialChurches]);
 
   const languages = useMemo(() => {
@@ -539,7 +541,7 @@ export default function ExploreClient({
     });
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [initialChurches]);
 
   const worshipStyles = useMemo(() => {
@@ -560,7 +562,7 @@ export default function ExploreClient({
     });
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [initialChurches]);
 
   const ministries = useMemo(() => {
@@ -575,7 +577,7 @@ export default function ExploreClient({
     });
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [initialChurches]);
 
   const cities = useMemo(() => {
@@ -600,7 +602,7 @@ export default function ExploreClient({
 
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [initialChurches, pastorsData, eventsData, worshipLeadersData, exploreType]);
 
   // Event filter lists
@@ -612,7 +614,7 @@ export default function ExploreClient({
     });
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [eventsData]);
 
   // Pastor filter lists (Name, City [from cities], Denomination, Ministries, Education, Languages)
@@ -624,7 +626,7 @@ export default function ExploreClient({
     });
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [pastorsData]);
 
   const pastorDenominations = useMemo(() => {
@@ -644,7 +646,7 @@ export default function ExploreClient({
     });
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [pastorsData, denominations]);
 
   const pastorMinistries = useMemo(() => {
@@ -672,7 +674,7 @@ export default function ExploreClient({
     });
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [pastorsData, ministries]);
 
   const pastorEducations = useMemo(() => {
@@ -691,7 +693,7 @@ export default function ExploreClient({
     });
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [pastorsData]);
 
   const pastorLanguages = useMemo(() => {
@@ -715,7 +717,7 @@ export default function ExploreClient({
     });
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [pastorsData, languages]);
 
   // Worship Leader filter lists
@@ -733,7 +735,7 @@ export default function ExploreClient({
     });
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [worshipLeadersData]);
 
   const wlInstruments = useMemo(() => {
@@ -750,7 +752,7 @@ export default function ExploreClient({
     });
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [worshipLeadersData]);
 
   const wlLanguages = useMemo(() => {
@@ -767,7 +769,7 @@ export default function ExploreClient({
     });
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [worshipLeadersData]);
 
   const wlAvailabilities = useMemo(() => {
@@ -784,7 +786,7 @@ export default function ExploreClient({
     });
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [worshipLeadersData]);
 
   // Haversine distance in km
@@ -1045,6 +1047,9 @@ export default function ExploreClient({
         if (sortBy === "name_desc") {
           return b.name.localeCompare(a.name);
         }
+        if (sortBy === "oldest") {
+          return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+        }
         if (sortBy === "nearby") {
           if (a.distance !== null && b.distance !== null) {
             return a.distance - b.distance;
@@ -1194,6 +1199,7 @@ export default function ExploreClient({
         }
         if (sortBy === "name_asc") return a.full_name.localeCompare(b.full_name);
         if (sortBy === "name_desc") return b.full_name.localeCompare(a.full_name);
+        if (sortBy === "oldest") return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
         if (sortBy === "nearby") {
           if (a.distance !== null && b.distance !== null) return a.distance - b.distance;
           if (a.distance !== null) return -1;
@@ -1278,6 +1284,7 @@ export default function ExploreClient({
         }
         if (sortBy === "name_asc") return a.title.localeCompare(b.title);
         if (sortBy === "name_desc") return b.title.localeCompare(a.title);
+        if (sortBy === "oldest") return new Date(a.starts_at || a.created_at || 0).getTime() - new Date(b.starts_at || b.created_at || 0).getTime();
         if (sortBy === "nearby") {
           if (a.distance !== null && b.distance !== null) return a.distance - b.distance;
           if (a.distance !== null) return -1;
@@ -1363,6 +1370,7 @@ export default function ExploreClient({
         }
         if (sortBy === "name_asc") return (a.display_name || "").localeCompare(b.display_name || "");
         if (sortBy === "name_desc") return (b.display_name || "").localeCompare(a.display_name || "");
+        if (sortBy === "oldest") return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
   }, [worshipLeadersData, searchQuery, selectedCities, selectedWlStyles, selectedWlInstruments, selectedWlLanguages, selectedWlAvailabilities, sortBy]);
@@ -1405,6 +1413,57 @@ export default function ExploreClient({
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 }
     );
   };
+
+  // Auto-geocode searched city or postcode to set map center / location
+  useEffect(() => {
+    const locationQuery = (initialCity || (selectedCities.length === 1 ? selectedCities[0] : "")).trim();
+    if (!locationQuery || userLocation) return;
+
+    let isMounted = true;
+    const geocodeLocation = async () => {
+      try {
+        // Try UK postcodes.io if it looks like a UK postcode
+        const cleanPostcode = locationQuery.replace(/\s+/g, "");
+        if (/^[A-Z]{1,2}[0-9][A-Z0-9]?\s?[0-9][A-Z]{2}$/i.test(locationQuery) || /^[A-Z]{1,2}\d/i.test(cleanPostcode)) {
+          const pcRes = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(cleanPostcode)}`);
+          if (pcRes.ok) {
+            const pcData = await pcRes.json();
+            if (pcData.result && isMounted) {
+              setUserLocation({
+                lat: pcData.result.latitude,
+                lng: pcData.result.longitude,
+              });
+              setSortBy("nearby");
+              return;
+            }
+          }
+        }
+
+        // Fallback to OpenStreetMap Nominatim for any city or town name
+        const nomRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationQuery)}&limit=1`
+        );
+        if (nomRes.ok) {
+          const nomData = await nomRes.json();
+          if (Array.isArray(nomData) && nomData.length > 0 && isMounted) {
+            setUserLocation({
+              lat: parseFloat(nomData[0].lat),
+              lng: parseFloat(nomData[0].lon),
+            });
+            setSortBy("nearby");
+          }
+        }
+      } catch (err) {
+        console.error("Geocoding failed for search location:", err);
+      }
+    };
+
+    geocodeLocation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [initialCity, selectedCities]);
 
   // Google Maps experience: Auto-detect location on initial page load if not already set
   useEffect(() => {
@@ -2194,7 +2253,8 @@ export default function ExploreClient({
                     onChange={(e) => setSortBy(e.target.value as any)}
                     style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: "#334155", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
                   >
-                    <option value="latest">{exploreType === "events" ? "Sort By: Event Date" : "Sort By: Latest"}</option>
+                    <option value="latest">{exploreType === "events" ? "Sort By: Event Date (Soonest)" : "Sort By: Latest"}</option>
+                    <option value="oldest">Sort By: Oldest</option>
                     <option value="nearby">Sort By: Nearby</option>
                     <option value="name_asc">Sort By: Name A-Z</option>
                     <option value="name_desc">Sort By: Name Z-A</option>

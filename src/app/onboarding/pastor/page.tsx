@@ -80,10 +80,10 @@ const AI_HINTS: Record<number, string> = {
   3: "Add your contact channels, languages, availability, sermons, and photos all in one place.",
 };
 
-const COMMON_LANGUAGES = ['English', 'Spanish', 'French', 'Portuguese', 'German', 'Mandarin', 'Arabic', 'Hindi'];
-const PREACHING_SUGGESTIONS = ['Prophetic preaching', 'Evangelism', 'Expository teaching', 'Faith & healing', 'Leadership'];
-const MINISTRY_SUGGESTIONS = ['Youth ministry', 'Community outreach', "Women's ministry", "Men's network", 'Marriage & family', 'Prison ministry'];
-const AVAILABLE_FOR_SUGGESTIONS = ['Sunday services', 'Conferences', 'Revival meetings', 'Retreats', 'Weddings', 'Funerals'];
+const COMMON_LANGUAGES = ['Arabic', 'English', 'French', 'German', 'Hindi', 'Mandarin', 'Portuguese', 'Spanish'];
+const PREACHING_SUGGESTIONS = ['Evangelism', 'Expository teaching', 'Faith & healing', 'Leadership', 'Prophetic preaching'];
+const MINISTRY_SUGGESTIONS = ['Community outreach', 'Marriage & family', "Men's network", 'Prison ministry', "Women's ministry", 'Youth ministry'];
+const AVAILABLE_FOR_SUGGESTIONS = ['Conferences', 'Funerals', 'Retreats', 'Revival meetings', 'Sunday services', 'Weddings'];
 
 const initialState: FormState = {
   full_name: '',

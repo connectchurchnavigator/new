@@ -10,6 +10,9 @@ interface ChurchOption {
   id: string;
   name: string;
   slug: string;
+  city?: string | null;
+  postcode?: string | null;
+  denomination?: string | null;
 }
 
 interface SourceItem {
@@ -147,9 +150,18 @@ export default function InsightsClient({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const filteredChurches = availableChurches.filter((c) =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredChurches = availableChurches.filter((c) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    const qClean = q.replace(/\s+/g, '');
+    const nameMatch = c.name?.toLowerCase().includes(q);
+    const cityMatch = c.city?.toLowerCase().includes(q);
+    const denomMatch = c.denomination?.toLowerCase().includes(q);
+    const postcodeMatch = c.postcode
+      ? c.postcode.toLowerCase().includes(q) || c.postcode.toLowerCase().replace(/\s+/g, '').includes(qClean)
+      : false;
+    return nameMatch || cityMatch || denomMatch || postcodeMatch;
+  });
 
   const activeChurchName = availableChurches.find(c => c.id === currentChurchId)?.name || initialChurchName;
 
@@ -388,7 +400,7 @@ export default function InsightsClient({
                           </svg>
                           <input
                             type="text"
-                            placeholder="Search your churches..."
+                            placeholder="Search by church, zip code, denomination..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             autoFocus
@@ -433,6 +445,7 @@ export default function InsightsClient({
                         {filteredChurches.length > 0 ? (
                           filteredChurches.map((c) => {
                             const isSelected = c.id === currentChurchId;
+                            const details = [c.city, c.postcode, c.denomination?.split('|||')[0]].filter(Boolean).join(' • ');
                             return (
                               <div
                                 key={c.id}
@@ -453,19 +466,27 @@ export default function InsightsClient({
                                   if (!isSelected) e.currentTarget.style.background = 'transparent';
                                 }}
                               >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
                                   <span
                                     style={{
                                       fontSize: '13px',
                                       fontWeight: isSelected ? 800 : 600,
                                       color: isSelected ? '#7c3aed' : '#1e293b',
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
                                     }}
                                   >
                                     {c.name}
                                   </span>
+                                  {details && (
+                                    <span style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      {details}
+                                    </span>
+                                  )}
                                 </div>
                                 {isSelected && (
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}>
                                     <polyline points="20 6 9 17 4 12"></polyline>
                                   </svg>
                                 )}

@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { useFormContext } from "@/context/FormContext";
 import { useRouter } from "next/navigation";
+import { compressImage } from "@/lib/image-compressor";
 
 const SOCIAL_RULES = {
   youtube: {
@@ -52,31 +53,39 @@ export default function Step6Media({ onBack }: Step6MediaProps) {
   const [youtubeError, setYoutubeError] = useState<string | null>(validateYouTubeUrl(formData.youtube || ""));
   const router = useRouter();
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setPreview: React.Dispatch<React.SetStateAction<string | null>>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, setPreview: React.Dispatch<React.SetStateAction<string | null>>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImage(file, { maxWidth: 600, maxHeight: 600, quality: 0.85 });
+        setPreview(compressed);
+      } catch (err) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
-  const handleCoverPhotosUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverPhotosUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
-      const readPromises = files.map(file => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
-        });
+      const compressPromises = files.map(async (file) => {
+        try {
+          return await compressImage(file, { maxWidth: 1600, maxHeight: 900, quality: 0.8 });
+        } catch {
+          return new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
+        }
       });
       
-      Promise.all(readPromises).then(results => {
-        updateFormData({ coverBanners: [...(formData.coverBanners || []), ...results] });
-      });
+      const results = await Promise.all(compressPromises);
+      updateFormData({ coverBanners: [...(formData.coverBanners || []), ...results] });
     }
   };
 

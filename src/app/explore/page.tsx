@@ -15,6 +15,8 @@ interface ExplorePageProps {
     q?: string;
     city?: string;
     denomination?: string;
+    type?: string;
+    category?: string;
   }>;
 }
 
@@ -23,6 +25,17 @@ export default async function ExplorePage(props: ExplorePageProps) {
   const initialQ = searchParams.q?.trim() || "";
   const initialCity = searchParams.city?.trim() || "";
   const initialDenomination = searchParams.denomination?.trim() || "";
+  
+  // Map incoming type or category param to valid exploreType
+  const rawType = (searchParams.type || searchParams.category || "").trim().toLowerCase();
+  let initialType: "churches" | "pastors" | "events" | "worship_leaders" = "churches";
+  if (rawType === "pastor" || rawType === "pastors") {
+    initialType = "pastors";
+  } else if (rawType === "event" || rawType === "events") {
+    initialType = "events";
+  } else if (rawType === "worshipleader" || rawType === "worshipleaders" || rawType === "worship_leader" || rawType === "worship_leaders" || rawType === "worship-leader" || rawType === "worship-leaders") {
+    initialType = "worship_leaders";
+  }
 
   const supabase = createAdminClient();
 
@@ -41,6 +54,7 @@ export default async function ExplorePage(props: ExplorePageProps) {
       initialSearchQuery={initialQ}
       initialCity={initialCity}
       initialDenom={initialDenomination}
+      initialType={initialType}
     />
   );
 }

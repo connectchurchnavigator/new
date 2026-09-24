@@ -96,18 +96,18 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
   const [contactErrors, setContactErrors] = useState<{ [key: string]: string }>({});
   const [contactVerified, setContactVerified] = useState<{ [key: string]: boolean }>({});
 
-  // Options & Custom entries
+  // Options & Custom entries (Alphabetically sorted)
   const [styleOptions, setStyleOptions] = useState<string[]>([
-    "Contemporary", "Gospel", "Afro-Gospel", "Hymns", "Acoustic", "Prophetic", "Spontaneous"
+    "Acoustic", "Afro-Gospel", "Contemporary", "Gospel", "Hymns", "Prophetic", "Spontaneous"
   ]);
   const [instrumentOptions, setInstrumentOptions] = useState<string[]>([
-    "Vocals", "Piano", "Acoustic guitar", "Electric guitar", "Bass", "Drums", "Keys"
+    "Acoustic guitar", "Bass", "Drums", "Electric guitar", "Keys", "Piano", "Vocals"
   ]);
   const [availableOptions, setAvailableOptions] = useState<string[]>([
-    "Sundays", "Events & conferences", "Worship nights", "Recordings", "Online / livestream", "Dep / cover"
+    "Dep / cover", "Events & conferences", "Online / livestream", "Recordings", "Sundays", "Worship nights"
   ]);
   const [feeOptions, setFeeOptions] = useState<string[]>([
-    "Love offering", "Fixed fee", "Fee on request", "Expenses only"
+    "Expenses only", "Fee on request", "Fixed fee", "Love offering"
   ]);
 
   // Custom addition states

@@ -68,7 +68,7 @@ export default async function AdminPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("worship_leaders")
-      .select("id, display_name, slug, title, city, country, is_verified, is_published, created_at, avatar_url")
+      .select("id, display_name, slug, tagline, city, country, is_verified, is_published, created_at, avatar_url")
       .order("created_at", { ascending: false }),
     supabase
       .from("events")

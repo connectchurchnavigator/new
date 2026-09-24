@@ -10,6 +10,8 @@ interface ChurchEventsSectionProps {
 }
 
 export default function ChurchEventsSection({ events, churchName }: ChurchEventsSectionProps) {
+  const [eventTab, setEventTab] = React.useState<"upcoming" | "past">("upcoming");
+
   if (!events || events.length === 0) {
     return (
       <div className="panel" style={{ padding: "40px 24px", textAlign: "center", background: "#fff", borderRadius: "20px", border: "1.5px dashed #e2e8f0" }}>
@@ -17,7 +19,7 @@ export default function ChurchEventsSection({ events, churchName }: ChurchEvents
           <i className="ti ti-calendar-off"></i>
         </div>
         <h3 style={{ fontSize: "17px", fontWeight: 800, color: "#0f172a", marginBottom: "6px" }}>
-          No upcoming events scheduled
+          No events scheduled
         </h3>
         <p style={{ fontSize: "14px", color: "var(--muted)", maxWidth: "420px", margin: "0 auto 20px" }}>
           Events organized by or hosted at {churchName} will automatically be displayed here.
@@ -44,6 +46,23 @@ export default function ChurchEventsSection({ events, churchName }: ChurchEvents
     );
   }
 
+  const now = new Date().getTime();
+  const upcomingEvents = events
+    .filter((e) => {
+      const t = new Date(e.starts_at).getTime();
+      return isNaN(t) || t >= now - 1000 * 60 * 60 * 24; // buffer 1 day
+    })
+    .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+
+  const pastEvents = events
+    .filter((e) => {
+      const t = new Date(e.starts_at).getTime();
+      return !isNaN(t) && t < now - 1000 * 60 * 60 * 24;
+    })
+    .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
+
+  const displayedEvents = eventTab === "upcoming" ? upcomingEvents : pastEvents;
+
   const badgeColors = [
     "linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)",
     "linear-gradient(135deg, #0d9488 0%, #0f766e 100%)",
@@ -54,10 +73,47 @@ export default function ChurchEventsSection({ events, churchName }: ChurchEvents
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
-        <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>
-          Upcoming Church Events ({events.length})
-        </h3>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px", flexWrap: "wrap", gap: "12px" }}>
+        {/* Upcoming vs Past Pill Filter */}
+        <div style={{ display: "flex", background: "#f1f5f9", padding: "4px", borderRadius: "12px", gap: "4px" }}>
+          <button
+            type="button"
+            onClick={() => setEventTab("upcoming")}
+            style={{
+              padding: "7px 16px",
+              borderRadius: "9px",
+              border: "none",
+              fontSize: "13px",
+              fontWeight: 800,
+              cursor: "pointer",
+              background: eventTab === "upcoming" ? "#ffffff" : "transparent",
+              color: eventTab === "upcoming" ? "#7c3aed" : "#64748b",
+              boxShadow: eventTab === "upcoming" ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+              transition: "all 0.15s ease",
+            }}
+          >
+            Upcoming Events ({upcomingEvents.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setEventTab("past")}
+            style={{
+              padding: "7px 16px",
+              borderRadius: "9px",
+              border: "none",
+              fontSize: "13px",
+              fontWeight: 800,
+              cursor: "pointer",
+              background: eventTab === "past" ? "#ffffff" : "transparent",
+              color: eventTab === "past" ? "#7c3aed" : "#64748b",
+              boxShadow: eventTab === "past" ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+              transition: "all 0.15s ease",
+            }}
+          >
+            Past Events ({pastEvents.length})
+          </button>
+        </div>
+
         <Link
           href="/onboarding/events"
           style={{
@@ -74,8 +130,19 @@ export default function ChurchEventsSection({ events, churchName }: ChurchEvents
         </Link>
       </div>
 
+      {displayedEvents.length === 0 ? (
+        <div style={{ padding: "36px 20px", textAlign: "center", background: "#f8fafc", borderRadius: "16px", border: "1.5px dashed #e2e8f0" }}>
+          <i className="ti ti-calendar-event" style={{ fontSize: "32px", color: "#94a3b8", display: "block", marginBottom: "8px" }}></i>
+          <h4 style={{ fontSize: "15px", fontWeight: 800, color: "#1e293b", margin: "0 0 4px" }}>
+            No {eventTab === "upcoming" ? "upcoming" : "past"} events
+          </h4>
+          <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+            {eventTab === "upcoming" ? "There are no upcoming scheduled gatherings right now." : "No previous events recorded for this church."}
+          </p>
+        </div>
+      ) : (
       <div className="event-list">
-        {events.map((ev, idx) => {
+        {displayedEvents.map((ev, idx) => {
           const dateObj = new Date(ev.starts_at);
           const day = !isNaN(dateObj.getDate()) ? String(dateObj.getDate()) : "—";
           const month = !isNaN(dateObj.getDate())
@@ -224,6 +291,7 @@ export default function ChurchEventsSection({ events, churchName }: ChurchEvents
           );
         })}
       </div>
+      )}
     </div>
   );
 }

@@ -28,6 +28,7 @@ export default function HomeChurchesSection({ initialChurches }: HomeChurchesSec
   const [city, setCity] = useState("");
   const [denomination, setDenomination] = useState("all");
   const [activeFilter, setActiveFilter] = useState<"all" | "open_now" | "verified">("all");
+  const [showAll, setShowAll] = useState(false);
 
   // Extract unique denominations for quick pills
   const availableDenominations = useMemo(() => {
@@ -83,9 +84,7 @@ export default function HomeChurchesSection({ initialChurches }: HomeChurchesSec
   const hasFilterActive = keyword || city || denomination !== "all" || activeFilter !== "all";
 
   return (
-    <>
-      {/* ── SECTION: CHURCHES DIRECTORY ── */}
-      <section id="churches-section" style={{ maxWidth: "1200px", margin: "0 auto", padding: "60px 24px 40px" }}>
+    <section id="churches-section" style={{ maxWidth: "1200px", margin: "0 auto", padding: "60px 24px 40px" }}>
         {/* Header & Quick Filters Bar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "20px", flexWrap: "wrap", gap: "14px" }}>
           <div>
@@ -136,110 +135,16 @@ export default function HomeChurchesSection({ initialChurches }: HomeChurchesSec
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "5px",
-                padding: "6px 14px",
+                padding: "8px 18px",
                 background: "#f5f3ff",
                 borderRadius: "20px",
                 border: "1px solid #ede9fe",
+                transition: "all 0.15s ease",
               }}
             >
-              <i className="ti ti-map-2" style={{ fontSize: "16px" }}></i>
-              View results on full map &rarr;
+              Browse all churches &rarr;
             </Link>
           </div>
-        </div>
-
-        {/* Quick Filter Filter Chips */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", overflowX: "auto", paddingBottom: "16px", marginBottom: "20px" }}>
-          <button
-            type="button"
-            onClick={() => setActiveFilter("all")}
-            style={{
-              padding: "7px 16px",
-              borderRadius: "20px",
-              fontSize: "12.5px",
-              fontWeight: 700,
-              cursor: "pointer",
-              border: activeFilter === "all" ? "1.5px solid #7c3aed" : "1px solid #e2e8f0",
-              background: activeFilter === "all" ? "#7c3aed" : "#ffffff",
-              color: activeFilter === "all" ? "#ffffff" : "#475569",
-              transition: "all 0.15s",
-              whiteSpace: "nowrap",
-            }}
-          >
-            All Churches
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveFilter(activeFilter === "open_now" ? "all" : "open_now")}
-            style={{
-              padding: "7px 16px",
-              borderRadius: "20px",
-              fontSize: "12.5px",
-              fontWeight: 700,
-              cursor: "pointer",
-              border: activeFilter === "open_now" ? "1.5px solid #16a34a" : "1px solid #e2e8f0",
-              background: activeFilter === "open_now" ? "#16a34a" : "#ffffff",
-              color: activeFilter === "open_now" ? "#ffffff" : "#475569",
-              transition: "all 0.15s",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: activeFilter === "open_now" ? "#fff" : "#22c55e" }} />
-            Open Today
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveFilter(activeFilter === "verified" ? "all" : "verified")}
-            style={{
-              padding: "7px 16px",
-              borderRadius: "20px",
-              fontSize: "12.5px",
-              fontWeight: 700,
-              cursor: "pointer",
-              border: activeFilter === "verified" ? "1.5px solid #0284c7" : "1px solid #e2e8f0",
-              background: activeFilter === "verified" ? "#0284c7" : "#ffffff",
-              color: activeFilter === "verified" ? "#ffffff" : "#475569",
-              transition: "all 0.15s",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "5px",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <i className="ti ti-check" style={{ fontSize: "13px" }}></i>
-            Verified Only
-          </button>
-
-          {/* Quick Denominations */}
-          {availableDenominations.map((d) => {
-            const isSelected = denomination.toLowerCase() === d.toLowerCase();
-            return (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setDenomination(isSelected ? "all" : d)}
-                style={{
-                  padding: "7px 16px",
-                  borderRadius: "20px",
-                  fontSize: "12.5px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  border: isSelected ? "1.5px solid #7c3aed" : "1px solid #e2e8f0",
-                  background: isSelected ? "#f5f3ff" : "#ffffff",
-                  color: isSelected ? "#7c3aed" : "#64748b",
-                  transition: "all 0.15s",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {d}
-              </button>
-            );
-          })}
         </div>
 
         {/* Churches Grid */}
@@ -283,8 +188,9 @@ export default function HomeChurchesSection({ initialChurches }: HomeChurchesSec
             </button>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px" }}>
-            {filteredChurches.map((church) => {
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px" }}>
+              {(showAll ? filteredChurches : filteredChurches.slice(0, 6)).map((church) => {
               const coverImage = church.cover_url ? church.cover_url.split("|||")[0] : null;
               const logoImage = church.logo_url ? church.logo_url.split("|||")[0] : null;
 
@@ -427,8 +333,47 @@ export default function HomeChurchesSection({ initialChurches }: HomeChurchesSec
               );
             })}
           </div>
-        )}
-      </section>
-    </>
+
+          {/* View More Button if more than 2 rows (6 cards) */}
+          {filteredChurches.length > 6 && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: "32px" }}>
+              <button
+                type="button"
+                onClick={() => setShowAll(!showAll)}
+                style={{
+                  background: "#ffffff",
+                  border: "1.5px solid #d8b4fe",
+                  color: "#7c3aed",
+                  padding: "11px 28px",
+                  borderRadius: "30px",
+                  fontSize: "14px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(124, 58, 237, 0.1)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#7c3aed";
+                  e.currentTarget.style.color = "#ffffff";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#ffffff";
+                  e.currentTarget.style.color = "#7c3aed";
+                }}
+              >
+                {showAll ? (
+                  <>Show Less <i className="ti ti-chevron-up"></i></>
+                ) : (
+                  <>View More ({filteredChurches.length - 6} more) <i className="ti ti-chevron-down"></i></>
+                )}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 }

@@ -26,7 +26,17 @@ export default function Step9Review() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      const data = await res.json();
+      
+      let data: any = {};
+      const responseText = await res.text();
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseErr) {
+        if (res.status === 413 || responseText.includes("Request Entity Too Large")) {
+          throw new Error("Photos uploaded are too large for the server. High-resolution images have now been auto-compressed. Please re-select photos and try again.");
+        }
+        throw new Error(responseText || `Server responded with status ${res.status}`);
+      }
       
       if (!res.ok) {
         throw new Error(data.error || 'Failed to submit listing');
@@ -37,7 +47,7 @@ export default function Step9Review() {
 
       localStorage.removeItem('churchFormData');
       const churchName = formData.churchName || formData.name || 'Your Church';
-      router.push(`/add-listing/success?slug=${data.church.slug}&name=${encodeURIComponent(churchName)}`);
+      router.push(`/add-listing/success?slug=${data.church?.slug || ''}&name=${encodeURIComponent(churchName)}`);
     } catch (err: any) {
       clearInterval(stepInterval);
       console.error(err);

@@ -18,6 +18,8 @@ interface AdminClientProps {
     verifiedChurches: number;
     totalPastors: number;
     verifiedPastors: number;
+    totalWorshipLeaders: number;
+    verifiedWorshipLeaders: number;
     totalEvents: number;
     totalUsers: number;
   };
@@ -77,8 +79,13 @@ export default function AdminClient({
 
   // Search queries
   const [churchSearch, setChurchSearch] = useState("");
+  const [churchSort, setChurchSort] = useState("latest");
   const [pastorSearch, setPastorSearch] = useState("");
+  const [pastorSort, setPastorSort] = useState("latest");
+  const [worshipLeaderSearch, setWorshipLeaderSearch] = useState("");
+  const [worshipLeaderSort, setWorshipLeaderSort] = useState("latest");
   const [eventSearch, setEventSearch] = useState("");
+  const [eventSort, setEventSort] = useState("soonest");
   const [userSearch, setUserSearch] = useState("");
 
   // Taxonomies State
@@ -215,6 +222,24 @@ export default function AdminClient({
     }
   };
 
+  // 4b. Toggle Worship Leader Verification
+  const handleToggleWorshipLeaderVerification = async (leaderId: string, currentStatus: boolean) => {
+    try {
+      const res = await fetch("/api/admin/worship-leaders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leaderId, is_verified: !currentStatus }),
+      });
+      if (res.ok) {
+        setWorshipLeaders((prev) =>
+          prev.map((w) => (w.id === leaderId ? { ...w, is_verified: !currentStatus } : w))
+        );
+      }
+    } catch (err) {
+      alert("Failed to update verification status");
+    }
+  };
+
   // 5. Taxonomy Operations
   const handleAddTaxItem = () => {
     if (!newTaxItem.trim()) return;
@@ -275,35 +300,122 @@ export default function AdminClient({
     }
   };
 
-  // Filtered churches
-  const filteredChurches = churches.filter((c) => {
-    const q = churchSearch.toLowerCase();
-    return (
-      c.name?.toLowerCase().includes(q) ||
-      c.city?.toLowerCase().includes(q) ||
-      c.denomination?.toLowerCase().includes(q)
-    );
-  });
+  // Filtered & Sorted churches
+  const filteredChurches = churches
+    .filter((c) => {
+      const q = churchSearch.toLowerCase();
+      return (
+        c.name?.toLowerCase().includes(q) ||
+        c.city?.toLowerCase().includes(q) ||
+        c.denomination?.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (churchSort === "oldest") {
+        return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      }
+      if (churchSort === "name_asc") {
+        return (a.name || "").localeCompare(b.name || "");
+      }
+      if (churchSort === "name_desc") {
+        return (b.name || "").localeCompare(a.name || "");
+      }
+      if (churchSort === "verified_first") {
+        if (!!a.is_verified !== !!b.is_verified) return a.is_verified ? -1 : 1;
+        return (a.name || "").localeCompare(b.name || "");
+      }
+      // default: latest
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    });
 
-  // Filtered pastors
-  const filteredPastors = pastors.filter((p) => {
-    const q = pastorSearch.toLowerCase();
-    return (
-      p.full_name?.toLowerCase().includes(q) ||
-      p.title?.toLowerCase().includes(q) ||
-      p.city?.toLowerCase().includes(q)
-    );
-  });
+  // Filtered & Sorted pastors
+  const filteredPastors = pastors
+    .filter((p) => {
+      const q = pastorSearch.toLowerCase();
+      return (
+        p.full_name?.toLowerCase().includes(q) ||
+        p.title?.toLowerCase().includes(q) ||
+        p.city?.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (pastorSort === "oldest") {
+        return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      }
+      if (pastorSort === "name_asc") {
+        return (a.full_name || "").localeCompare(b.full_name || "");
+      }
+      if (pastorSort === "name_desc") {
+        return (b.full_name || "").localeCompare(a.full_name || "");
+      }
+      if (pastorSort === "verified_first") {
+        if (!!a.is_verified !== !!b.is_verified) return a.is_verified ? -1 : 1;
+        return (a.full_name || "").localeCompare(b.full_name || "");
+      }
+      // default: latest
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    });
 
-  // Filtered events
-  const filteredEvents = events.filter((e) => {
-    const q = eventSearch.toLowerCase();
-    return (
-      e.title?.toLowerCase().includes(q) ||
-      e.city?.toLowerCase().includes(q) ||
-      e.venue_name?.toLowerCase().includes(q)
-    );
-  });
+  // Filtered & Sorted worship leaders
+  const filteredWorshipLeaders = worshipLeaders
+    .filter((w) => {
+      const q = worshipLeaderSearch.toLowerCase();
+      return (
+        w.display_name?.toLowerCase().includes(q) ||
+        w.tagline?.toLowerCase().includes(q) ||
+        w.city?.toLowerCase().includes(q) ||
+        w.country?.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (worshipLeaderSort === "oldest") {
+        return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      }
+      if (worshipLeaderSort === "name_asc") {
+        return (a.display_name || "").localeCompare(b.display_name || "");
+      }
+      if (worshipLeaderSort === "name_desc") {
+        return (b.display_name || "").localeCompare(a.display_name || "");
+      }
+      if (worshipLeaderSort === "verified_first") {
+        if (!!a.is_verified !== !!b.is_verified) return a.is_verified ? -1 : 1;
+        return (a.display_name || "").localeCompare(b.display_name || "");
+      }
+      // default: latest
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    });
+
+  // Filtered & Sorted events
+  const filteredEvents = events
+    .filter((e) => {
+      const q = eventSearch.toLowerCase();
+      return (
+        e.title?.toLowerCase().includes(q) ||
+        e.city?.toLowerCase().includes(q) ||
+        e.venue_name?.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (eventSort === "soonest") {
+        return new Date(a.starts_at || 0).getTime() - new Date(b.starts_at || 0).getTime();
+      }
+      if (eventSort === "furthest") {
+        return new Date(b.starts_at || 0).getTime() - new Date(a.starts_at || 0).getTime();
+      }
+      if (eventSort === "latest") {
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      }
+      if (eventSort === "oldest") {
+        return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      }
+      if (eventSort === "name_asc") {
+        return (a.title || "").localeCompare(b.title || "");
+      }
+      if (eventSort === "name_desc") {
+        return (b.title || "").localeCompare(a.title || "");
+      }
+      return new Date(a.starts_at || 0).getTime() - new Date(b.starts_at || 0).getTime();
+    });
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f8fafc", fontFamily: "inherit" }}>
@@ -701,24 +813,51 @@ export default function AdminClient({
         {/* ── 2. CHURCHES TAB ──────────────────────────────────────────────── */}
         {activeTab === "churches" && (
           <div style={{ background: "#ffffff", borderRadius: "20px", border: "1.5px solid #e2e8f0", padding: "24px" }}>
-            {/* Search Input */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", gap: "16px" }}>
-              <div style={{ position: "relative", flex: 1, maxWidth: "400px" }}>
-                <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }}></i>
-                <input
-                  type="text"
-                  placeholder="Search by church name, city, denomination..."
-                  value={churchSearch}
-                  onChange={(e) => setChurchSearch(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px 10px 40px",
-                    borderRadius: "12px",
-                    border: "1.5px solid #e2e8f0",
-                    fontSize: "13.5px",
-                    outline: "none",
-                  }}
-                />
+            {/* Search and Sort Controls */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", gap: "16px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: "280px" }}>
+                <div style={{ position: "relative", flex: 1, maxWidth: "380px" }}>
+                  <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }}></i>
+                  <input
+                    type="text"
+                    placeholder="Search by church name, city, denomination..."
+                    value={churchSearch}
+                    onChange={(e) => setChurchSearch(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px 10px 40px",
+                      borderRadius: "12px",
+                      border: "1.5px solid #e2e8f0",
+                      fontSize: "13.5px",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#64748b", whiteSpace: "nowrap" }}>Sort:</span>
+                  <select
+                    value={churchSort}
+                    onChange={(e) => setChurchSort(e.target.value)}
+                    style={{
+                      padding: "9px 14px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #e2e8f0",
+                      background: "#fff",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      color: "#334155",
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
+                  >
+                    <option value="latest">Latest (Newest First)</option>
+                    <option value="oldest">Oldest (Earliest First)</option>
+                    <option value="name_asc">Name: A &rarr; Z</option>
+                    <option value="name_desc">Name: Z &rarr; A</option>
+                    <option value="verified_first">Verified First</option>
+                  </select>
+                </div>
               </div>
 
               <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#64748b" }}>
@@ -851,23 +990,50 @@ export default function AdminClient({
         {/* ── 3. PASTORS TAB ───────────────────────────────────────────────── */}
         {activeTab === "pastors" && (
           <div style={{ background: "#ffffff", borderRadius: "20px", border: "1.5px solid #e2e8f0", padding: "24px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <div style={{ position: "relative", flex: 1, maxWidth: "400px" }}>
-                <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }}></i>
-                <input
-                  type="text"
-                  placeholder="Search pastors by name, title, city..."
-                  value={pastorSearch}
-                  onChange={(e) => setPastorSearch(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px 10px 40px",
-                    borderRadius: "12px",
-                    border: "1.5px solid #e2e8f0",
-                    fontSize: "13.5px",
-                    outline: "none",
-                  }}
-                />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", gap: "16px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: "280px" }}>
+                <div style={{ position: "relative", flex: 1, maxWidth: "380px" }}>
+                  <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }}></i>
+                  <input
+                    type="text"
+                    placeholder="Search pastors by name, title, city..."
+                    value={pastorSearch}
+                    onChange={(e) => setPastorSearch(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px 10px 40px",
+                      borderRadius: "12px",
+                      border: "1.5px solid #e2e8f0",
+                      fontSize: "13.5px",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#64748b", whiteSpace: "nowrap" }}>Sort:</span>
+                  <select
+                    value={pastorSort}
+                    onChange={(e) => setPastorSort(e.target.value)}
+                    style={{
+                      padding: "9px 14px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #e2e8f0",
+                      background: "#fff",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      color: "#334155",
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
+                  >
+                    <option value="latest">Latest (Newest First)</option>
+                    <option value="oldest">Oldest (Earliest First)</option>
+                    <option value="name_asc">Name: A &rarr; Z</option>
+                    <option value="name_desc">Name: Z &rarr; A</option>
+                    <option value="verified_first">Verified First</option>
+                  </select>
+                </div>
               </div>
 
               <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#64748b" }}>
@@ -967,13 +1133,58 @@ export default function AdminClient({
         )}
 
 
-        {/* ── WORSHIP LEADERS TAB ────────────────────────────────────────── */
-        activeTab === "worship_leaders" && (
+        {/* ── WORSHIP LEADERS TAB ────────────────────────────────────────── */}
+        {activeTab === "worship_leaders" && (
           <div style={{ background: "#ffffff", borderRadius: "20px", border: "1.5px solid #e2e8f0", padding: "24px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>
-                Worship Leaders ({worshipLeaders.length})
-              </h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", gap: "16px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: "280px" }}>
+                <div style={{ position: "relative", flex: 1, maxWidth: "380px" }}>
+                  <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }}></i>
+                  <input
+                    type="text"
+                    placeholder="Search worship leaders by name, tagline, city..."
+                    value={worshipLeaderSearch}
+                    onChange={(e) => setWorshipLeaderSearch(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px 10px 40px",
+                      borderRadius: "12px",
+                      border: "1.5px solid #e2e8f0",
+                      fontSize: "13.5px",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#64748b", whiteSpace: "nowrap" }}>Sort:</span>
+                  <select
+                    value={worshipLeaderSort}
+                    onChange={(e) => setWorshipLeaderSort(e.target.value)}
+                    style={{
+                      padding: "9px 14px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #e2e8f0",
+                      background: "#fff",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      color: "#334155",
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
+                  >
+                    <option value="latest">Latest (Newest First)</option>
+                    <option value="oldest">Oldest (Earliest First)</option>
+                    <option value="name_asc">Name: A &rarr; Z</option>
+                    <option value="name_desc">Name: Z &rarr; A</option>
+                    <option value="verified_first">Verified First</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#64748b" }}>
+                Showing {filteredWorshipLeaders.length} worship leaders
+              </div>
             </div>
 
             <div style={{ overflowX: "auto" }}>
@@ -989,7 +1200,7 @@ export default function AdminClient({
                   </tr>
                 </thead>
                 <tbody>
-                  {worshipLeaders.map((w) => (
+                  {filteredWorshipLeaders.map((w) => (
                     <tr key={w.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "14px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -1006,12 +1217,32 @@ export default function AdminClient({
                           </div>
                         </div>
                       </td>
-                      <td style={{ padding: "14px", color: "#e11d48", fontWeight: 700 }}>{w.title || "Artist"}</td>
+                      <td style={{ padding: "14px", color: "#e11d48", fontWeight: 700, maxWidth: "260px" }}>
+                        <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {w.tagline || "Artist / Leader"}
+                        </div>
+                      </td>
                       <td style={{ padding: "14px", color: "#475569" }}>{w.city || w.country || "—"}</td>
                       <td style={{ padding: "14px" }}>
-                        <span style={{ fontSize: "11px", fontWeight: 800, padding: "4px 8px", borderRadius: "6px", background: w.is_verified ? "#f0fdf4" : "#f1f5f9", color: w.is_verified ? "#16a34a" : "#64748b" }}>
-                          {w.is_verified ? "✓ Verified" : "Not Verified"}
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleWorshipLeaderVerification(w.id, !!w.is_verified)}
+                          style={{
+                            border: "none",
+                            borderRadius: "8px",
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            background: w.is_verified ? "#f0fdf4" : "#f1f5f9",
+                            color: w.is_verified ? "#16a34a" : "#64748b",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px"
+                          }}
+                        >
+                          {w.is_verified ? "✓ Verified" : "○ Not Verified"}
+                        </button>
                       </td>
                       <td style={{ padding: "14px" }}>
                         <button
@@ -1054,23 +1285,51 @@ export default function AdminClient({
         {/* ── 4. EVENTS TAB ────────────────────────────────────────────────── */}
         {activeTab === "events" && (
           <div style={{ background: "#ffffff", borderRadius: "20px", border: "1.5px solid #e2e8f0", padding: "24px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <div style={{ position: "relative", flex: 1, maxWidth: "400px" }}>
-                <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }}></i>
-                <input
-                  type="text"
-                  placeholder="Search events by title, city, venue..."
-                  value={eventSearch}
-                  onChange={(e) => setEventSearch(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 14px 10px 40px",
-                    borderRadius: "12px",
-                    border: "1.5px solid #e2e8f0",
-                    fontSize: "13.5px",
-                    outline: "none",
-                  }}
-                />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", gap: "16px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: "280px" }}>
+                <div style={{ position: "relative", flex: 1, maxWidth: "380px" }}>
+                  <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }}></i>
+                  <input
+                    type="text"
+                    placeholder="Search events by title, city, venue..."
+                    value={eventSearch}
+                    onChange={(e) => setEventSearch(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px 10px 40px",
+                      borderRadius: "12px",
+                      border: "1.5px solid #e2e8f0",
+                      fontSize: "13.5px",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#64748b", whiteSpace: "nowrap" }}>Sort:</span>
+                  <select
+                    value={eventSort}
+                    onChange={(e) => setEventSort(e.target.value)}
+                    style={{
+                      padding: "9px 14px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #e2e8f0",
+                      background: "#fff",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      color: "#334155",
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
+                  >
+                    <option value="soonest">Event Date: Soonest</option>
+                    <option value="furthest">Event Date: Furthest</option>
+                    <option value="latest">Latest Added</option>
+                    <option value="oldest">Oldest Added</option>
+                    <option value="name_asc">Title: A &rarr; Z</option>
+                    <option value="name_desc">Title: Z &rarr; A</option>
+                  </select>
+                </div>
               </div>
 
               <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#64748b" }}>
