@@ -1639,6 +1639,7 @@ export default function AdminClient({
                     <th style={{ padding: "12px 14px" }}>Email</th>
                     <th style={{ padding: "12px 14px" }}>Sign-in Method</th>
                     <th style={{ padding: "12px 14px" }}>User Role</th>
+                    <th style={{ padding: "12px 14px" }}>Assigned Churches & Pastors</th>
                     <th style={{ padding: "12px 14px" }}>Email Verified</th>
                     <th style={{ padding: "12px 14px" }}>Joined</th>
                     <th style={{ padding: "12px 14px" }}>Last Sign-in</th>
@@ -1720,6 +1721,31 @@ export default function AdminClient({
                               <option value="super_admin">Super Admin</option>
                               <option value="visitor">Visitor</option>
                             </select>
+                          </td>
+
+                          {/* Assigned Churches & Pastors */}
+                          <td style={{ padding: "14px", maxWidth: "220px" }}>
+                            {(() => {
+                              const churchNames: string[] = u.user_metadata?.assigned_church_names || [];
+                              const pastorNames: string[] = u.user_metadata?.assigned_pastor_names || [];
+                              if (churchNames.length === 0 && pastorNames.length === 0) {
+                                return <span style={{ color: "#94a3b8", fontSize: "12px" }}>—</span>;
+                              }
+                              return (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                  {churchNames.map((cName, i) => (
+                                    <span key={i} style={{ fontSize: "11px", background: "#f5f3ff", color: "#7c3aed", border: "1px solid #ddd6fe", padding: "2px 7px", borderRadius: "6px", fontWeight: 700 }}>
+                                      ⛪ {cName}
+                                    </span>
+                                  ))}
+                                  {pastorNames.map((pName, i) => (
+                                    <span key={i} style={{ fontSize: "11px", background: "#fef3c7", color: "#b45309", border: "1px solid #fde68a", padding: "2px 7px", borderRadius: "6px", fontWeight: 700 }}>
+                                      👤 {pName}
+                                    </span>
+                                  ))}
+                                </div>
+                              );
+                            })()}
                           </td>
 
                           {/* Email Verified */}

@@ -173,14 +173,15 @@ export default function DashboardClient({
     name: string;
     email: string;
     role: 'events_only' | 'events_and_church_edit';
-    churchId?: string;
-    churchName?: string;
+    assignedChurches?: string[];
+    assignedPastors?: string[];
+    churchNames?: string[];
+    pastorNames?: string[];
     status: 'active' | 'pending';
     addedAt: string;
   }
 
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => {
-    // Initial sample team members or load from storage
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('cn_dashboard_team_members');
       if (saved) {
@@ -193,66 +194,136 @@ export default function DashboardClient({
         name: 'Sarah Jenkins',
         email: 'sarah.j@example.com',
         role: 'events_and_church_edit',
-        churchName: churches[0]?.name || 'Grace Community Church',
+        assignedChurches: churches[0]?.id ? [churches[0].id] : [],
+        churchNames: churches[0]?.name ? [churches[0].name] : ['Grace Community Church'],
+        assignedPastors: pastors[0]?.id ? [pastors[0].id] : [],
+        pastorNames: pastors[0]?.full_name ? [pastors[0].full_name] : ['Senior Pastor'],
         status: 'active',
         addedAt: '2026-02-14',
-      },
-      {
-        id: 'tm-2',
-        name: 'David Adeleke',
-        email: 'david.a@example.com',
-        role: 'events_only',
-        churchName: churches[0]?.name || 'Grace Community Church',
-        status: 'active',
-        addedAt: '2026-03-01',
       },
     ];
   });
 
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberPassword, setNewMemberPassword] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<'events_only' | 'events_and_church_edit'>('events_only');
-  const [newMemberChurchId, setNewMemberChurchId] = useState(churches[0]?.id || '');
+  const [teamSelectedChurchIds, setTeamSelectedChurchIds] = useState<string[]>(churches[0]?.id ? [churches[0].id] : []);
+  const [teamSelectedPastorIds, setTeamSelectedPastorIds] = useState<string[]>([]);
   const [teamSuccessMsg, setTeamSuccessMsg] = useState<string | null>(null);
   const [teamErrorMsg, setTeamErrorMsg] = useState<string | null>(null);
+  const [isSavingTeamMember, setIsSavingTeamMember] = useState(false);
 
-  const handleAddTeamMember = (e: React.FormEvent) => {
+  // Load live team members from Supabase Auth via API
+  useEffect(() => {
+    async function loadTeamMembers() {
+      try {
+        const res = await fetch('/api/dashboard/team');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.teamUsers) && data.teamUsers.length > 0) {
+            setTeamMembers(data.teamUsers);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('cn_dashboard_team_members', JSON.stringify(data.teamUsers));
+            }
+          }
+        }
+      } catch (e) {
+        // Fallback to local storage
+      }
+    }
+    loadTeamMembers();
+  }, []);
+
+  const handleAddTeamMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMemberName.trim() || !newMemberEmail.trim()) {
       setTeamErrorMsg('Please provide both full name and email address.');
       return;
     }
+    if (!newMemberPassword || newMemberPassword.length < 6) {
+      setTeamErrorMsg('Please enter a login password (at least 6 characters).');
+      return;
+    }
 
-    const churchObj = churches.find((c) => c.id === newMemberChurchId) || churches[0];
-    const newMember: TeamMember = {
-      id: 'tm-' + Date.now(),
+    setIsSavingTeamMember(true);
+    setTeamErrorMsg(null);
+
+    const chosenChurchNames = churches
+      .filter((c) => teamSelectedChurchIds.includes(c.id))
+      .map((c) => c.name || 'Unnamed Church');
+
+    const chosenPastorNames = pastors
+      .filter((p) => teamSelectedPastorIds.includes(p.id))
+      .map((p) => p.full_name || p.name || 'Unnamed Pastor');
+
+    const payload = {
       name: newMemberName.trim(),
       email: newMemberEmail.trim().toLowerCase(),
+      password: newMemberPassword,
       role: newMemberRole,
-      churchId: churchObj?.id,
-      churchName: churchObj?.name || 'All Assigned Churches',
-      status: 'active',
-      addedAt: new Date().toISOString().split('T')[0],
+      assignedChurches: teamSelectedChurchIds,
+      assignedPastors: teamSelectedPastorIds,
+      churchNames: chosenChurchNames,
+      pastorNames: chosenPastorNames,
     };
 
-    const updated = [newMember, ...teamMembers];
+    try {
+      // 1. Save directly into Supabase Auth
+      const res = await fetch('/api/dashboard/team', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const resData = await res.json();
+
+      if (!res.ok) {
+        throw new Error(resData.error || 'Failed to create user in Supabase.');
+      }
+
+      const newMember: TeamMember = {
+        id: resData.user?.id || 'tm-' + Date.now(),
+        name: newMemberName.trim(),
+        email: newMemberEmail.trim().toLowerCase(),
+        role: newMemberRole,
+        assignedChurches: teamSelectedChurchIds,
+        assignedPastors: teamSelectedPastorIds,
+        churchNames: chosenChurchNames,
+        pastorNames: chosenPastorNames,
+        status: 'active',
+        addedAt: new Date().toISOString().split('T')[0],
+      };
+
+      const updated = [newMember, ...teamMembers.filter((m) => m.email !== newMember.email)];
+      setTeamMembers(updated);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('cn_dashboard_team_members', JSON.stringify(updated));
+      }
+
+      setNewMemberName('');
+      setNewMemberEmail('');
+      setNewMemberPassword('');
+      setTeamSuccessMsg(`Successfully created & saved ${newMember.name} in Supabase Auth! They can now log in immediately with their email and password.`);
+      setTimeout(() => setTeamSuccessMsg(null), 5500);
+    } catch (err: any) {
+      setTeamErrorMsg(err.message || 'Error creating user');
+    } finally {
+      setIsSavingTeamMember(false);
+    }
+  };
+
+  const handleRemoveTeamMember = async (id: string) => {
+    const updated = teamMembers.filter((m) => m.id !== id);
     setTeamMembers(updated);
     if (typeof window !== 'undefined') {
       localStorage.setItem('cn_dashboard_team_members', JSON.stringify(updated));
     }
 
-    setNewMemberName('');
-    setNewMemberEmail('');
-    setTeamErrorMsg(null);
-    setTeamSuccessMsg(`Successfully added ${newMember.name} as team member with ${newMember.role === 'events_only' ? 'Add Events Only' : 'Add Events & Edit Church Data'} access.`);
-    setTimeout(() => setTeamSuccessMsg(null), 4500);
-  };
-
-  const handleRemoveTeamMember = (id: string) => {
-    const updated = teamMembers.filter((m) => m.id !== id);
-    setTeamMembers(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('cn_dashboard_team_members', JSON.stringify(updated));
+    try {
+      await fetch(`/api/dashboard/team?userId=${id}`, { method: 'DELETE' });
+    } catch {
+      // Non-critical if offline
     }
   };
 
@@ -5263,35 +5334,162 @@ export default function DashboardClient({
                       />
                     </div>
 
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                        Login Password <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="Create a password (min 6 characters)"
+                        value={newMemberPassword}
+                        onChange={(e) => setNewMemberPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        style={{
+                          width: '100%',
+                          padding: '11px 14px',
+                          borderRadius: '12px',
+                          border: '1.5px solid #cbd5e1',
+                          fontSize: '14px',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                      <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                        This password is saved in Supabase Auth so they can sign in immediately.
+                      </div>
+                    </div>
+
+                    {/* Multi-Select: Assign to Churches */}
                     {churches.length > 0 && (
                       <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                          Assign to Church
-                        </label>
-                        <select
-                          value={newMemberChurchId}
-                          onChange={(e) => setNewMemberChurchId(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '11px 14px',
-                            borderRadius: '12px',
-                            border: '1.5px solid #cbd5e1',
-                            fontSize: '14px',
-                            background: '#ffffff',
-                            outline: 'none',
-                            cursor: 'pointer',
-                            boxSizing: 'border-box',
-                          }}
-                        >
-                          {/* Sorted Alphabetically */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <label style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>
+                            Assign to Churches <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 500 }}>(Multi-selectable)</span>
+                          </label>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedChurchIds(churches.map((c) => c.id))}
+                              style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                            >
+                              Select All
+                            </button>
+                            <span style={{ color: '#cbd5e1' }}>•</span>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedChurchIds([])}
+                              style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        </div>
+
+                        <div style={{ maxHeight: '130px', overflowY: 'auto', border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '8px', background: '#fafafa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           {[...churches]
                             .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-                            .map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name || 'Unnamed Church'}
-                              </option>
-                            ))}
-                        </select>
+                            .map((c) => {
+                              const isSelected = teamSelectedChurchIds.includes(c.id);
+                              return (
+                                <label
+                                  key={c.id}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '6px 8px',
+                                    borderRadius: '8px',
+                                    background: isSelected ? '#f5f3ff' : 'transparent',
+                                    cursor: 'pointer',
+                                    fontSize: '13px',
+                                    fontWeight: isSelected ? 700 : 500,
+                                    color: isSelected ? '#6b21a8' : '#334155',
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setTeamSelectedChurchIds([...teamSelectedChurchIds, c.id]);
+                                      } else {
+                                        setTeamSelectedChurchIds(teamSelectedChurchIds.filter((id) => id !== c.id));
+                                      }
+                                    }}
+                                  />
+                                  <span>{c.name || 'Unnamed Church'}</span>
+                                </label>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Multi-Select: Assign to Pastors */}
+                    {pastors.length > 0 && (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <label style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>
+                            Assign to Pastors <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 500 }}>(Multi-selectable)</span>
+                          </label>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={() => setTeamSelectedPastorIds(pastors.map((p) => p.id))}
+                              style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                            >
+                              Select All
+                            </button>
+                            <span style={{ color: '#cbd5e1' }}>•</span>
+                            <button
+                              type="button"
+                              onClick={() => setTeamSelectedPastorIds([])}
+                              style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        </div>
+
+                        <div style={{ maxHeight: '130px', overflowY: 'auto', border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '8px', background: '#fafafa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {[...pastors]
+                            .sort((a, b) => (a.full_name || a.name || '').localeCompare(b.full_name || b.name || ''))
+                            .map((p) => {
+                              const pName = p.full_name || p.name || 'Unnamed Pastor';
+                              const isSelected = teamSelectedPastorIds.includes(p.id);
+                              return (
+                                <label
+                                  key={p.id}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '6px 8px',
+                                    borderRadius: '8px',
+                                    background: isSelected ? '#f5f3ff' : 'transparent',
+                                    cursor: 'pointer',
+                                    fontSize: '13px',
+                                    fontWeight: isSelected ? 700 : 500,
+                                    color: isSelected ? '#6b21a8' : '#334155',
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setTeamSelectedPastorIds([...teamSelectedPastorIds, p.id]);
+                                      } else {
+                                        setTeamSelectedPastorIds(teamSelectedPastorIds.filter((id) => id !== p.id));
+                                      }
+                                    }}
+                                  />
+                                  <span>{pName}</span>
+                                </label>
+                              );
+                            })}
+                        </div>
                       </div>
                     )}
 
@@ -5362,6 +5560,7 @@ export default function DashboardClient({
 
                     <button
                       type="submit"
+                      disabled={isSavingTeamMember}
                       style={{
                         marginTop: '8px',
                         background: 'linear-gradient(135deg, #7c3aed, #6366f1)',
@@ -5371,7 +5570,8 @@ export default function DashboardClient({
                         borderRadius: '12px',
                         fontWeight: 800,
                         fontSize: '14px',
-                        cursor: 'pointer',
+                        cursor: isSavingTeamMember ? 'not-allowed' : 'pointer',
+                        opacity: isSavingTeamMember ? 0.7 : 1,
                         boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)',
                         display: 'flex',
                         alignItems: 'center',
@@ -5379,7 +5579,15 @@ export default function DashboardClient({
                         gap: '8px',
                       }}
                     >
-                      <i className="ti ti-plus"></i> Add Team User Now
+                      {isSavingTeamMember ? (
+                        <>
+                          <i className="ti ti-loader ti-spin"></i> Saving into Supabase...
+                        </>
+                      ) : (
+                        <>
+                          <i className="ti ti-plus"></i> Add Team User Now
+                        </>
+                      )}
                     </button>
                   </form>
                 </div>
@@ -5436,7 +5644,7 @@ export default function DashboardClient({
                     <thead>
                       <tr style={{ borderBottom: '1.5px solid #e2e8f0', fontSize: '12px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         <th style={{ padding: '12px 14px' }}>Name & Email</th>
-                        <th style={{ padding: '12px 14px' }}>Assigned Church</th>
+                        <th style={{ padding: '12px 14px' }}>Assigned Churches & Pastors</th>
                         <th style={{ padding: '12px 14px' }}>Access Role</th>
                         <th style={{ padding: '12px 14px' }}>Status</th>
                         <th style={{ padding: '12px 14px' }}>Added Date</th>
@@ -5471,7 +5679,31 @@ export default function DashboardClient({
                           </td>
 
                           <td style={{ padding: '16px 14px', color: '#334155', fontWeight: 600 }}>
-                            {member.churchName || 'All Churches'}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {member.churchNames && member.churchNames.length > 0 ? (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                  {member.churchNames.map((name, i) => (
+                                    <span key={i} style={{ fontSize: '11px', background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe', padding: '2px 8px', borderRadius: '8px', fontWeight: 700 }}>
+                                      ⛪ {name}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : null}
+
+                              {member.pastorNames && member.pastorNames.length > 0 ? (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                  {member.pastorNames.map((pName, i) => (
+                                    <span key={i} style={{ fontSize: '11px', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', padding: '2px 8px', borderRadius: '8px', fontWeight: 700 }}>
+                                      👤 {pName}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : null}
+
+                              {(!member.churchNames?.length && !member.pastorNames?.length) && (
+                                <span style={{ fontSize: '12px', color: '#94a3b8' }}>All Entities</span>
+                              )}
+                            </div>
                           </td>
 
                           <td style={{ padding: '16px 14px' }}>

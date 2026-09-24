@@ -8,7 +8,10 @@
     "774d7d4d-96ba-4997-852f-8694a2706827",
     "a19fc427-d857-4e06-a9bd-f32655a09114"
   ],
-  "worshipLeaderIds": [],
+  "worshipLeaderIds": [
+    "36467dfa-299a-444b-b973-550d67d347d4",
+    "84eed4b8-4129-441f-83b0-7b1a6c28a00a"
+  ],
   "eventIds": [
     "1319c4d9-acaf-4254-883d-4b960ce2eab2",
     "308cfd02-1033-435b-b06d-85b9ca527592"
