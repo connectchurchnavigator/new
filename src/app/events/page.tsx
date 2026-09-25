@@ -62,7 +62,22 @@ export default async function EventsDirectoryPage() {
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px" }}>
             {events.map((ev) => {
-              const dateStr = ev.starts_at ? new Date(ev.starts_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", weekday: "short" }) : "Upcoming";
+              let dateStr = "Upcoming";
+              if (ev.starts_at) {
+                const sDate = new Date(ev.starts_at);
+                const sDay = sDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+                if (ev.ends_at) {
+                  const eDate = new Date(ev.ends_at);
+                  if (sDate.toDateString() !== eDate.toDateString()) {
+                    const eDay = eDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+                    dateStr = `${sDay} – ${eDay}`;
+                  } else {
+                    dateStr = sDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", weekday: "short" });
+                  }
+                } else {
+                  dateStr = sDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", weekday: "short" });
+                }
+              }
               const timeStr = ev.starts_at ? new Date(ev.starts_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
 
               return (

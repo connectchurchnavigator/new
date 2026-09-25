@@ -27,15 +27,17 @@ export default async function AdminPage() {
   const userEmail = user?.email?.toLowerCase() || "";
   const isSuperAdminByEmail = adminEmails.length > 0 ? adminEmails.includes(userEmail) : false;
   const isSuperAdminByRole = user?.user_metadata?.role === "super_admin" || user?.app_metadata?.role === "super_admin";
+  const isTeamMember = !!(user?.user_metadata?.is_team_member || user?.user_metadata?.team_role);
 
-  // If user is logged in but NOT a super admin (and admin emails list is defined or role is missing), grant access if dev or admin
   // For production security: If user is not logged in, redirect to login.
   if (!user) {
     redirect("/login?next=/admin");
   }
 
-  // If role check fails and explicit admin email list exists, deny access
-  if (adminEmails.length > 0 && !isSuperAdminByEmail && !isSuperAdminByRole) {
+  // Deny access if user is a team member, or if they are NOT a verified super admin
+  const isAuthorized = !isTeamMember && (isSuperAdminByRole || isSuperAdminByEmail);
+
+  if (!isAuthorized) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", fontFamily: "sans-serif" }}>
         <div style={{ background: "#ffffff", padding: "40px", borderRadius: "20px", border: "1.5px solid #fecdd3", maxWidth: "450px", textAlign: "center", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05)" }}>
@@ -46,8 +48,8 @@ export default async function AdminPage() {
           <p style={{ fontSize: "14px", color: "#64748b", margin: "0 0 24px", lineHeight: 1.5 }}>
             You are logged in as <strong>{user.email}</strong>, but your account does not have Super Admin privileges to access this command center.
           </p>
-          <a href="/" style={{ background: "#7c3aed", color: "#ffffff", textDecoration: "none", padding: "10px 20px", borderRadius: "12px", fontSize: "13.5px", fontWeight: 800, display: "inline-block" }}>
-            Return to Homepage
+          <a href="/dashboard" style={{ background: "#7c3aed", color: "#ffffff", textDecoration: "none", padding: "10px 20px", borderRadius: "12px", fontSize: "13.5px", fontWeight: 800, display: "inline-block" }}>
+            Return to Dashboard
           </a>
         </div>
       </div>

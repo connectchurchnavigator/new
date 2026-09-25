@@ -21,11 +21,18 @@ export default function EventClientView({ slug }: EventClientViewProps) {
   const [showQRModal, setShowQRModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [activeDayTab, setActiveDayTab] = useState<number>(1);
 
   useEffect(() => {
     async function fetchEvent() {
       try {
-        const res = await fetch(`/api/events?slug=${encodeURIComponent(slug)}&t=${Date.now()}`, { cache: "no-store" });
+        const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+        const idParam = urlParams ? urlParams.get("id") : null;
+        const query = idParam
+          ? `id=${encodeURIComponent(idParam)}&t=${Date.now()}`
+          : `slug=${encodeURIComponent(slug)}&t=${Date.now()}`;
+
+        const res = await fetch(`/api/events?${query}`, { cache: "no-store" });
         const data = await res.json();
         if (!res.ok || !data.event) {
           throw new Error("Event not found");
@@ -159,7 +166,13 @@ export default function EventClientView({ slug }: EventClientViewProps) {
   const gallery = eventData.gallery_urls || [];
 
   const startDateObj = new Date(eventData.starts_at);
-  const formattedDate = startDateObj.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
+  const endDateObj = eventData.ends_at ? new Date(eventData.ends_at) : null;
+  const isMultiDay = endDateObj && startDateObj.toDateString() !== endDateObj.toDateString();
+
+  const formattedDate = isMultiDay
+    ? `${startDateObj.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} – ${endDateObj.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}`
+    : startDateObj.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
+
   const formattedTime = startDateObj.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
   const hasCapacityLimit = typeof eventData.capacity === "number" && eventData.capacity > 0;
@@ -414,31 +427,155 @@ export default function EventClientView({ slug }: EventClientViewProps) {
           </div>
 
           {/* SCHEDULE TIMETABLE */}
-          {sessions.length > 0 && (
-            <div style={{ background: "#fff", border: "1px solid #e9e9ef", borderRadius: "18px", padding: "22px", marginBottom: "18px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 800, marginBottom: "4px", color: "#0f0f1a", letterSpacing: "-0.02em" }}>Schedule</h2>
-              <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "16px", fontWeight: 500 }}>{formattedDate}</div>
+          {sessions.length > 0 && (() => {
+            // Group sessions by day_number
+            const daysSet = new Set<number>();
+            sessions.forEach((s: any) => {
+              if (s.day_number) daysSet.add(Number(s.day_number));
+            });
 
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                {sessions.map((sess: any, i: number) => (
-                  <div key={i} style={{ display: "flex", gap: "16px", padding: "14px 0", borderBottom: i < sessions.length - 1 ? "1px solid #e9e9ef" : "none" }}>
-                    <div style={{ fontSize: "13px", fontWeight: 800, color: "#6d28d9", width: "74px", flexShrink: 0 }}>
-                      {sess.time_label}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "14.5px", fontWeight: 700, color: "#0f0f1a" }}>{sess.title}</div>
-                      {sess.description && <div style={{ fontSize: "12.5px", color: "#6b7280", marginTop: "2px" }}>{sess.description}</div>}
-                      {sess.speaker_name && (
-                        <div style={{ fontSize: "12px", fontWeight: 600, color: "#6d28d9", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
-                          <i className="ti ti-microphone" style={{ fontSize: "14px" }}></i> {sess.speaker_name}
-                        </div>
-                      )}
+            // If day_number wasn't explicitly populated on sessions, but event has multiple days, infer days
+            if (daysSet.size <= 1 && isMultiDay && startDateObj && endDateObj) {
+              const diffDays = Math.max(1, Math.round((endDateObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+              for (let d = 1; d <= diffDays; d++) {
+                daysSet.add(d);
+              }
+            }
+
+            const dayNumbers = Array.from(daysSet).sort((a, b) => a - b);
+            const hasMultipleDays = dayNumbers.length > 1;
+
+            // Selected day sessions
+            const currentDayNumber = hasMultipleDays
+              ? (dayNumbers.includes(activeDayTab) ? activeDayTab : dayNumbers[0])
+              : null;
+
+            const visibleSessions = currentDayNumber
+              ? sessions.filter((s: any) => {
+                  const sDay = Number(s.day_number || 1);
+                  return sDay === currentDayNumber;
+                })
+              : sessions;
+
+            // Compute date string for current day if event dates are known
+            let daySubtitle = formattedDate;
+            if (currentDayNumber && startDateObj) {
+              const d = new Date(startDateObj);
+              d.setDate(d.getDate() + (currentDayNumber - 1));
+              daySubtitle = d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+            }
+
+            return (
+              <div style={{ background: "#fff", border: "1px solid #e9e9ef", borderRadius: "18px", padding: "24px", marginBottom: "18px", boxShadow: "0 4px 16px rgba(0,0,0,0.02)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+                  <div>
+                    <h2 style={{ fontSize: "19px", fontWeight: 800, marginBottom: "4px", color: "#0f0f1a", letterSpacing: "-0.02em" }}>
+                      Event Schedule
+                    </h2>
+                    <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>
+                      {hasMultipleDays ? `Day ${currentDayNumber} — ${daySubtitle}` : formattedDate}
                     </div>
                   </div>
-                ))}
+
+                  {/* Multi-day Pills */}
+                  {hasMultipleDays && (
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", background: "#f8fafc", padding: "4px", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
+                      {dayNumbers.map((dNum) => {
+                        const isSelected = dNum === currentDayNumber;
+                        const dObj = new Date(startDateObj);
+                        dObj.setDate(dObj.getDate() + (dNum - 1));
+                        const shortDate = dObj.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+                        return (
+                          <button
+                            key={dNum}
+                            type="button"
+                            onClick={() => setActiveDayTab(dNum)}
+                            style={{
+                              border: "none",
+                              cursor: "pointer",
+                              padding: "7px 14px",
+                              borderRadius: "10px",
+                              fontSize: "12.5px",
+                              fontWeight: 700,
+                              transition: "all 0.15s ease",
+                              background: isSelected ? "linear-gradient(135deg, #7c3aed, #6d28d9)" : "transparent",
+                              color: isSelected ? "#ffffff" : "#475569",
+                              boxShadow: isSelected ? "0 4px 12px rgba(124, 58, 237, 0.25)" : "none"
+                            }}
+                          >
+                            Day {dNum} <span style={{ opacity: isSelected ? 0.9 : 0.65, fontWeight: 500 }}>({shortDate})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {visibleSessions.length === 0 ? (
+                    <div style={{ padding: "24px 0", textAlign: "center", color: "#94a3b8", fontSize: "13px" }}>
+                      No sessions scheduled for this day yet.
+                    </div>
+                  ) : (
+                    visibleSessions.map((sess: any, i: number) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: "flex",
+                          gap: "18px",
+                          padding: "16px 0",
+                          borderBottom: i < visibleSessions.length - 1 ? "1px solid #f1f5f9" : "none"
+                        }}
+                      >
+                        <div style={{ width: "90px", flexShrink: 0 }}>
+                          <span style={{
+                            display: "inline-block",
+                            background: "#f5f3ff",
+                            color: "#7c3aed",
+                            padding: "4px 8px",
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            letterSpacing: "-0.01em"
+                          }}>
+                            {sess.time_label}
+                          </span>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: "15px", fontWeight: 700, color: "#0f0f1a", lineHeight: 1.35 }}>
+                            {sess.title}
+                          </div>
+                          {sess.description && (
+                            <div style={{ fontSize: "13px", color: "#64748b", marginTop: "4px", lineHeight: 1.45 }}>
+                              {sess.description}
+                            </div>
+                          )}
+                          {sess.speaker_name && (
+                            <div style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              marginTop: "8px",
+                              padding: "3px 10px",
+                              borderRadius: "20px",
+                              background: "#faf5ff",
+                              border: "1px solid #f3e8ff",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              color: "#7c3aed"
+                            }}>
+                              <i className="ti ti-microphone" style={{ fontSize: "13px" }}></i> {sess.speaker_name}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* SPEAKERS & MINISTERS */}
           {speakers.length > 0 && (
@@ -589,9 +726,9 @@ export default function EventClientView({ slug }: EventClientViewProps) {
           )}
         </div>
 
-        {/* RIGHT COLUMN: Registration Box & Pricing Tiers */}
-        <div>
-          <div style={{ background: "#fff", border: "1px solid #e9e9ef", borderRadius: "18px", padding: "22px", position: "sticky", top: "74px" }}>
+        {/* RIGHT COLUMN: Registration Box & Hosted By */}
+        <div style={{ position: "sticky", top: "74px", alignSelf: "start", display: "flex", flexDirection: "column", gap: "18px" }}>
+          <div style={{ background: "#fff", border: "1px solid #e9e9ef", borderRadius: "18px", padding: "22px", boxShadow: "0 4px 16px rgba(0,0,0,0.02)" }}>
             
             {/* TICKET PRICING TIERS */}
             <h4 style={{ fontSize: "14px", fontWeight: 800, marginBottom: "12px", color: "#0f0f1a" }}>Select Ticket Category</h4>
@@ -802,7 +939,7 @@ export default function EventClientView({ slug }: EventClientViewProps) {
           </div>
 
           {/* HOSTED BY CARD */}
-          <div style={{ background: "#fff", border: "1px solid #e9e9ef", borderRadius: "18px", padding: "20px", marginTop: "18px" }}>
+          <div style={{ background: "#fff", border: "1px solid #e9e9ef", borderRadius: "18px", padding: "20px", boxShadow: "0 4px 16px rgba(0,0,0,0.02)" }}>
             <div style={{ fontSize: "13px", fontWeight: 800, color: "#0f0f1a", marginBottom: "12px" }}>Hosted by</div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
               <div style={{ width: "46px", height: "46px", borderRadius: "14px", background: "linear-gradient(135deg, #7c3aed, #f43f5e)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "16px", flexShrink: 0 }}>

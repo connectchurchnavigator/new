@@ -20,6 +20,8 @@ interface ScheduleSession {
   title: string;
   description: string;
   speaker_name: string;
+  day_number?: number;
+  session_date?: string;
 }
 
 interface SpeakerItem {
@@ -417,7 +419,9 @@ function EventsOnboardingContent() {
               time_label: s.time_label || "",
               title: s.title || "",
               description: s.description || "",
-              speaker_name: s.speaker_name || ""
+              speaker_name: s.speaker_name || "",
+              day_number: typeof s.day_number === "number" ? s.day_number : (parseInt(s.day_number) || 1),
+              session_date: s.session_date || ""
             }));
 
             const parsedSpeakers = (ev.event_speakers || []).map((sp: any) => ({
@@ -433,6 +437,33 @@ function EventsOnboardingContent() {
             }));
 
             const startDate = ev.starts_at ? new Date(ev.starts_at) : new Date();
+            const endDate = ev.ends_at ? new Date(ev.ends_at) : startDate;
+
+            // Reconstruct all date slots between starts_at and ends_at
+            const reconstructedDates: EventDateSlot[] = [];
+            const curDate = new Date(startDate);
+            // Format time strings
+            const defaultStartTime = startDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+            const defaultEndTime = ev.ends_at ? new Date(ev.ends_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
+
+            while (curDate <= endDate) {
+              reconstructedDates.push({
+                date: curDate.toISOString().split("T")[0],
+                starts_time: defaultStartTime,
+                ends_time: defaultEndTime
+              });
+              // Advance by 1 calendar day
+              curDate.setDate(curDate.getDate() + 1);
+            }
+
+            // Ensure at least 1 date exists
+            if (reconstructedDates.length === 0) {
+              reconstructedDates.push({
+                date: startDate.toISOString().split("T")[0],
+                starts_time: defaultStartTime,
+                ends_time: defaultEndTime
+              });
+            }
 
             setForm({
               id: ev.id,
@@ -451,11 +482,7 @@ function EventsOnboardingContent() {
               postcode: ev.postcode || "",
               latitude: ev.latitude,
               longitude: ev.longitude,
-              dates: [{
-                date: startDate.toISOString().split("T")[0],
-                starts_time: startDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
-                ends_time: ev.ends_at ? new Date(ev.ends_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : ""
-              }],
+              dates: reconstructedDates,
               capacity: ev.capacity ? ev.capacity.toString() : "",
               has_free_parking: Boolean(ev.has_free_parking),
               near_metro_station: Boolean(ev.near_metro_station),
@@ -568,10 +595,11 @@ function EventsOnboardingContent() {
           { date: "2025-11-16", starts_time: "02:00 PM", ends_time: "07:30 PM" }
         ],
         sessions: [
-          { time_label: "09:30 AM", title: "Morning Worship & Keynote Opening", description: "Opening worship encounter followed by the apostolic keynote address.", speaker_name: "Bishop David Evans" },
-          { time_label: "11:30 AM", title: "Kingdom Leadership Workshop", description: "Practical breakout masterclass for church planters, department heads, and leaders.", speaker_name: "Pastor Sarah Jenkins" },
-          { time_label: "02:00 PM", title: "Next-Gen Youth & Revival Seminar", description: "Interactive session on raising and discipling the emerging generation.", speaker_name: "Minister Michael Cole" },
-          { time_label: "06:30 PM", title: "Evening Miracle & Prophetic Service", description: "Powerful evening service dedicated to intercession, healing, and prophetic release.", speaker_name: "Dr. Emmanuel Adeyemi" }
+          { day_number: 1, session_date: "2025-11-14", time_label: "09:30 AM", title: "Morning Worship & Keynote Opening", description: "Opening worship encounter followed by the apostolic keynote address.", speaker_name: "Bishop David Evans" },
+          { day_number: 1, session_date: "2025-11-14", time_label: "11:30 AM", title: "Kingdom Leadership Workshop", description: "Practical breakout masterclass for church planters, department heads, and leaders.", speaker_name: "Pastor Sarah Jenkins" },
+          { day_number: 2, session_date: "2025-11-15", time_label: "10:00 AM", title: "Next-Gen Youth & Revival Seminar", description: "Interactive session on raising and discipling the emerging generation.", speaker_name: "Minister Michael Cole" },
+          { day_number: 2, session_date: "2025-11-15", time_label: "06:30 PM", title: "Evening Miracle & Prophetic Service", description: "Powerful evening service dedicated to intercession, healing, and prophetic release.", speaker_name: "Dr. Emmanuel Adeyemi" },
+          { day_number: 3, session_date: "2025-11-16", time_label: "03:00 PM", title: "Grand Impartation & Commissioning", description: "Final commissioning service with apostolic anointing and global outreach sending.", speaker_name: "Bishop David Evans" }
         ],
         speakers: [
           { name: "Bishop David Evans", photo_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80", designation: "General Overseer", affiliation: "Grace International Fellowship" },
@@ -690,12 +718,23 @@ function EventsOnboardingContent() {
     }));
   };
 
-  const handleAddSession = () => {
+  const [activeScheduleDay, setActiveScheduleDay] = useState(1);
+
+  const handleAddSession = (preferredDay?: number) => {
+    const targetDay = preferredDay || activeScheduleDay || 1;
+    const targetDateSlot = form.dates[targetDay - 1] || form.dates[0];
     setForm(prev => ({
       ...prev,
       sessions: [
         ...prev.sessions,
-        { time_label: "", title: "", description: "", speaker_name: "" }
+        {
+          time_label: "",
+          title: "",
+          description: "",
+          speaker_name: "",
+          day_number: targetDay,
+          session_date: targetDateSlot ? targetDateSlot.date : ""
+        }
       ]
     }));
   };
@@ -707,10 +746,18 @@ function EventsOnboardingContent() {
     }));
   };
 
-  const handleUpdateSession = (index: number, field: keyof ScheduleSession, val: string) => {
+  const handleUpdateSession = (index: number, field: keyof ScheduleSession, val: any) => {
     setForm(prev => {
       const updated = [...prev.sessions];
       updated[index] = { ...updated[index], [field]: val };
+      // If day_number was updated, keep session_date in sync with that date slot
+      if (field === "day_number") {
+        const dNum = Number(val);
+        const slot = prev.dates[dNum - 1];
+        if (slot) {
+          updated[index].session_date = slot.date;
+        }
+      }
       return { ...prev, sessions: updated };
     });
   };
@@ -1719,76 +1766,254 @@ function EventsOnboardingContent() {
 
             {/* 9. Schedule: Time, Heading, Subtext, Guest Name */}
             <div style={{ marginBottom: "36px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                <div>
-                  <div style={{ fontSize: "15px", fontWeight: 800, color: "#0f172a" }}>Schedule Timetable</div>
-                  <div style={{ fontSize: "12.5px", color: "#64748b" }}>Add event sessions with time, title, description, and minister.</div>
+              <div style={{ marginBottom: "14px" }}>
+                <div style={{ fontSize: "15px", fontWeight: 800, color: "#0f172a" }}>Schedule Timetable</div>
+                <div style={{ fontSize: "12.5px", color: "#64748b" }}>
+                  {form.dates.length > 1
+                    ? `Select a day to view or add sessions for each day of the event.`
+                    : "Add event sessions with time, title, description, and minister."}
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddSession}
-                  style={{ fontSize: "12.5px", padding: "6px 16px", border: "none", color: "#ffffff", background: "linear-gradient(135deg, #e11d48, #7c3aed)", borderRadius: "20px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 10px rgba(225,29,72,0.2)" }}
-                >
-                  <i className="ti ti-plus"></i> Add Session
-                </button>
               </div>
 
+              {/* Day Selection Tabs for Multi-Day Events */}
+              {form.dates.length > 1 && (
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginBottom: "18px",
+                  padding: "6px",
+                  background: "#f1f5f9",
+                  borderRadius: "14px",
+                  overflowX: "auto"
+                }}>
+                  {form.dates.map((dSlot, dIdx) => {
+                    const dNum = dIdx + 1;
+                    const isSelected = activeScheduleDay === dNum;
+                    const dateFormatted = dSlot.date
+                      ? new Date(dSlot.date + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })
+                      : `Date ${dNum}`;
+                    const sessionCount = form.sessions.filter(s => (s.day_number || 1) === dNum).length;
+
+                    return (
+                      <button
+                        key={dIdx}
+                        type="button"
+                        onClick={() => setActiveScheduleDay(dNum)}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "8px 16px",
+                          borderRadius: "10px",
+                          border: "none",
+                          cursor: "pointer",
+                          fontWeight: 700,
+                          fontSize: "13px",
+                          whiteSpace: "nowrap",
+                          transition: "all 0.15s ease",
+                          background: isSelected ? "#7c3aed" : "transparent",
+                          color: isSelected ? "#ffffff" : "#475569",
+                          boxShadow: isSelected ? "0 2px 8px rgba(124, 58, 237, 0.3)" : "none"
+                        }}
+                      >
+                        <span>Day {dNum}</span>
+                        <span style={{ fontSize: "11.5px", opacity: isSelected ? 0.95 : 0.75, fontWeight: 500 }}>
+                          ({dateFormatted})
+                        </span>
+                        <span style={{
+                          background: isSelected ? "rgba(255,255,255,0.25)" : "#e2e8f0",
+                          color: isSelected ? "#ffffff" : "#64748b",
+                          padding: "1px 7px",
+                          borderRadius: "12px",
+                          fontSize: "11px",
+                          fontWeight: 800
+                        }}>
+                          {sessionCount}
+                        </span>
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveScheduleDay(0)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "8px 14px",
+                      borderRadius: "10px",
+                      border: "none",
+                      cursor: "pointer",
+                      fontWeight: 700,
+                      fontSize: "12.5px",
+                      whiteSpace: "nowrap",
+                      marginLeft: "auto",
+                      background: activeScheduleDay === 0 ? "#0f172a" : "transparent",
+                      color: activeScheduleDay === 0 ? "#ffffff" : "#64748b"
+                    }}
+                  >
+                    <span>All Days ({form.sessions.length})</span>
+                  </button>
+                </div>
+              )}
+
               <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                {form.sessions.map((sess, idx) => (
-                  <div key={idx} style={{ padding: "16px", borderRadius: "14px", background: "#f8fafc", border: "1.5px solid #e2e8f0", position: "relative" }}>
-                    <button
-                      onClick={() => handleRemoveSession(idx)}
-                      style={{ position: "absolute", top: "12px", right: "12px", color: "#ef4444", border: "none", background: "none", cursor: "pointer" }}
-                    >
-                      <i className="ti ti-trash" style={{ fontSize: "16px" }}></i>
-                    </button>
-                    {/* Row 1: Time | Guest Name / Speaker */}
-                    <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: "12px", marginBottom: "12px" }}>
-                      <div>
-                        <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px", display: "block" }}>Time</label>
-                        <EventTimeInput
-                          value={sess.time_label}
-                          onChange={(val) => handleUpdateSession(idx, "time_label", val)}
-                          placeholder="e.g. 9:30 AM"
-                        />
+                {form.sessions
+                  .map((sess, origIdx) => ({ sess, origIdx }))
+                  .filter(({ sess }) => activeScheduleDay === 0 || (sess.day_number || 1) === activeScheduleDay)
+                  .length === 0 ? (
+                    <div style={{ padding: "32px 20px", textAlign: "center", background: "#f8fafc", borderRadius: "14px", border: "1.5px dashed #cbd5e1" }}>
+                      <i className="ti ti-calendar-event" style={{ fontSize: "28px", color: "#94a3b8", display: "block", marginBottom: "8px" }}></i>
+                      <div style={{ fontSize: "14px", fontWeight: 700, color: "#334155" }}>
+                        No sessions added for {form.dates.length > 1 ? `Day ${activeScheduleDay}` : "this event"} yet
                       </div>
-                      <div style={{ paddingRight: "28px" }}>
-                        <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px", display: "block" }}>Guest Name / Speaker</label>
-                        <input
-                          type="text"
-                          value={sess.speaker_name}
-                          onChange={(e) => handleUpdateSession(idx, "speaker_name", e.target.value)}
-                          placeholder="e.g. Pastor James Okafor"
-                          style={{ width: "100%", padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #cbd5e1", fontSize: "13.5px", outline: "none" }}
-                        />
+                      <div style={{ fontSize: "12px", color: "#64748b", marginTop: "4px", marginBottom: "14px" }}>
+                        Click below to create the first timetable slot for this day.
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => handleAddSession(activeScheduleDay)}
+                        style={{
+                          fontSize: "12.5px",
+                          padding: "8px 18px",
+                          border: "none",
+                          color: "#ffffff",
+                          background: "#7c3aed",
+                          borderRadius: "10px",
+                          fontWeight: 700,
+                          cursor: "pointer"
+                        }}
+                      >
+                        + Add Session for Day {activeScheduleDay}
+                      </button>
                     </div>
+                  ) : (
+                    <>
+                      {form.sessions
+                        .map((sess, origIdx) => ({ sess, origIdx }))
+                        .filter(({ sess }) => activeScheduleDay === 0 || (sess.day_number || 1) === activeScheduleDay)
+                        .map(({ sess, origIdx }) => (
+                          <div key={origIdx} style={{ padding: "16px", borderRadius: "14px", background: "#f8fafc", border: "1.5px solid #e2e8f0", position: "relative" }}>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSession(origIdx)}
+                              style={{ position: "absolute", top: "12px", right: "12px", color: "#ef4444", border: "none", background: "none", cursor: "pointer" }}
+                              title="Remove Session"
+                            >
+                              <i className="ti ti-trash" style={{ fontSize: "16px" }}></i>
+                            </button>
 
-                    {/* Row 2: Session Heading */}
-                    <div style={{ marginBottom: "12px" }}>
-                      <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px", display: "block" }}>Session Heading</label>
-                      <input
-                        type="text"
-                        value={sess.title}
-                        onChange={(e) => handleUpdateSession(idx, "title", e.target.value)}
-                        placeholder="Opening session — Kingdom Authority"
-                        style={{ width: "100%", padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #cbd5e1", fontSize: "13.5px", outline: "none" }}
-                      />
-                    </div>
+                            {/* Row 1: Day (if multi-day) + Time + Speaker */}
+                            <div style={{
+                              display: "grid",
+                              gridTemplateColumns: form.dates.length > 1 ? "140px 170px 1fr" : "180px 1fr",
+                              gap: "12px",
+                              marginBottom: "12px"
+                            }}>
+                              {/* Day Selector dropdown if multi-day */}
+                              {form.dates.length > 1 && (
+                                <div>
+                                  <label style={{ fontSize: "11px", fontWeight: 700, color: "#7c3aed", marginBottom: "4px", display: "block" }}>
+                                    Which Day?
+                                  </label>
+                                  <select
+                                    value={sess.day_number || 1}
+                                    onChange={(e) => handleUpdateSession(origIdx, "day_number", parseInt(e.target.value))}
+                                    style={{
+                                      width: "100%",
+                                      padding: "9px 10px",
+                                      borderRadius: "10px",
+                                      border: "1.5px solid #c4b5fd",
+                                      background: "#faf5ff",
+                                      color: "#5b21b6",
+                                      fontSize: "13px",
+                                      fontWeight: 700,
+                                      outline: "none"
+                                    }}
+                                  >
+                                    {form.dates.map((d, dIdx) => (
+                                      <option key={dIdx} value={dIdx + 1}>
+                                        Day {dIdx + 1} ({d.date || `Slot ${dIdx + 1}`})
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
 
-                    {/* Row 3: Description */}
-                    <div>
-                      <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px", display: "block" }}>Description</label>
-                      <input
-                        type="text"
-                        value={sess.description}
-                        onChange={(e) => handleUpdateSession(idx, "description", e.target.value)}
-                        placeholder="Welcome coffee & worship team"
-                        style={{ width: "100%", padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #cbd5e1", fontSize: "13.5px", outline: "none" }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                              <div>
+                                <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px", display: "block" }}>Time</label>
+                                <EventTimeInput
+                                  value={sess.time_label}
+                                  onChange={(val) => handleUpdateSession(origIdx, "time_label", val)}
+                                  placeholder="e.g. 9:30 AM"
+                                />
+                              </div>
+                              <div style={{ paddingRight: "28px" }}>
+                                <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px", display: "block" }}>Guest Name / Speaker</label>
+                                <input
+                                  type="text"
+                                  value={sess.speaker_name}
+                                  onChange={(e) => handleUpdateSession(origIdx, "speaker_name", e.target.value)}
+                                  placeholder="e.g. Pastor James Okafor"
+                                  style={{ width: "100%", padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #cbd5e1", fontSize: "13.5px", outline: "none" }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Row 2: Session Heading */}
+                            <div style={{ marginBottom: "12px" }}>
+                              <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px", display: "block" }}>Session Heading</label>
+                              <input
+                                type="text"
+                                value={sess.title}
+                                onChange={(e) => handleUpdateSession(origIdx, "title", e.target.value)}
+                                placeholder="Opening session — Kingdom Authority"
+                                style={{ width: "100%", padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #cbd5e1", fontSize: "13.5px", outline: "none" }}
+                              />
+                            </div>
+
+                            {/* Row 3: Description */}
+                            <div>
+                              <label style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", marginBottom: "4px", display: "block" }}>Description</label>
+                              <input
+                                type="text"
+                                value={sess.description}
+                                onChange={(e) => handleUpdateSession(origIdx, "description", e.target.value)}
+                                placeholder="Welcome coffee & worship team"
+                                style={{ width: "100%", padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #cbd5e1", fontSize: "13.5px", outline: "none" }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+
+                      {/* ADD SESSION BUTTON AT THE BOTTOM AFTER DESCRIPTION */}
+                      <div style={{ marginTop: "4px" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleAddSession(activeScheduleDay)}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            fontSize: "13px",
+                            padding: "9px 20px",
+                            border: "none",
+                            color: "#ffffff",
+                            background: "linear-gradient(135deg, #e11d48, #7c3aed)",
+                            borderRadius: "12px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            boxShadow: "0 4px 12px rgba(225,29,72,0.22)",
+                            transition: "all 0.15s ease"
+                          }}
+                        >
+                          <i className="ti ti-plus"></i> Add Session {form.dates.length > 1 && activeScheduleDay > 0 ? `to Day ${activeScheduleDay}` : ""}
+                        </button>
+                      </div>
+                    </>
+                  )}
               </div>
             </div>
 

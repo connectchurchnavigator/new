@@ -163,9 +163,21 @@ export async function POST(req: NextRequest) {
         title: s.title || 'Session',
         description: s.description || null,
         speaker_name: s.speaker_name || null,
+        day_number: typeof s.day_number === 'number' ? s.day_number : (parseInt(s.day_number) || 1),
+        session_date: s.session_date || null,
         sort_order: idx
       }));
-      await supabase.from('event_sessions').insert(sessionRows);
+
+      const { error: sessErr } = await supabase.from('event_sessions').insert(sessionRows);
+      if (sessErr) {
+        console.warn('Initial session insert with day_number failed, trying fallback:', sessErr.message);
+        // Fallback: If DB schema doesn't have day_number or session_date column yet, insert without them
+        const fallbackRows = sessionRows.map(({ day_number, session_date, ...rest }) => rest);
+        const { error: fallbackErr } = await supabase.from('event_sessions').insert(fallbackRows);
+        if (fallbackErr) {
+          console.error('Fallback session insert error:', fallbackErr);
+        }
+      }
     }
 
     // Insert speakers

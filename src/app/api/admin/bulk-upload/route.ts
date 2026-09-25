@@ -44,6 +44,15 @@ export async function POST(req: NextRequest) {
 
     // ── 1. IMPORT CHURCHES ──────────────────────────────────────────────────────────
     if (type === "churches") {
+      // Find a default fallback owner user for organizations if needed
+      let fallbackOwnerId: string | null = null;
+      try {
+        const { data: userList } = await supabase.auth.admin.listUsers();
+        fallbackOwnerId = userList?.users?.[0]?.id || null;
+      } catch (e) {
+        console.warn("Could not list auth users for fallback owner:", e);
+      }
+
       for (let i = 0; i < records.length; i++) {
         const r = records[i];
         const name = r.name || r.ChurchName || r.church_name || `Church ${i + 1}`;
@@ -57,6 +66,25 @@ export async function POST(req: NextRequest) {
             const { data: existing } = await supabase.from("churches").select("id").eq("slug", slug).maybeSingle();
             if (!existing) break;
             slug = withUniqueSuffix(baseSlug);
+          }
+
+          // Ensure organization exists for this church if org_id is required
+          let orgId: string | null = null;
+          try {
+            if (fallbackOwnerId) {
+              const { data: orgData } = await supabase
+                .from("organizations")
+                .insert({
+                  name: name.trim(),
+                  slug: `org-${slug}`,
+                  owner_id: fallbackOwnerId,
+                })
+                .select("id")
+                .maybeSingle();
+              if (orgData?.id) orgId = orgData.id;
+            }
+          } catch (oErr) {
+            console.warn("Could not create organization for church:", oErr);
           }
 
           // Parse arrays from comma-separated strings or JSON
@@ -115,9 +143,9 @@ export async function POST(req: NextRequest) {
             longitude = coords.lon;
           }
 
-          const churchPayload = {
-            slug,
+          const churchPayload: Record<string, any> = {
             name: name.trim(),
+            slug,
             about: about ? about.trim() : null,
             city: city ? city.trim() : null,
             area: area ? area.trim() : null,
@@ -140,8 +168,6 @@ export async function POST(req: NextRequest) {
             cover_url,
             logo_url,
             gallery,
-            worship_style,
-            worship_styles: worship_style,
             ministries,
             facilities,
             languages,
@@ -151,11 +177,47 @@ export async function POST(req: NextRequest) {
             is_verified: Boolean(r.is_verified || r.verified === "true" || r.verified === true),
           };
 
-          const { data: church, error: insertError } = await supabase
+          if (orgId) {
+            churchPayload.org_id = orgId;
+          }
+
+          let { data: church, error: insertError } = await supabase
             .from("churches")
             .insert(churchPayload)
             .select()
             .single();
+
+          // Fallback if schema doesn't have some optional columns like area/state/livestream
+          if (insertError && (insertError.message?.includes("column") || insertError.code === "42703")) {
+            console.warn("Retrying church insert with core columns:", insertError.message);
+            const corePayload: Record<string, any> = {
+              name: churchPayload.name,
+              slug: churchPayload.slug,
+              about: churchPayload.about,
+              city: churchPayload.city,
+              address_line: churchPayload.address_line,
+              postcode: churchPayload.postcode,
+              country: churchPayload.country,
+              denomination: churchPayload.denomination,
+              phone: churchPayload.phone,
+              email: churchPayload.email,
+              website: churchPayload.website,
+              cover_url: churchPayload.cover_url,
+              logo_url: churchPayload.logo_url,
+              gallery: churchPayload.gallery,
+              ministries: churchPayload.ministries,
+              facilities: churchPayload.facilities,
+              languages: churchPayload.languages,
+              latitude: churchPayload.latitude,
+              longitude: churchPayload.longitude,
+              status: churchPayload.status,
+              is_verified: churchPayload.is_verified,
+            };
+            if (orgId) corePayload.org_id = orgId;
+            const retryRes = await supabase.from("churches").insert(corePayload).select().single();
+            church = retryRes.data;
+            insertError = retryRes.error;
+          }
 
           if (insertError) {
             errors.push({ row: i + 1, name, error: insertError.message });

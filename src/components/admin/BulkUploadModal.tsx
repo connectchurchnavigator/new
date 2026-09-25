@@ -15,15 +15,19 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }: BulkUplo
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [fileName, setFileName] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
-  const [uploadResult, setUploadResult] = useState<{ insertedCount: number; errorsCount: number } | null>(null);
+  const [uploadResult, setUploadResult] = useState<{
+    insertedCount: number;
+    errorsCount: number;
+    errors?: Array<{ row: number; name: string; error: string }>;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  // Handle File Drag / Selection
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  // Process File helper (shared between input change and drop)
+  const processFile = (file: File) => {
     if (!file) return;
 
     setFileName(file.name);
@@ -68,6 +72,35 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }: BulkUplo
       reader.readAsBinaryString(file);
     } else {
       setErrorMsg("Please upload a .csv or .xlsx / .xls file.");
+    }
+  };
+
+  // Handle File Input Selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  // Drag & Drop event handlers
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -261,6 +294,7 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }: BulkUplo
       setUploadResult({
         insertedCount: data.insertedCount || 0,
         errorsCount: data.errorsCount || 0,
+        errors: data.errors || [],
       });
 
       if (data.insertedRecords && data.insertedRecords.length > 0) {
@@ -345,8 +379,7 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }: BulkUplo
                   style={{
                     padding: "14px",
                     borderRadius: "14px",
-                    border: "2px solid",
-                    borderColor: uploadType === t.id ? "#7c3aed" : "#e2e8f0",
+                    border: uploadType === t.id ? "2px solid #7c3aed" : "2px solid #e2e8f0",
                     background: uploadType === t.id ? "#f5f3ff" : "#ffffff",
                     cursor: "pointer",
                     textAlign: "left",
@@ -417,14 +450,16 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }: BulkUplo
           {/* Dropzone Upload */}
           <div
             onClick={() => fileInputRef.current?.click()}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
             style={{
-              border: "2px dashed #cbd5e1",
+              border: isDragging ? "2px dashed #7c3aed" : fileName ? "2px dashed #86efac" : "2px dashed #cbd5e1",
               borderRadius: "16px",
               padding: "36px 20px",
               textAlign: "center",
               cursor: "pointer",
-              background: fileName ? "#f0fdf4" : "#ffffff",
-              borderColor: fileName ? "#86efac" : "#cbd5e1",
+              background: isDragging ? "#faf5ff" : fileName ? "#f0fdf4" : "#ffffff",
               transition: "all 0.2s",
               marginBottom: "18px",
             }}
@@ -436,7 +471,7 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }: BulkUplo
               onChange={handleFileChange}
               style={{ display: "none" }}
             />
-            <i className={`ti ${fileName ? "ti-file-check" : "ti-cloud-upload"}`} style={{ fontSize: "40px", color: fileName ? "#16a34a" : "#7c3aed", marginBottom: "10px", display: "block" }}></i>
+            <i className={`ti ${fileName ? "ti-file-check" : isDragging ? "ti-arrow-down" : "ti-cloud-upload"}`} style={{ fontSize: "40px", color: fileName ? "#16a34a" : "#7c3aed", marginBottom: "10px", display: "block" }}></i>
             
             {fileName ? (
               <div>
@@ -450,7 +485,7 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }: BulkUplo
             ) : (
               <div>
                 <div style={{ fontSize: "15px", fontWeight: 800, color: "#0f172a" }}>
-                  Click to choose your Excel (.xlsx) or CSV file
+                  {isDragging ? "Drop your file here!" : "Drag & drop your Excel (.xlsx) or CSV file here, or click to browse"}
                 </div>
                 <div style={{ fontSize: "12.5px", color: "#64748b", marginTop: "4px" }}>
                   Supports auto-geocoding for UK postcodes & addresses
@@ -466,15 +501,36 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }: BulkUplo
             </div>
           )}
 
-          {/* Success Banner */}
+          {/* Success Banner & Detailed Row Errors */}
           {uploadResult && (
-            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", padding: "14px", borderRadius: "12px", marginBottom: "16px" }}>
+            <div style={{
+              background: uploadResult.insertedCount > 0 ? "#f0fdf4" : "#fff7ed",
+              border: uploadResult.insertedCount > 0 ? "1px solid #bbf7d0" : "1px solid #fed7aa",
+              color: uploadResult.insertedCount > 0 ? "#166534" : "#9a3412",
+              padding: "14px",
+              borderRadius: "12px",
+              marginBottom: "16px"
+            }}>
               <div style={{ fontWeight: 800, fontSize: "14px" }}>
-                🎉 Successfully imported {uploadResult.insertedCount} {uploadType}!
+                {uploadResult.insertedCount > 0 ? "🎉" : "⚠️"} Successfully imported {uploadResult.insertedCount} {uploadType}!
               </div>
               {uploadResult.errorsCount > 0 && (
-                <div style={{ fontSize: "12.5px", marginTop: "4px", color: "#b45309" }}>
-                  {uploadResult.errorsCount} rows had errors and were skipped.
+                <div style={{ fontSize: "12.5px", marginTop: "6px", color: "#b45309" }}>
+                  <strong>{uploadResult.errorsCount}</strong> rows had errors and were skipped.
+                  {uploadResult.errors && uploadResult.errors.length > 0 && (
+                    <div style={{ marginTop: "8px", maxHeight: "120px", overflowY: "auto", background: "rgba(255,255,255,0.7)", borderRadius: "6px", padding: "8px" }}>
+                      {uploadResult.errors.slice(0, 5).map((e, idx) => (
+                        <div key={idx} style={{ fontSize: "11.5px", color: "#b91c1c", marginBottom: "4px" }}>
+                          • Row {e.row} ({e.name}): {e.error}
+                        </div>
+                      ))}
+                      {uploadResult.errors.length > 5 && (
+                        <div style={{ fontSize: "11px", color: "#64748b" }}>
+                          ...and {uploadResult.errors.length - 5} more errors
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -522,43 +578,71 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }: BulkUplo
           </button>
 
           <div style={{ display: "flex", gap: "10px" }}>
-            <button
-              onClick={onClose}
-              disabled={isUploading}
-              style={{
-                background: "#ffffff",
-                border: "1.5px solid #e2e8f0",
-                color: "#475569",
-                fontWeight: 700,
-                fontSize: "13.5px",
-                padding: "10px 18px",
-                borderRadius: "12px",
-                cursor: "pointer",
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleStartImport}
-              disabled={isUploading || parsedData.length === 0}
-              style={{
-                background: parsedData.length > 0 ? "linear-gradient(135deg, #16a34a, #059669)" : "#94a3b8",
-                color: "#ffffff",
-                border: "none",
-                fontWeight: 800,
-                fontSize: "13.5px",
-                padding: "10px 24px",
-                borderRadius: "12px",
-                cursor: parsedData.length > 0 ? "pointer" : "not-allowed",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                boxShadow: parsedData.length > 0 ? "0 4px 14px rgba(22, 163, 74, 0.35)" : "none",
-              }}
-            >
-              <i className={`ti ${isUploading ? "ti-loader animate-spin" : "ti-upload"}`}></i>
-              {isUploading ? "Importing Data..." : `Import ${parsedData.length} ${uploadType}`}
-            </button>
+            {uploadResult && uploadResult.insertedCount > 0 ? (
+              <button
+                onClick={() => {
+                  resetState();
+                  onClose();
+                }}
+                style={{
+                  background: "linear-gradient(135deg, #16a34a, #059669)",
+                  color: "#ffffff",
+                  border: "none",
+                  fontWeight: 800,
+                  fontSize: "13.5px",
+                  padding: "10px 24px",
+                  borderRadius: "12px",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  boxShadow: "0 4px 14px rgba(22, 163, 74, 0.35)",
+                }}
+              >
+                <i className="ti ti-check"></i>
+                Done / Close
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={onClose}
+                  disabled={isUploading}
+                  style={{
+                    background: "#ffffff",
+                    border: "1.5px solid #e2e8f0",
+                    color: "#475569",
+                    fontWeight: 700,
+                    fontSize: "13.5px",
+                    padding: "10px 18px",
+                    borderRadius: "12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleStartImport}
+                  disabled={isUploading || parsedData.length === 0}
+                  style={{
+                    background: parsedData.length > 0 ? "linear-gradient(135deg, #16a34a, #059669)" : "#94a3b8",
+                    color: "#ffffff",
+                    border: "none",
+                    fontWeight: 800,
+                    fontSize: "13.5px",
+                    padding: "10px 24px",
+                    borderRadius: "12px",
+                    cursor: parsedData.length > 0 ? "pointer" : "not-allowed",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    boxShadow: parsedData.length > 0 ? "0 4px 14px rgba(22, 163, 74, 0.35)" : "none",
+                  }}
+                >
+                  <i className={`ti ${isUploading ? "ti-loader animate-spin" : "ti-upload"}`}></i>
+                  {isUploading ? "Importing Data..." : `Import ${parsedData.length} ${uploadType}`}
+                </button>
+              </>
+            )}
           </div>
         </div>
 

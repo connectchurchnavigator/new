@@ -22,7 +22,13 @@ export default async function DashboardPage(props: DashboardPageProps) {
 
   const adminSb = createAdminClient();
 
-  // Fetch all organizations owned by this user
+  // Role detection: is the user a delegated team member?
+  const isTeamMember = !!(user.user_metadata?.is_team_member || user.user_metadata?.team_role);
+  const teamRole: 'events_only' | 'events_and_church_edit' | null = user.user_metadata?.team_role || (isTeamMember ? 'events_only' : null);
+  const assignedChurchIds: string[] = user.user_metadata?.assigned_churches || (user.user_metadata?.assigned_church ? [user.user_metadata.assigned_church] : []);
+  const assignedPastorIds: string[] = user.user_metadata?.assigned_pastors || (user.user_metadata?.assigned_pastor ? [user.user_metadata.assigned_pastor] : []);
+
+  // Fetch all organizations owned by this user (only for org owners)
   const { data: userOrgs } = await adminSb
     .from('organizations')
     .select('id, name, slug')
@@ -30,46 +36,104 @@ export default async function DashboardPage(props: DashboardPageProps) {
 
   const orgIds = (userOrgs || []).map((o) => o.id);
 
-  // Fetch all churches (matching insights/page.tsx logic)
+  // Fetch all churches
   const { data: churchesData } = await adminSb
     .from('churches')
     .select('*, church_services(*), leaders(*)')
     .order('created_at', { ascending: false });
 
   const allChurches = churchesData || [];
-  const userChurches = orgIds.length > 0
-    ? allChurches.filter((c) => orgIds.includes(c.org_id))
-    : allChurches;
 
-  const availableChurches = userChurches.length > 0 ? userChurches : allChurches;
+  // Scoping logic:
+  // 1. If delegated team member with assigned churches, ONLY allow those assigned churches
+  // 2. If org owner, only churches within org
+  // 3. Otherwise (admin/primary owner), all churches
+  let userChurches: any[] = [];
+  if (isTeamMember) {
+    if (assignedChurchIds.length > 0) {
+      userChurches = allChurches.filter((c) => assignedChurchIds.includes(c.id));
+    } else {
+      userChurches = []; // Team member with no assigned churches has no church management rights
+    }
+  } else if (orgIds.length > 0) {
+    userChurches = allChurches.filter((c) => orgIds.includes(c.org_id));
+  } else {
+    userChurches = allChurches;
+  }
+
+  const churchIds = userChurches.map((c: any) => c.id);
 
   // Fetch other entity types owned or linked to this user in parallel
-  const [pastorsRes, eventsRes, worshipLeadersRes] = await Promise.all([
-    // Pastor profiles owned by this user
-    adminSb
-      .from('pastors')
-      .select('*')
-      .eq('owner_id', user.id)
-      .order('created_at', { ascending: false }),
+  let userPastors: any[] = [];
+  let userWorshipLeaders: any[] = [];
 
-    // Events created by this user
-    adminSb
+  if (isTeamMember) {
+    // Delegated user only gets pastors specifically assigned to them
+    if (assignedPastorIds.length > 0) {
+      const { data: matchedPastors } = await adminSb
+        .from('pastors')
+        .select('*')
+        .in('id', assignedPastorIds)
+        .order('created_at', { ascending: false });
+      userPastors = matchedPastors || [];
+    } else {
+      userPastors = [];
+    }
+    // Delegated team members do not own worship leaders unless they are full admin
+    userWorshipLeaders = [];
+  } else {
+    const [pastorsRes, worshipLeadersRes] = await Promise.all([
+      adminSb
+        .from('pastors')
+        .select('*')
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: false }),
+      adminSb
+        .from('worship_leaders')
+        .select('*')
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: false }),
+    ]);
+    userPastors = pastorsRes.data || [];
+    userWorshipLeaders = worshipLeadersRes.data || [];
+  }
+
+  const pastorIds = userPastors.map((p: any) => p.id);
+
+  // Fetch events created by this user or hosted by user's assigned churches/pastors
+  let userEvents: any[] = [];
+  try {
+    let query = adminSb
       .from('events')
-      .select('*')
-      .eq('owner_id', user.id)
-      .order('created_at', { ascending: false }),
+      .select('*, event_registrations(*), event_tickets(*)')
+      .order('created_at', { ascending: false });
 
-    // Worship leader profiles owned by this user
-    adminSb
-      .from('worship_leaders')
-      .select('*')
-      .eq('owner_id', user.id)
-      .order('created_at', { ascending: false }),
-  ]);
+    // Match by created_by or host church / pastor
+    const filters: string[] = [`created_by.eq.${user.id}`];
+    if (churchIds.length > 0) {
+      filters.push(`host_church_id.in.(${churchIds.join(',')})`);
+    }
+    if (pastorIds.length > 0) {
+      filters.push(`host_pastor_id.in.(${pastorIds.join(',')})`);
+    }
 
-  const userPastors = pastorsRes.data || [];
-  const userEvents = eventsRes.data || [];
-  const userWorshipLeaders = worshipLeadersRes.data || [];
+    const { data: matchedEvents, error: evErr } = await query.or(filters.join(','));
+    if (!evErr && matchedEvents && matchedEvents.length > 0) {
+      userEvents = matchedEvents;
+    } else if (!isTeamMember) {
+      // Fallback only for primary admins, never for delegated team members
+      const { data: fallbackEvents } = await adminSb
+        .from('events')
+        .select('*, event_registrations(*), event_tickets(*)')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      userEvents = fallbackEvents || [];
+    } else {
+      userEvents = [];
+    }
+  } catch (e) {
+    console.error('Error fetching events for dashboard:', e);
+  }
 
   // Fetch enquiries for all pastors owned by this user
   let pastorEnquiries: any[] = [];

@@ -175,26 +175,164 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * DELETE: Remove a team member user by ID
+ * DELETE: Remove a team member user by ID (or email)
  */
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");
+    const email = searchParams.get("email");
 
-    if (!userId) {
-      return NextResponse.json({ error: "userId parameter is required." }, { status: 400 });
+    if (!userId && !email) {
+      return NextResponse.json({ error: "userId or email parameter is required." }, { status: 400 });
     }
 
     const supabase = createAdminClient();
-    const { error } = await supabase.auth.admin.deleteUser(userId);
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    let targetUserId = userId;
+    if (!targetUserId || !uuidRegex.test(targetUserId)) {
+      // Look up by email
+      const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      const found = listData?.users.find((u) => 
+        (email && u.email?.toLowerCase() === email.toLowerCase()) ||
+        (userId && u.email?.toLowerCase() === userId.toLowerCase())
+      );
+      if (found) {
+        targetUserId = found.id;
+      }
+    }
+
+    if (!targetUserId || !uuidRegex.test(targetUserId)) {
+      // Fallback: If not found in auth, consider already deleted
+      return NextResponse.json({ success: true, deletedUserId: userId });
+    }
+
+    const { error } = await supabase.auth.admin.deleteUser(targetUserId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, deletedUserId: userId });
+    return NextResponse.json({ success: true, deletedUserId: targetUserId });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
   }
 }
+
+/**
+ * PATCH: Reset password or update team member role / details
+ */
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { userId, email, newPassword, role, assignedChurches, assignedPastors, churchNames, pastorNames } = body;
+
+    if (!userId && !email) {
+      return NextResponse.json({ error: "userId or email is required." }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    let targetUserId = userId;
+
+    // If userId is not a valid UUID (e.g. 'tm-174...', 'tm-1', etc.), find the actual UUID by email
+    if (!targetUserId || !uuidRegex.test(targetUserId)) {
+      const searchEmail = email || (userId && userId.includes("@") ? userId : null);
+      const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      const found = listData?.users.find((u) => {
+        if (searchEmail && u.email?.toLowerCase() === searchEmail.toLowerCase()) return true;
+        return false;
+      });
+
+      if (found) {
+        targetUserId = found.id;
+      } else if (searchEmail && newPassword) {
+        // User was in local state but not yet committed to Supabase Auth -> provision them now!
+        const memberName = body.name || searchEmail.split("@")[0] || "Team Member";
+        const { data: newlyCreated, error: createErr } = await supabase.auth.admin.createUser({
+          email: searchEmail.trim().toLowerCase(),
+          password: newPassword,
+          email_confirm: true,
+          user_metadata: {
+            full_name: memberName,
+            name: memberName,
+            is_team_member: true,
+            team_role: role || "events_only",
+            role: "listing_manager",
+            assigned_churches: assignedChurches || [],
+            assigned_pastors: assignedPastors || [],
+            assigned_church_names: churchNames || [],
+            assigned_pastor_names: pastorNames || [],
+          },
+        });
+
+        if (createErr) {
+          return NextResponse.json({ error: createErr.message }, { status: 400 });
+        }
+
+        try {
+          await supabase.from("profiles").upsert(
+            {
+              id: newlyCreated.user.id,
+              role: "listing_manager",
+              full_name: memberName,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "id" }
+          );
+        } catch {}
+
+        return NextResponse.json({
+          success: true,
+          message: "User successfully created and activated in Supabase Auth with this password!",
+          user: newlyCreated.user,
+        });
+      } else {
+        return NextResponse.json(
+          { error: `Could not locate user in Supabase Auth with ID: ${userId}. Please verify the email address is correct.` },
+          { status: 400 }
+        );
+      }
+    }
+
+    const updateAttrs: any = {};
+    if (newPassword) {
+      if (newPassword.length < 6) {
+        return NextResponse.json({ error: "Password must be at least 6 characters long." }, { status: 400 });
+      }
+      updateAttrs.password = newPassword;
+      updateAttrs.email_confirm = true;
+    }
+
+    // If metadata changes provided
+    if (role || assignedChurches || assignedPastors) {
+      const { data: userObj } = await supabase.auth.admin.getUserById(targetUserId);
+      const currentMeta = userObj?.user?.user_metadata || {};
+      updateAttrs.user_metadata = {
+        ...currentMeta,
+        ...(role ? { team_role: role } : {}),
+        ...(assignedChurches ? { assigned_churches: assignedChurches } : {}),
+        ...(assignedPastors ? { assigned_pastors: assignedPastors } : {}),
+        ...(churchNames ? { assigned_church_names: churchNames } : {}),
+        ...(pastorNames ? { assigned_pastor_names: pastorNames } : {}),
+      };
+    }
+
+    const { data, error } = await supabase.auth.admin.updateUserById(targetUserId, updateAttrs);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: newPassword ? "Password has been successfully reset!" : "User updated successfully.",
+      user: data.user,
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
+  }
+}
+

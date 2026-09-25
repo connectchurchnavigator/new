@@ -6,12 +6,13 @@ export const dynamic = "force-dynamic";
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { worshipLeaderId, is_verified, is_published } = body;
+    const leaderId = body.worshipLeaderId || body.leaderId || body.id;
 
-    if (!worshipLeaderId) {
+    if (!leaderId) {
       return NextResponse.json({ error: "Missing worshipLeaderId" }, { status: 400 });
     }
 
+    const { is_verified, is_published } = body;
     const updatePayload: Record<string, any> = {};
     if (typeof is_verified === "boolean") updatePayload.is_verified = is_verified;
     if (typeof is_published === "boolean") updatePayload.is_published = is_published;
@@ -20,7 +21,7 @@ export async function PATCH(req: NextRequest) {
     const { data, error } = await supabase
       .from("worship_leaders")
       .update(updatePayload)
-      .eq("id", worshipLeaderId)
+      .eq("id", leaderId)
       .select()
       .single();
 

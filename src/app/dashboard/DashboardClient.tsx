@@ -45,14 +45,39 @@ export default function DashboardClient({
   insightsData,
 }: DashboardClientProps) {
   const router = useRouter();
+
+  // Role permissions checking
+  const isTeamMember = !!(user?.user_metadata?.is_team_member || user?.user_metadata?.team_role);
+  const teamRole: 'events_only' | 'events_and_church_edit' = user?.user_metadata?.team_role || 'events_only';
+  const isSuperAdmin = !isTeamMember && (
+    user?.user_metadata?.role === 'super_admin' ||
+    user?.app_metadata?.role === 'super_admin' ||
+    (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS || '')
+      .split(',')
+      .map((e: string) => e.trim().toLowerCase())
+      .filter(Boolean)
+      .includes(user?.email?.toLowerCase() || '')
+  );
+
+  // If user is events_only, default their section to 'events' or 'overview'
+  const defaultInitialSection: NavSection = isTeamMember && teamRole === 'events_only'
+    ? (['events', 'overview'].includes(initialSection) ? initialSection : 'events')
+    : (initialSection === 'users' ? 'overview' : initialSection);
+
   // Main navigation section — defaults to initialSection (e.g. 'visitor-insights') or 'overview'
-  const [section, setSection] = useState<NavSection>(initialSection);
+  const [section, setSection] = useState<NavSection>(defaultInitialSection);
 
   useEffect(() => {
     if (initialSection) {
-      setSection(initialSection);
+      if (isTeamMember && teamRole === 'events_only' && !['events', 'overview', 'my-profile'].includes(initialSection)) {
+        setSection('events');
+      } else if (initialSection === 'users') {
+        setSection('overview');
+      } else {
+        setSection(initialSection);
+      }
     }
-  }, [initialSection]);
+  }, [initialSection, isTeamMember, teamRole]);
 
   // User menu dropdown state in header
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -185,34 +210,53 @@ export default function DashboardClient({
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('cn_dashboard_team_members');
       if (saved) {
-        try { return JSON.parse(saved); } catch {}
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch {}
       }
     }
-    return [
-      {
-        id: 'tm-1',
-        name: 'Sarah Jenkins',
-        email: 'sarah.j@example.com',
-        role: 'events_and_church_edit',
-        assignedChurches: churches[0]?.id ? [churches[0].id] : [],
-        churchNames: churches[0]?.name ? [churches[0].name] : ['Grace Community Church'],
-        assignedPastors: pastors[0]?.id ? [pastors[0].id] : [],
-        pastorNames: pastors[0]?.full_name ? [pastors[0].full_name] : ['Senior Pastor'],
-        status: 'active',
-        addedAt: '2026-02-14',
-      },
-    ];
+    return [];
   });
 
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberPassword, setNewMemberPassword] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<'events_only' | 'events_and_church_edit'>('events_only');
-  const [teamSelectedChurchIds, setTeamSelectedChurchIds] = useState<string[]>(churches[0]?.id ? [churches[0].id] : []);
+  const [teamSelectedChurchIds, setTeamSelectedChurchIds] = useState<string[]>([]);
   const [teamSelectedPastorIds, setTeamSelectedPastorIds] = useState<string[]>([]);
   const [teamSuccessMsg, setTeamSuccessMsg] = useState<string | null>(null);
   const [teamErrorMsg, setTeamErrorMsg] = useState<string | null>(null);
   const [isSavingTeamMember, setIsSavingTeamMember] = useState(false);
+
+  // State for Church & Pastor dropdown open status and search filters
+  const [isChurchDropdownOpen, setIsChurchDropdownOpen] = useState(false);
+  const [isPastorDropdownOpen, setIsPastorDropdownOpen] = useState(false);
+  const [churchDropdownSearch, setChurchDropdownSearch] = useState('');
+  const [pastorDropdownSearch, setPastorDropdownSearch] = useState('');
+
+  const churchDropdownRef = useRef<HTMLDivElement>(null);
+  const pastorDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (churchDropdownRef.current && !churchDropdownRef.current.contains(e.target as Node)) {
+        setIsChurchDropdownOpen(false);
+      }
+      if (pastorDropdownRef.current && !pastorDropdownRef.current.contains(e.target as Node)) {
+        setIsPastorDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  // State for inline Reset Password modal / prompt for existing team members
+  const [resettingMember, setResettingMember] = useState<TeamMember | null>(null);
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [isResettingMemberPassword, setIsResettingMemberPassword] = useState(false);
+  const [resetModalMsg, setResetModalMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Load live team members from Supabase Auth via API
   useEffect(() => {
@@ -313,7 +357,7 @@ export default function DashboardClient({
     }
   };
 
-  const handleRemoveTeamMember = async (id: string) => {
+  const handleRemoveTeamMember = async (id: string, email?: string) => {
     const updated = teamMembers.filter((m) => m.id !== id);
     setTeamMembers(updated);
     if (typeof window !== 'undefined') {
@@ -321,7 +365,8 @@ export default function DashboardClient({
     }
 
     try {
-      await fetch(`/api/dashboard/team?userId=${id}`, { method: 'DELETE' });
+      const q = email ? `userId=${encodeURIComponent(id)}&email=${encodeURIComponent(email)}` : `userId=${encodeURIComponent(id)}`;
+      await fetch(`/api/dashboard/team?${q}`, { method: 'DELETE' });
     } catch {
       // Non-critical if offline
     }
@@ -332,6 +377,61 @@ export default function DashboardClient({
     setTeamMembers(updated);
     if (typeof window !== 'undefined') {
       localStorage.setItem('cn_dashboard_team_members', JSON.stringify(updated));
+    }
+  };
+
+  const handleResetTeamMemberPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resettingMember) return;
+    if (!resetNewPassword || resetNewPassword.length < 6) {
+      setResetModalMsg({ type: 'error', text: 'Password must be at least 6 characters long.' });
+      return;
+    }
+
+    setIsResettingMemberPassword(true);
+    setResetModalMsg(null);
+
+    try {
+      const res = await fetch('/api/dashboard/team', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: resettingMember.id,
+          email: resettingMember.email,
+          name: resettingMember.name,
+          role: resettingMember.role,
+          assignedChurches: resettingMember.assignedChurches,
+          assignedPastors: resettingMember.assignedPastors,
+          churchNames: resettingMember.churchNames,
+          pastorNames: resettingMember.pastorNames,
+          newPassword: resetNewPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to reset password.');
+      }
+
+      if (data.user?.id) {
+        // Sync real Supabase Auth UUID back into state and localStorage
+        const synced = teamMembers.map((m) => m.email === resettingMember.email ? { ...m, id: data.user.id } : m);
+        setTeamMembers(synced);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('cn_dashboard_team_members', JSON.stringify(synced));
+        }
+      }
+
+      setResetModalMsg({ type: 'success', text: `Password successfully updated for ${resettingMember.name || resettingMember.email}!` });
+      setTimeout(() => {
+        setResettingMember(null);
+        setResetNewPassword('');
+        setResetModalMsg(null);
+      }, 2000);
+    } catch (err: any) {
+      setResetModalMsg({ type: 'error', text: err.message || 'Error resetting password' });
+    } finally {
+      setIsResettingMemberPassword(false);
     }
   };
 
@@ -1606,16 +1706,17 @@ export default function DashboardClient({
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
           {[
-            { id: 'overview', label: 'Overview', icon: 'ti-layout-dashboard', unread: null },
-            { id: 'visitor-insights', label: 'Visitor Insights', icon: 'ti-chart-dots', unread: null },
-            { id: 'all', label: 'All Listings', icon: 'ti-layout-grid', unread: null },
-            { id: 'churches', label: 'Churches', icon: 'ti-building-church', unread: null },
-            { id: 'pastors', label: 'Pastors', icon: 'ti-user-star', unread: null, primary: true },
-            { id: 'worship-leaders', label: 'Worship leaders', icon: 'ti-microphone-2', unread: null },
-            { id: 'events', label: 'Events', icon: 'ti-calendar-event', unread: null },
-            { id: 'enquiries', label: 'Enquiries', icon: 'ti-mail', unread: unreadEnquiriesCount },
-            { id: 'users', label: 'Users', icon: 'ti-users', unread: null },
-          ].map((item) => {
+            { id: 'overview', label: 'Overview', icon: 'ti-layout-dashboard', unread: null, allowed: true },
+            { id: 'visitor-insights', label: 'Visitor Insights', icon: 'ti-chart-dots', unread: null, allowed: !isTeamMember || teamRole === 'events_and_church_edit' },
+            { id: 'all', label: 'All Listings', icon: 'ti-layout-grid', unread: null, allowed: !isTeamMember || teamRole === 'events_and_church_edit' },
+            { id: 'churches', label: 'Churches', icon: 'ti-building-church', unread: null, allowed: !isTeamMember || teamRole === 'events_and_church_edit' },
+            { id: 'pastors', label: 'Pastors', icon: 'ti-user-star', unread: null, primary: true, allowed: !isTeamMember || teamRole === 'events_and_church_edit' },
+            { id: 'worship-leaders', label: 'Worship leaders', icon: 'ti-microphone-2', unread: null, allowed: !isTeamMember },
+            { id: 'events', label: 'Events', icon: 'ti-calendar-event', unread: null, allowed: true },
+            { id: 'enquiries', label: 'Enquiries', icon: 'ti-mail', unread: unreadEnquiriesCount, allowed: !isTeamMember || teamRole === 'events_and_church_edit' },
+            // Users / Team management hidden for the time being:
+            // { id: 'users', label: 'Users', icon: 'ti-users', unread: null, allowed: !isTeamMember },
+          ].filter(item => item.allowed).map((item) => {
             const isSel = section === item.id;
             return (
               <button
@@ -1898,26 +1999,28 @@ export default function DashboardClient({
                   My Profile
                 </button>
 
-                {/* 3. Super Admin */}
-                <Link
-                  href="/admin"
-                  onClick={() => setIsUserMenuOpen(false)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '9px 12px',
-                    borderRadius: '10px',
-                    fontSize: '13.5px',
-                    fontWeight: 600,
-                    color: '#7c3aed',
-                    textDecoration: 'none',
-                    background: '#faf5ff',
-                  }}
-                >
-                  <i className="ti ti-shield-lock" style={{ fontSize: '16px', color: '#7c3aed' }}></i>
-                  Super Admin
-                </Link>
+                {/* 3. Super Admin (Restricted strictly to super administrators) */}
+                {isSuperAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '9px 12px',
+                      borderRadius: '10px',
+                      fontSize: '13.5px',
+                      fontWeight: 600,
+                      color: '#7c3aed',
+                      textDecoration: 'none',
+                      background: '#faf5ff',
+                    }}
+                  >
+                    <i className="ti ti-shield-lock" style={{ fontSize: '16px', color: '#7c3aed' }}></i>
+                    Super Admin
+                  </Link>
+                )}
 
                 {/* 4. Sign Out */}
                 <button
@@ -2277,32 +2380,34 @@ export default function DashboardClient({
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <button
-                        type="button"
-                        onClick={() => openDrawerForEntity({
-                          id: currentPastor.id,
-                          title: currentPastor.full_name || currentPastor.name,
-                          type: 'pastor',
-                          typeLabel: 'Pastor',
-                          raw: currentPastor,
-                        })}
-                        style={{
-                          background: '#7c3aed',
-                          color: '#ffffff',
-                          border: 'none',
-                          padding: '8px 16px',
-                          borderRadius: '10px',
-                          fontSize: '12.5px',
-                          fontWeight: 800,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          boxShadow: '0 2px 6px rgba(124, 58, 237, 0.25)',
-                        }}
-                      >
-                        <i className="ti ti-edit" style={{ fontSize: '14px' }}></i> Quick Edit Details
-                      </button>
+                      {(!isTeamMember || teamRole === 'events_and_church_edit') && (
+                        <button
+                          type="button"
+                          onClick={() => openDrawerForEntity({
+                            id: currentPastor.id,
+                            title: currentPastor.full_name || currentPastor.name,
+                            type: 'pastor',
+                            typeLabel: 'Pastor',
+                            raw: currentPastor,
+                          })}
+                          style={{
+                            background: '#7c3aed',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '8px 16px',
+                            borderRadius: '10px',
+                            fontSize: '12.5px',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 6px rgba(124, 58, 237, 0.25)',
+                          }}
+                        >
+                          <i className="ti ti-edit" style={{ fontSize: '14px' }}></i> Quick Edit Details
+                        </button>
+                      )}
 
                       <Link
                         href={`/pastor/${currentPastor.slug || currentPastor.id}`}
@@ -3569,33 +3674,37 @@ export default function DashboardClient({
                                   >
                                     View
                                   </Link>
-                                  <Link
-                                    href={item.editUrl}
-                                    style={{
-                                      fontSize: '12.5px',
-                                      color: '#0284c7',
-                                      fontWeight: 800,
-                                      textDecoration: 'none',
-                                      padding: '4px 6px',
-                                    }}
-                                  >
-                                    Edit
-                                  </Link>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteListingRequest(item)}
-                                    style={{
-                                      background: 'none',
-                                      border: 'none',
-                                      fontSize: '12.5px',
-                                      color: '#ef4444',
-                                      fontWeight: 800,
-                                      cursor: 'pointer',
-                                      padding: '4px 6px',
-                                    }}
-                                  >
-                                    Delete
-                                  </button>
+                                  {(!isTeamMember || teamRole === 'events_and_church_edit') && (
+                                    <Link
+                                      href={item.editUrl}
+                                      style={{
+                                        fontSize: '12.5px',
+                                        color: '#0284c7',
+                                        fontWeight: 800,
+                                        textDecoration: 'none',
+                                        padding: '4px 6px',
+                                      }}
+                                    >
+                                      Edit
+                                    </Link>
+                                  )}
+                                  {!isTeamMember && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteListingRequest(item)}
+                                      style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        fontSize: '12.5px',
+                                        color: '#ef4444',
+                                        fontWeight: 800,
+                                        cursor: 'pointer',
+                                        padding: '4px 6px',
+                                      }}
+                                    >
+                                      Delete
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -3786,32 +3895,34 @@ export default function DashboardClient({
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <button
-                        type="button"
-                        onClick={() => openDrawerForEntity({
-                          id: targetChurch.id,
-                          title: targetChurch.name,
-                          type: 'church',
-                          typeLabel: 'Church',
-                          raw: targetChurch,
-                        })}
-                        style={{
-                          background: '#7c3aed',
-                          color: '#ffffff',
-                          border: 'none',
-                          padding: '8px 16px',
-                          borderRadius: '10px',
-                          fontSize: '12.5px',
-                          fontWeight: 800,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          boxShadow: '0 2px 6px rgba(124, 58, 237, 0.25)',
-                        }}
-                      >
-                        <i className="ti ti-edit" style={{ fontSize: '14px' }}></i> Quick Edit Church
-                      </button>
+                      {(!isTeamMember || teamRole === 'events_and_church_edit') && (
+                        <button
+                          type="button"
+                          onClick={() => openDrawerForEntity({
+                            id: targetChurch.id,
+                            title: targetChurch.name,
+                            type: 'church',
+                            typeLabel: 'Church',
+                            raw: targetChurch,
+                          })}
+                          style={{
+                            background: '#7c3aed',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '8px 16px',
+                            borderRadius: '10px',
+                            fontSize: '12.5px',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 6px rgba(124, 58, 237, 0.25)',
+                          }}
+                        >
+                          <i className="ti ti-edit" style={{ fontSize: '14px' }}></i> Quick Edit Church
+                        </button>
+                      )}
 
                       <Link
                         href={`/church/${targetChurch.slug || targetChurch.id}`}
@@ -4165,23 +4276,25 @@ export default function DashboardClient({
                     )}
                   </div>
 
-                  <Link
-                    href="/onboarding/worship-leader"
-                    style={{
-                      background: '#0284c7',
-                      color: '#fff',
-                      padding: '8px 16px',
-                      borderRadius: '10px',
-                      fontSize: '13px',
-                      fontWeight: 800,
-                      textDecoration: 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    + Add Worship Leader
-                  </Link>
+                  {!isTeamMember && (
+                    <Link
+                      href="/onboarding/worship-leader"
+                      style={{
+                        background: '#0284c7',
+                        color: '#fff',
+                        padding: '8px 16px',
+                        borderRadius: '10px',
+                        fontSize: '13px',
+                        fontWeight: 800,
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      + Add Worship Leader
+                    </Link>
+                  )}
                 </div>
               </div>
 
@@ -4984,6 +5097,404 @@ export default function DashboardClient({
                   selectedTimeframe={eventTfConfig.label}
                 />
               </div>
+
+              {/* ═════════════════════════════════════════════════════════ */}
+              {/* ── EVENTS & BOOKINGS ROSTER / MANAGEMENT TABLE ─────────── */}
+              {/* ═════════════════════════════════════════════════════════ */}
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '20px',
+                  border: '1.5px solid #f1f5f9',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                {/* Table Header / Title Bar */}
+                <div
+                  style={{
+                    padding: '22px 26px',
+                    borderBottom: '1px solid #f1f5f9',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '14px',
+                    background: '#ffffff',
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '10px',
+                          background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                          color: '#ffffff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '18px',
+                        }}
+                      >
+                        <i className="ti ti-calendar-event"></i>
+                      </div>
+                      <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+                        All Events & Attendance Overview
+                      </h3>
+                      <span
+                        style={{
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          padding: '3px 10px',
+                          borderRadius: '16px',
+                          background: '#f0fdf4',
+                          color: '#16a34a',
+                          border: '1px solid #bbf7d0',
+                        }}
+                      >
+                        {filteredEvents.length} {filteredEvents.length === 1 ? 'Event' : 'Events'}
+                      </span>
+                    </div>
+                    <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>
+                      Monitor attendee bookings, page visitors, ticket capacity, and edit or preview each event.
+                    </p>
+                  </div>
+
+                  <Link
+                    href="/onboarding/events"
+                    style={{
+                      background: '#16a34a',
+                      color: '#ffffff',
+                      padding: '8px 18px',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '7px',
+                      boxShadow: '0 2px 6px rgba(22, 163, 74, 0.25)',
+                    }}
+                  >
+                    <i className="ti ti-plus" style={{ fontSize: '15px' }}></i> Create New Event
+                  </Link>
+                </div>
+
+                {/* Table Component */}
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px', textAlign: 'left' }}>
+                    <thead>
+                      <tr
+                        style={{
+                          borderBottom: '1.5px solid #f1f5f9',
+                          background: '#f8fafc',
+                          color: '#64748b',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        <th style={{ padding: '14px 22px' }}>Event Details</th>
+                        <th style={{ padding: '14px 18px', textAlign: 'center' }}>Date & Schedule</th>
+                        <th style={{ padding: '14px 18px', textAlign: 'center' }}>Visitors / Views</th>
+                        <th style={{ padding: '14px 18px', textAlign: 'center' }}>Bookings / RSVPs</th>
+                        <th style={{ padding: '14px 18px', textAlign: 'center' }}>Capacity</th>
+                        <th style={{ padding: '14px 18px', textAlign: 'center' }}>Status</th>
+                        <th style={{ padding: '14px 22px', textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredEvents.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} style={{ padding: '60px 20px', textAlign: 'center', color: '#64748b' }}>
+                            <i className="ti ti-calendar-off" style={{ fontSize: '42px', color: '#cbd5e1', display: 'block', marginBottom: '10px' }}></i>
+                            <div style={{ fontWeight: 800, fontSize: '16px', color: '#0f172a', marginBottom: '4px' }}>
+                              No events found
+                            </div>
+                            <div style={{ fontSize: '13px' }}>
+                              Try clearing your search query or create your first event.
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredEvents.map((ev: any) => {
+                          const regs = Array.isArray(ev.event_registrations) ? ev.event_registrations : [];
+                          // Sum attendees across bookings (each booking party_size or 1)
+                          const totalBookedAttendees = regs.reduce((sum: number, r: any) => sum + (Number(r.party_size) || 1), 0);
+                          const totalBookingsCount = regs.length;
+
+                          // Views / Visitors
+                          const viewsCount = Number(ev.view_count || 0);
+
+                          // Capacity & Fill Rate
+                          const capacityNum = Number(ev.capacity) || 0;
+                          const fillPct = capacityNum > 0 ? Math.min(100, Math.round((totalBookedAttendees / capacityNum) * 100)) : 0;
+
+                          // Dates formatting
+                          const startDateStr = ev.starts_at ? new Date(ev.starts_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Date TBD';
+                          const startTimeStr = ev.starts_at ? new Date(ev.starts_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+                          const isMultiDay = ev.ends_at && new Date(ev.ends_at).toDateString() !== (ev.starts_at ? new Date(ev.starts_at).toDateString() : '');
+                          const endDateStr = ev.ends_at ? new Date(ev.ends_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+
+                          const isDraft = ev.status === 'draft' || ev.status === 'unpublished';
+                          const eventImage = ev.cover_url || ev.image_url;
+
+                          return (
+                            <tr
+                              key={ev.id}
+                              style={{
+                                borderBottom: '1px solid #f1f5f9',
+                                transition: 'background-color 0.15s ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#fbfcfe';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                              }}
+                            >
+                              {/* Event Details: Thumbnail, Title, Venue, Location */}
+                              <td style={{ padding: '16px 22px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                  <div
+                                    style={{
+                                      width: '48px',
+                                      height: '48px',
+                                      borderRadius: '12px',
+                                      backgroundColor: '#f1f5f9',
+                                      border: '1px solid #e2e8f0',
+                                      overflow: 'hidden',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {eventImage ? (
+                                      <img
+                                        src={eventImage}
+                                        alt={ev.title || 'Event cover'}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                      />
+                                    ) : (
+                                      <i className="ti ti-calendar" style={{ fontSize: '22px', color: '#94a3b8' }}></i>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <div style={{ fontWeight: 800, fontSize: '14.5px', color: '#0f172a', lineHeight: 1.25, marginBottom: '4px' }}>
+                                      {ev.title || 'Untitled Event'}
+                                    </div>
+                                    <div style={{ fontSize: '12.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <i className="ti ti-map-pin" style={{ fontSize: '13px', color: '#94a3b8' }}></i>
+                                      <span>
+                                        {ev.venue_name || ev.city || 'Venue to be confirmed'}
+                                        {ev.city && ev.venue_name && ev.venue_name !== ev.city ? `, ${ev.city}` : ''}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Date & Schedule */}
+                              <td style={{ padding: '16px 18px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '13px' }}>
+                                  {isMultiDay ? `${startDateStr} - ${endDateStr}` : startDateStr}
+                                </div>
+                                {startTimeStr && (
+                                  <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+                                    <i className="ti ti-clock" style={{ fontSize: '11.5px', marginRight: '3px' }}></i>
+                                    {startTimeStr}
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* Visitors / Page Views */}
+                              <td style={{ padding: '16px 18px', textAlign: 'center' }}>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#f8fafc', padding: '5px 12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                  <i className="ti ti-eye" style={{ fontSize: '14px', color: '#3b82f6' }}></i>
+                                  <span style={{ fontWeight: 800, fontSize: '13.5px', color: '#0f172a' }}>
+                                    {viewsCount.toLocaleString()}
+                                  </span>
+                                  <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
+                                    views
+                                  </span>
+                                </div>
+                              </td>
+
+                              {/* Bookings / RSVPs */}
+                              <td style={{ padding: '16px 18px', textAlign: 'center' }}>
+                                <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: totalBookingsCount > 0 ? '#f0fdf4' : '#f8fafc', padding: '5px 12px', borderRadius: '12px', border: `1px solid ${totalBookingsCount > 0 ? '#bbf7d0' : '#e2e8f0'}` }}>
+                                    <i className="ti ti-ticket" style={{ fontSize: '14px', color: totalBookingsCount > 0 ? '#16a34a' : '#64748b' }}></i>
+                                    <span style={{ fontWeight: 900, fontSize: '13.5px', color: totalBookingsCount > 0 ? '#16a34a' : '#0f172a' }}>
+                                      {totalBookingsCount.toLocaleString()}
+                                    </span>
+                                    <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
+                                      {totalBookingsCount === 1 ? 'booking' : 'bookings'}
+                                    </span>
+                                  </div>
+                                  {totalBookedAttendees > totalBookingsCount && (
+                                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                                      ({totalBookedAttendees} attendees)
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Capacity Fill */}
+                              <td style={{ padding: '16px 18px', textAlign: 'center', minWidth: '130px' }}>
+                                {capacityNum > 0 ? (
+                                  <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>
+                                      <span>{totalBookedAttendees} / {capacityNum}</span>
+                                      <span style={{ color: fillPct >= 90 ? '#ef4444' : fillPct >= 50 ? '#16a34a' : '#64748b' }}>
+                                        {fillPct}%
+                                      </span>
+                                    </div>
+                                    <div style={{ width: '100%', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                                      <div
+                                        style={{
+                                          width: `${fillPct}%`,
+                                          height: '100%',
+                                          backgroundColor: fillPct >= 90 ? '#ef4444' : fillPct >= 50 ? '#16a34a' : '#3b82f6',
+                                          borderRadius: '10px',
+                                          transition: 'width 0.3s ease',
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
+                                    Unlimited
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Status Badge */}
+                              <td style={{ padding: '16px 18px', textAlign: 'center' }}>
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    padding: '4px 10px',
+                                    borderRadius: '20px',
+                                    fontSize: '11.5px',
+                                    fontWeight: 800,
+                                    backgroundColor: isDraft ? '#fef3c7' : '#dcfce7',
+                                    color: isDraft ? '#92400e' : '#166534',
+                                    border: `1px solid ${isDraft ? '#fde68a' : '#bbf7d0'}`,
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      width: '6px',
+                                      height: '6px',
+                                      borderRadius: '50%',
+                                      backgroundColor: isDraft ? '#d97706' : '#16a34a',
+                                    }}
+                                  />
+                                  {isDraft ? 'Draft' : 'Published'}
+                                </span>
+                              </td>
+
+                              {/* Actions: Direct Edit & View Live */}
+                              <td style={{ padding: '16px 22px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                                  {/* Direct Edit Button */}
+                                  <Link
+                                    href={`/onboarding/events?id=${ev.id}`}
+                                    style={{
+                                      background: '#16a34a',
+                                      color: '#ffffff',
+                                      padding: '7px 13px',
+                                      borderRadius: '9px',
+                                      fontSize: '12px',
+                                      fontWeight: 800,
+                                      textDecoration: 'none',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      boxShadow: '0 1px 3px rgba(22, 163, 74, 0.2)',
+                                      transition: 'background-color 0.15s ease',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#15803d';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#16a34a';
+                                    }}
+                                  >
+                                    <i className="ti ti-edit" style={{ fontSize: '13px' }}></i>
+                                    Edit
+                                  </Link>
+
+                                  {/* Quick Drawer Edit Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openDrawerForEntity({
+                                        id: ev.id,
+                                        title: ev.title,
+                                        type: 'event',
+                                        typeLabel: 'Event',
+                                        raw: ev,
+                                      })
+                                    }
+                                    title="Quick Edit Details"
+                                    style={{
+                                      background: '#f1f5f9',
+                                      color: '#475569',
+                                      border: '1px solid #cbd5e1',
+                                      padding: '7px 9px',
+                                      borderRadius: '9px',
+                                      fontSize: '12px',
+                                      fontWeight: 700,
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}
+                                  >
+                                    <i className="ti ti-adjustments" style={{ fontSize: '13px' }}></i>
+                                  </button>
+
+                                  {/* View Live Page */}
+                                  <Link
+                                    href={`/events/${ev.slug || ev.id}`}
+                                    target="_blank"
+                                    style={{
+                                      background: '#ffffff',
+                                      color: '#475569',
+                                      border: '1px solid #cbd5e1',
+                                      padding: '7px 11px',
+                                      borderRadius: '9px',
+                                      fontSize: '12px',
+                                      fontWeight: 700,
+                                      textDecoration: 'none',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                    }}
+                                  >
+                                    <span>View</span>
+                                    <i className="ti ti-external-link" style={{ fontSize: '12px' }}></i>
+                                  </Link>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
 
@@ -5318,6 +5829,8 @@ export default function DashboardClient({
                       </label>
                       <input
                         type="email"
+                        name="new_team_email_unique"
+                        autoComplete="off"
                         placeholder="teammate@example.com"
                         value={newMemberEmail}
                         onChange={(e) => setNewMemberEmail(e.target.value)}
@@ -5340,6 +5853,8 @@ export default function DashboardClient({
                       </label>
                       <input
                         type="password"
+                        name="new_team_pwd_unique"
+                        autoComplete="new-password"
                         placeholder="Create a password (min 6 characters)"
                         value={newMemberPassword}
                         onChange={(e) => setNewMemberPassword(e.target.value)}
@@ -5360,136 +5875,508 @@ export default function DashboardClient({
                       </div>
                     </div>
 
-                    {/* Multi-Select: Assign to Churches */}
+                    {/* Sleek Multi-Select Dropdown: Assign to Churches */}
                     {churches.length > 0 && (
-                      <div>
+                      <div ref={churchDropdownRef} style={{ position: 'relative' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                           <label style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>
-                            Assign to Churches <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 500 }}>(Multi-selectable)</span>
+                            Assign to Churches <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 500 }}>(Typable & searchable dropdown)</span>
                           </label>
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                          {teamSelectedChurchIds.length > 0 && (
                             <button
                               type="button"
-                              onClick={() => setSelectedChurchIds(churches.map((c) => c.id))}
-                              style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
-                            >
-                              Select All
-                            </button>
-                            <span style={{ color: '#cbd5e1' }}>•</span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedChurchIds([])}
+                              onClick={() => setTeamSelectedChurchIds([])}
                               style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
                             >
-                              Clear
+                              Clear ({teamSelectedChurchIds.length})
                             </button>
-                          </div>
+                          )}
                         </div>
 
-                        <div style={{ maxHeight: '130px', overflowY: 'auto', border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '8px', background: '#fafafa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          {[...churches]
-                            .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-                            .map((c) => {
-                              const isSelected = teamSelectedChurchIds.includes(c.id);
-                              return (
-                                <label
-                                  key={c.id}
+                        {/* Dropdown Trigger Box */}
+                        <div
+                          onClick={() => {
+                            setIsChurchDropdownOpen(!isChurchDropdownOpen);
+                            setIsPastorDropdownOpen(false);
+                          }}
+                          style={{
+                            minHeight: '44px',
+                            padding: '7px 12px',
+                            borderRadius: '12px',
+                            border: `1.5px solid ${isChurchDropdownOpen ? '#7c3aed' : '#cbd5e1'}`,
+                            background: '#ffffff',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '8px',
+                            flexWrap: 'wrap',
+                            boxSizing: 'border-box',
+                          }}
+                        >
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', flex: 1, alignItems: 'center' }}>
+                            {teamSelectedChurchIds.length === 0 ? (
+                              <span style={{ fontSize: '13.5px', color: '#94a3b8' }}>
+                                Click to search and select churches...
+                              </span>
+                            ) : (
+                              churches
+                                .filter((c) => teamSelectedChurchIds.includes(c.id))
+                                .map((c) => (
+                                  <span
+                                    key={c.id}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      background: '#f5f3ff',
+                                      color: '#6b21a8',
+                                      border: '1px solid #ddd6fe',
+                                      padding: '2px 8px',
+                                      borderRadius: '8px',
+                                      fontSize: '12px',
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    ⛪ {c.name || 'Unnamed Church'}
+                                    <span
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setTeamSelectedChurchIds(teamSelectedChurchIds.filter((id) => id !== c.id));
+                                      }}
+                                      style={{ cursor: 'pointer', color: '#9333ea', fontWeight: 900, marginLeft: '2px', fontSize: '12px' }}
+                                    >
+                                      ×
+                                    </span>
+                                  </span>
+                                ))
+                            )}
+                          </div>
+                          <i
+                            className="ti ti-chevron-down"
+                            style={{
+                              color: '#64748b',
+                              fontSize: '14px',
+                              transform: isChurchDropdownOpen ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.15s ease',
+                              flexShrink: 0,
+                            }}
+                          />
+                        </div>
+
+                        {/* Popover Dropdown Menu with Typable Search */}
+                        {isChurchDropdownOpen && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: 'calc(100% + 4px)',
+                              left: 0,
+                              right: 0,
+                              background: '#ffffff',
+                              borderRadius: '14px',
+                              border: '1.5px solid #cbd5e1',
+                              boxShadow: '0 10px 30px -5px rgba(0,0,0,0.18)',
+                              zIndex: 50,
+                              maxHeight: '270px',
+                              overflowY: 'auto',
+                              padding: '10px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '6px',
+                            }}
+                          >
+                            {/* Typable Search Input */}
+                            <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
+                              <i
+                                className="ti ti-search"
+                                style={{
+                                  position: 'absolute',
+                                  left: '10px',
+                                  top: '50%',
+                                  transform: 'translateY(-50%)',
+                                  color: '#94a3b8',
+                                  fontSize: '14px',
+                                }}
+                              />
+                              <input
+                                type="text"
+                                autoFocus
+                                placeholder="Type to search churches by name, city..."
+                                value={churchDropdownSearch}
+                                onChange={(e) => setChurchDropdownSearch(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 30px 8px 32px',
+                                  borderRadius: '8px',
+                                  border: '1.5px solid #e2e8f0',
+                                  fontSize: '12.5px',
+                                  outline: 'none',
+                                  background: '#f8fafc',
+                                  boxSizing: 'border-box',
+                                }}
+                              />
+                              {churchDropdownSearch && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setChurchDropdownSearch('');
+                                  }}
                                   style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '6px 8px',
-                                    borderRadius: '8px',
-                                    background: isSelected ? '#f5f3ff' : 'transparent',
+                                    position: 'absolute',
+                                    right: '8px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#94a3b8',
                                     cursor: 'pointer',
+                                    padding: '2px',
                                     fontSize: '13px',
-                                    fontWeight: isSelected ? 700 : 500,
-                                    color: isSelected ? '#6b21a8' : '#334155',
                                   }}
                                 >
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setTeamSelectedChurchIds([...teamSelectedChurchIds, c.id]);
-                                      } else {
-                                        setTeamSelectedChurchIds(teamSelectedChurchIds.filter((id) => id !== c.id));
-                                      }
+                                  <i className="ti ti-x" />
+                                </button>
+                              )}
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 6px', borderBottom: '1px solid #f1f5f9' }}>
+                              <button
+                                type="button"
+                                onClick={() => setTeamSelectedChurchIds(churches.map((c) => c.id))}
+                                style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                Select All ({churches.length})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setTeamSelectedChurchIds([])}
+                                style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer' }}
+                              >
+                                Deselect All
+                              </button>
+                            </div>
+
+                            {(() => {
+                              const filtered = [...churches]
+                                .filter((c) => {
+                                  if (!churchDropdownSearch.trim()) return true;
+                                  const q = churchDropdownSearch.toLowerCase().trim();
+                                  return (
+                                    (c.name && c.name.toLowerCase().includes(q)) ||
+                                    (c.city && c.city.toLowerCase().includes(q)) ||
+                                    (c.address && c.address.toLowerCase().includes(q))
+                                  );
+                                })
+                                .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+                              if (filtered.length === 0) {
+                                return (
+                                  <div style={{ textAlign: 'center', padding: '16px', color: '#94a3b8', fontSize: '12.5px' }}>
+                                    No churches match &ldquo;{churchDropdownSearch}&rdquo;
+                                  </div>
+                                );
+                              }
+
+                              return filtered.map((c) => {
+                                const isSelected = teamSelectedChurchIds.includes(c.id);
+                                return (
+                                  <label
+                                    key={c.id}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '9px',
+                                      padding: '8px 10px',
+                                      borderRadius: '8px',
+                                      background: isSelected ? '#f5f3ff' : 'transparent',
+                                      cursor: 'pointer',
+                                      fontSize: '13px',
+                                      fontWeight: isSelected ? 700 : 500,
+                                      color: isSelected ? '#6b21a8' : '#334155',
+                                      transition: 'background 0.12s ease',
                                     }}
-                                  />
-                                  <span>{c.name || 'Unnamed Church'}</span>
-                                </label>
-                              );
-                            })}
-                        </div>
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setTeamSelectedChurchIds([...teamSelectedChurchIds, c.id]);
+                                        } else {
+                                          setTeamSelectedChurchIds(teamSelectedChurchIds.filter((id) => id !== c.id));
+                                        }
+                                      }}
+                                      style={{ accentColor: '#7c3aed', width: '15px', height: '15px' }}
+                                    />
+                                    <span>{c.name || 'Unnamed Church'}</span>
+                                    {c.city && (
+                                      <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: 'auto' }}>
+                                        {c.city}
+                                      </span>
+                                    )}
+                                  </label>
+                                );
+                              });
+                            })()}
+                          </div>
+                        )}
                       </div>
                     )}
 
-                    {/* Multi-Select: Assign to Pastors */}
+                    {/* Sleek Multi-Select Dropdown: Assign to Pastors */}
                     {pastors.length > 0 && (
-                      <div>
+                      <div ref={pastorDropdownRef} style={{ position: 'relative' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                           <label style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>
-                            Assign to Pastors <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 500 }}>(Multi-selectable)</span>
+                            Assign to Pastors <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 500 }}>(Typable & searchable dropdown)</span>
                           </label>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                              type="button"
-                              onClick={() => setTeamSelectedPastorIds(pastors.map((p) => p.id))}
-                              style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
-                            >
-                              Select All
-                            </button>
-                            <span style={{ color: '#cbd5e1' }}>•</span>
+                          {teamSelectedPastorIds.length > 0 && (
                             <button
                               type="button"
                               onClick={() => setTeamSelectedPastorIds([])}
                               style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
                             >
-                              Clear
+                              Clear ({teamSelectedPastorIds.length})
                             </button>
-                          </div>
+                          )}
                         </div>
 
-                        <div style={{ maxHeight: '130px', overflowY: 'auto', border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '8px', background: '#fafafa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          {[...pastors]
-                            .sort((a, b) => (a.full_name || a.name || '').localeCompare(b.full_name || b.name || ''))
-                            .map((p) => {
-                              const pName = p.full_name || p.name || 'Unnamed Pastor';
-                              const isSelected = teamSelectedPastorIds.includes(p.id);
-                              return (
-                                <label
-                                  key={p.id}
+                        {/* Dropdown Trigger Box */}
+                        <div
+                          onClick={() => {
+                            setIsPastorDropdownOpen(!isPastorDropdownOpen);
+                            setIsChurchDropdownOpen(false);
+                          }}
+                          style={{
+                            minHeight: '44px',
+                            padding: '7px 12px',
+                            borderRadius: '12px',
+                            border: `1.5px solid ${isPastorDropdownOpen ? '#7c3aed' : '#cbd5e1'}`,
+                            background: '#ffffff',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '8px',
+                            flexWrap: 'wrap',
+                            boxSizing: 'border-box',
+                          }}
+                        >
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', flex: 1, alignItems: 'center' }}>
+                            {teamSelectedPastorIds.length === 0 ? (
+                              <span style={{ fontSize: '13.5px', color: '#94a3b8' }}>
+                                Click to search and select pastors...
+                              </span>
+                            ) : (
+                              pastors
+                                .filter((p) => teamSelectedPastorIds.includes(p.id))
+                                .map((p) => {
+                                  const pName = p.full_name || p.name || 'Unnamed Pastor';
+                                  return (
+                                    <span
+                                      key={p.id}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        background: '#fef3c7',
+                                        color: '#92400e',
+                                        border: '1px solid #fde68a',
+                                        padding: '2px 8px',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      👤 {pName}
+                                      <span
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setTeamSelectedPastorIds(teamSelectedPastorIds.filter((id) => id !== p.id));
+                                        }}
+                                        style={{ cursor: 'pointer', color: '#b45309', fontWeight: 900, marginLeft: '2px', fontSize: '12px' }}
+                                      >
+                                        ×
+                                      </span>
+                                    </span>
+                                  );
+                                })
+                            )}
+                          </div>
+                          <i
+                            className="ti ti-chevron-down"
+                            style={{
+                              color: '#64748b',
+                              fontSize: '14px',
+                              transform: isPastorDropdownOpen ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.15s ease',
+                              flexShrink: 0,
+                            }}
+                          />
+                        </div>
+
+                        {/* Popover Dropdown Menu with Typable Search */}
+                        {isPastorDropdownOpen && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: 'calc(100% + 4px)',
+                              left: 0,
+                              right: 0,
+                              background: '#ffffff',
+                              borderRadius: '14px',
+                              border: '1.5px solid #cbd5e1',
+                              boxShadow: '0 10px 30px -5px rgba(0,0,0,0.18)',
+                              zIndex: 50,
+                              maxHeight: '270px',
+                              overflowY: 'auto',
+                              padding: '10px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '6px',
+                            }}
+                          >
+                            {/* Typable Search Input */}
+                            <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
+                              <i
+                                className="ti ti-search"
+                                style={{
+                                  position: 'absolute',
+                                  left: '10px',
+                                  top: '50%',
+                                  transform: 'translateY(-50%)',
+                                  color: '#94a3b8',
+                                  fontSize: '14px',
+                                }}
+                              />
+                              <input
+                                type="text"
+                                autoFocus
+                                placeholder="Type to search pastors by name, role..."
+                                value={pastorDropdownSearch}
+                                onChange={(e) => setPastorDropdownSearch(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 30px 8px 32px',
+                                  borderRadius: '8px',
+                                  border: '1.5px solid #e2e8f0',
+                                  fontSize: '12.5px',
+                                  outline: 'none',
+                                  background: '#f8fafc',
+                                  boxSizing: 'border-box',
+                                }}
+                              />
+                              {pastorDropdownSearch && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPastorDropdownSearch('');
+                                  }}
                                   style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '6px 8px',
-                                    borderRadius: '8px',
-                                    background: isSelected ? '#f5f3ff' : 'transparent',
+                                    position: 'absolute',
+                                    right: '8px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#94a3b8',
                                     cursor: 'pointer',
+                                    padding: '2px',
                                     fontSize: '13px',
-                                    fontWeight: isSelected ? 700 : 500,
-                                    color: isSelected ? '#6b21a8' : '#334155',
                                   }}
                                 >
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setTeamSelectedPastorIds([...teamSelectedPastorIds, p.id]);
-                                      } else {
-                                        setTeamSelectedPastorIds(teamSelectedPastorIds.filter((id) => id !== p.id));
-                                      }
+                                  <i className="ti ti-x" />
+                                </button>
+                              )}
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 6px', borderBottom: '1px solid #f1f5f9' }}>
+                              <button
+                                type="button"
+                                onClick={() => setTeamSelectedPastorIds(pastors.map((p) => p.id))}
+                                style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                Select All ({pastors.length})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setTeamSelectedPastorIds([])}
+                                style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer' }}
+                              >
+                                Deselect All
+                              </button>
+                            </div>
+
+                            {(() => {
+                              const filtered = [...pastors]
+                                .filter((p) => {
+                                  if (!pastorDropdownSearch.trim()) return true;
+                                  const q = pastorDropdownSearch.toLowerCase().trim();
+                                  const pName = p.full_name || p.name || '';
+                                  return (
+                                    pName.toLowerCase().includes(q) ||
+                                    (p.role && p.role.toLowerCase().includes(q)) ||
+                                    (p.city && p.city.toLowerCase().includes(q))
+                                  );
+                                })
+                                .sort((a, b) => (a.full_name || a.name || '').localeCompare(b.full_name || b.name || ''));
+
+                              if (filtered.length === 0) {
+                                return (
+                                  <div style={{ textAlign: 'center', padding: '16px', color: '#94a3b8', fontSize: '12.5px' }}>
+                                    No pastors match &ldquo;{pastorDropdownSearch}&rdquo;
+                                  </div>
+                                );
+                              }
+
+                              return filtered.map((p) => {
+                                const pName = p.full_name || p.name || 'Unnamed Pastor';
+                                const isSelected = teamSelectedPastorIds.includes(p.id);
+                                return (
+                                  <label
+                                    key={p.id}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '9px',
+                                      padding: '8px 10px',
+                                      borderRadius: '8px',
+                                      background: isSelected ? '#fef3c7' : 'transparent',
+                                      cursor: 'pointer',
+                                      fontSize: '13px',
+                                      fontWeight: isSelected ? 700 : 500,
+                                      color: isSelected ? '#92400e' : '#334155',
+                                      transition: 'background 0.12s ease',
                                     }}
-                                  />
-                                  <span>{pName}</span>
-                                </label>
-                              );
-                            })}
-                        </div>
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setTeamSelectedPastorIds([...teamSelectedPastorIds, p.id]);
+                                        } else {
+                                          setTeamSelectedPastorIds(teamSelectedPastorIds.filter((id) => id !== p.id));
+                                        }
+                                      }}
+                                      style={{ accentColor: '#d97706', width: '15px', height: '15px' }}
+                                    />
+                                    <span>{pName}</span>
+                                    {p.role && (
+                                      <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: 'auto' }}>
+                                        {p.role}
+                                      </span>
+                                    )}
+                                  </label>
+                                );
+                              });
+                            })()}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -5739,33 +6626,256 @@ export default function DashboardClient({
                           </td>
 
                           <td style={{ padding: '16px 14px', textAlign: 'right' }}>
-                            <button
-                              onClick={() => handleRemoveTeamMember(member.id)}
-                              title="Revoke access"
-                              style={{
-                                background: '#fef2f2',
-                                color: '#dc2626',
-                                border: '1px solid #fecaca',
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                fontSize: '12px',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                transition: 'all 0.15s',
-                              }}
-                            >
-                              <i className="ti ti-trash"></i> Remove
-                            </button>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
+                              {/* Reset Password Button */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setResettingMember(member);
+                                  setResetNewPassword('');
+                                  setResetModalMsg(null);
+                                }}
+                                title="Reset login password"
+                                style={{
+                                  background: '#f8fafc',
+                                  color: '#475569',
+                                  border: '1px solid #cbd5e1',
+                                  padding: '6px 11px',
+                                  borderRadius: '8px',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  transition: 'all 0.15s',
+                                }}
+                              >
+                                <i className="ti ti-key" style={{ fontSize: '13px', color: '#7c3aed' }}></i> Reset Password
+                              </button>
+
+                              {/* Remove Button */}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveTeamMember(member.id, member.email)}
+                                title="Revoke access"
+                                style={{
+                                  background: '#fef2f2',
+                                  color: '#dc2626',
+                                  border: '1px solid #fecaca',
+                                  padding: '6px 11px',
+                                  borderRadius: '8px',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  transition: 'all 0.15s',
+                                }}
+                              >
+                                <i className="ti ti-trash" style={{ fontSize: '13px' }}></i> Remove
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+
+                {teamMembers.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '36px 16px', color: '#64748b' }}>
+                    <i className="ti ti-users" style={{ fontSize: '36px', color: '#cbd5e1', display: 'block', marginBottom: '8px' }}></i>
+                    <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#1e293b' }}>No team members added yet</div>
+                    <div style={{ fontSize: '12.5px', marginTop: '2px' }}>Use the form above to add an assistant or co-leader.</div>
+                  </div>
+                )}
               </div>
+
+              {/* Inline Reset Password Modal for Team Member */}
+              {resettingMember && (
+                <div
+                  style={{
+                    position: 'fixed',
+                    inset: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+                    backdropFilter: 'blur(4px)',
+                    zIndex: 9999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '16px',
+                  }}
+                  onClick={() => {
+                    if (!isResettingMemberPassword) {
+                      setResettingMember(null);
+                      setResetNewPassword('');
+                      setResetModalMsg(null);
+                    }
+                  }}
+                >
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      background: '#ffffff',
+                      borderRadius: '20px',
+                      maxWidth: '440px',
+                      width: '100%',
+                      padding: '28px',
+                      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                      border: '1.5px solid #e2e8f0',
+                      animation: 'fadeIn 0.2s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div
+                          style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '10px',
+                            background: '#f5f3ff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#7c3aed',
+                            fontSize: '18px',
+                          }}
+                        >
+                          <i className="ti ti-key"></i>
+                        </div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>
+                            Reset Password
+                          </h4>
+                          <span style={{ fontSize: '12px', color: '#64748b' }}>
+                            for {resettingMember.name || resettingMember.email}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResettingMember(null);
+                          setResetNewPassword('');
+                          setResetModalMsg(null);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#94a3b8',
+                          fontSize: '18px',
+                          cursor: 'pointer',
+                          padding: '4px',
+                        }}
+                      >
+                        <i className="ti ti-x"></i>
+                      </button>
+                    </div>
+
+                    {resetModalMsg && (
+                      <div
+                        style={{
+                          padding: '10px 14px',
+                          borderRadius: '10px',
+                          fontSize: '12.5px',
+                          fontWeight: 700,
+                          marginBottom: '14px',
+                          background: resetModalMsg.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                          color: resetModalMsg.type === 'success' ? '#166534' : '#991b1b',
+                          border: `1px solid ${resetModalMsg.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <i className={resetModalMsg.type === 'success' ? 'ti ti-check' : 'ti ti-alert-triangle'}></i>
+                        <span>{resetModalMsg.text}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleResetTeamMemberPassword}>
+                      <div style={{ marginBottom: '18px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                          Enter New Password <span style={{ color: '#ef4444' }}>*</span>
+                        </label>
+                        <input
+                          type="password"
+                          autoComplete="new-password"
+                          placeholder="At least 6 characters"
+                          value={resetNewPassword}
+                          onChange={(e) => setResetNewPassword(e.target.value)}
+                          required
+                          minLength={6}
+                          style={{
+                            width: '100%',
+                            padding: '10px 14px',
+                            borderRadius: '10px',
+                            border: '1.5px solid #cbd5e1',
+                            fontSize: '14px',
+                            outline: 'none',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                        <span style={{ fontSize: '11.5px', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                          The teammate can immediately log in with this new password.
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setResettingMember(null);
+                            setResetNewPassword('');
+                            setResetModalMsg(null);
+                          }}
+                          disabled={isResettingMemberPassword}
+                          style={{
+                            background: '#f1f5f9',
+                            color: '#475569',
+                            border: '1px solid #cbd5e1',
+                            padding: '8px 16px',
+                            borderRadius: '10px',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isResettingMemberPassword || !resetNewPassword}
+                          style={{
+                            background: 'linear-gradient(135deg, #7c3aed, #6366f1)',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '8px 18px',
+                            borderRadius: '10px',
+                            fontSize: '13px',
+                            fontWeight: 800,
+                            cursor: (isResettingMemberPassword || !resetNewPassword) ? 'not-allowed' : 'pointer',
+                            opacity: (isResettingMemberPassword || !resetNewPassword) ? 0.65 : 1,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          {isResettingMemberPassword ? (
+                            <>
+                              <i className="ti ti-loader ti-spin"></i> Saving...
+                            </>
+                          ) : (
+                            'Set New Password'
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
 
             </div>
           )}
