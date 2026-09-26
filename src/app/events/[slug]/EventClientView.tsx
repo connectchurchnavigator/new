@@ -867,6 +867,29 @@ export default function EventClientView({ slug }: EventClientViewProps) {
                   window.open(bookingUrl, "_blank");
                 } else {
                   setRegisteredCount(prev => prev + seatQuantity);
+                  // Persist booking to localStorage for live dashboard sync
+                  try {
+                    const eventId = eventData?.id;
+                    if (eventId && typeof window !== "undefined") {
+                      const storageKey = `cn_event_bookings_${eventId}`;
+                      const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
+                      existing.push({
+                        id: `book_${Date.now()}`,
+                        event_id: eventId,
+                        party_size: seatQuantity,
+                        ticket_name: currentTicket?.name || (selectedTicket === 1 ? "Paid" : "Free RSVP"),
+                        created_at: new Date().toISOString()
+                      });
+                      localStorage.setItem(storageKey, JSON.stringify(existing));
+
+                      // Also maintain an index of all booked events
+                      const allBookedEvents = JSON.parse(localStorage.getItem("cn_all_event_bookings") || "{}");
+                      allBookedEvents[eventId] = (allBookedEvents[eventId] || 0) + seatQuantity;
+                      localStorage.setItem("cn_all_event_bookings", JSON.stringify(allBookedEvents));
+                    }
+                  } catch (e) {
+                    console.error("Failed to save booking:", e);
+                  }
                   alert(`Thank you for registering! Reserved ${seatQuantity} seat${seatQuantity > 1 ? "s" : ""}.`);
                 }
               }}

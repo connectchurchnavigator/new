@@ -635,9 +635,29 @@ export default function DashboardClient({
   const [selectedEventIndex, setSelectedEventIndex] = useState<number>(-1); // -1 = All
   const currentSelectedEvent = selectedEventIndex === -1 ? null : (events[selectedEventIndex] || null);
 
-  // Timeframe selector
   const [timeframe, setTimeframe] = useState<TimeRange>('14d');
   const [churchTimeframe, setChurchTimeframe] = useState<TimeRange>('14d');
+
+  // Live booked attendees map from localStorage: { [eventId]: number }
+  const [localEventBookings, setLocalEventBookings] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const loadBookings = () => {
+      try {
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem('cn_all_event_bookings');
+          if (stored) {
+            setLocalEventBookings(JSON.parse(stored));
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load local event bookings:', e);
+      }
+    };
+    loadBookings();
+    window.addEventListener('storage', loadBookings);
+    return () => window.removeEventListener('storage', loadBookings);
+  }, []);
 
   // Enquiries state
   const [enquiries, setEnquiries] = useState<any[]>(pastorEnquiries);
@@ -5224,9 +5244,10 @@ export default function DashboardClient({
                       ) : (
                         filteredEvents.map((ev: any) => {
                           const regs = Array.isArray(ev.event_registrations) ? ev.event_registrations : [];
-                          // Sum attendees across bookings (each booking party_size or 1)
-                          const totalBookedAttendees = regs.reduce((sum: number, r: any) => sum + (Number(r.party_size) || 1), 0);
-                          const totalBookingsCount = regs.length;
+                          const localCount = localEventBookings[ev.id] || 0;
+                          // Sum attendees across bookings (each booking party_size or 1) + any local booked seats
+                          const totalBookedAttendees = regs.reduce((sum: number, r: any) => sum + (Number(r.party_size) || 1), 0) + localCount;
+                          const totalBookingsCount = regs.length + (localCount > 0 ? 1 : 0);
 
                           // Views / Visitors
                           const viewsCount = Number(ev.view_count || 0);
