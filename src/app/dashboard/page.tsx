@@ -44,18 +44,10 @@ export default async function DashboardPage(props: DashboardPageProps) {
 
   const allChurches = churchesData || [];
 
-  // Scoping logic:
-  // 1. If delegated team member with assigned churches, ONLY allow those assigned churches
-  // 2. If org owner, only churches within org
-  // 3. Otherwise (admin/primary owner), all churches
+  // Co-manager / Team Member scoping:
+  // Both primary owners and team members share full access to the listings
   let userChurches: any[] = [];
-  if (isTeamMember) {
-    if (assignedChurchIds.length > 0) {
-      userChurches = allChurches.filter((c) => assignedChurchIds.includes(c.id));
-    } else {
-      userChurches = []; // Team member with no assigned churches has no church management rights
-    }
-  } else if (orgIds.length > 0) {
+  if (orgIds.length > 0) {
     userChurches = allChurches.filter((c) => orgIds.includes(c.org_id));
   } else {
     userChurches = allChurches;
@@ -67,36 +59,18 @@ export default async function DashboardPage(props: DashboardPageProps) {
   let userPastors: any[] = [];
   let userWorshipLeaders: any[] = [];
 
-  if (isTeamMember) {
-    // Delegated user only gets pastors specifically assigned to them
-    if (assignedPastorIds.length > 0) {
-      const { data: matchedPastors } = await adminSb
-        .from('pastors')
-        .select('*')
-        .in('id', assignedPastorIds)
-        .order('created_at', { ascending: false });
-      userPastors = matchedPastors || [];
-    } else {
-      userPastors = [];
-    }
-    // Delegated team members do not own worship leaders unless they are full admin
-    userWorshipLeaders = [];
-  } else {
-    const [pastorsRes, worshipLeadersRes] = await Promise.all([
-      adminSb
-        .from('pastors')
-        .select('*')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false }),
-      adminSb
-        .from('worship_leaders')
-        .select('*')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false }),
-    ]);
-    userPastors = pastorsRes.data || [];
-    userWorshipLeaders = worshipLeadersRes.data || [];
-  }
+  const [pastorsRes, worshipLeadersRes] = await Promise.all([
+    adminSb
+      .from('pastors')
+      .select('*')
+      .order('created_at', { ascending: false }),
+    adminSb
+      .from('worship_leaders')
+      .select('*')
+      .order('created_at', { ascending: false }),
+  ]);
+  userPastors = pastorsRes.data || [];
+  userWorshipLeaders = worshipLeadersRes.data || [];
 
   const pastorIds = userPastors.map((p: any) => p.id);
 
@@ -120,16 +94,13 @@ export default async function DashboardPage(props: DashboardPageProps) {
     const { data: matchedEvents, error: evErr } = await query.or(filters.join(','));
     if (!evErr && matchedEvents && matchedEvents.length > 0) {
       userEvents = matchedEvents;
-    } else if (!isTeamMember) {
-      // Fallback only for primary admins, never for delegated team members
+    } else {
       const { data: fallbackEvents } = await adminSb
         .from('events')
         .select('*, event_tickets(*)')
         .order('created_at', { ascending: false })
         .limit(20);
       userEvents = fallbackEvents || [];
-    } else {
-      userEvents = [];
     }
   } catch (e) {
     console.error('Error fetching events for dashboard:', e);
