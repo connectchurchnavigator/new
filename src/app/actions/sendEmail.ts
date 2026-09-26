@@ -1,7 +1,7 @@
 "use server";
 
 import { Resend } from "resend";
-import { buildEnquiryReceivedEmail } from "@/emails/templates/enquiries";
+import { buildEnquiryReceivedEmail, buildEnquiryReceiptEmail } from "@/emails/templates/enquiries";
 
 export async function sendEmailAction(formData: FormData) {
   const name = formData.get("name") as string;
@@ -71,6 +71,27 @@ export async function sendEmailAction(formData: FormData) {
     if (error) {
       console.error("Resend error:", error);
       return { success: false, error: error.message };
+    }
+
+    // Automatically send a confirmation receipt copy to the visitor / sender
+    if (email) {
+      try {
+        const receipt = buildEnquiryReceiptEmail({
+          senderName: name || "Friend",
+          entityName: churchName || "Church",
+          message: message,
+        });
+
+        await resend.emails.send({
+          from: fromEmail,
+          to: [email],
+          subject: receipt.subject,
+          html: receipt.html,
+        });
+      } catch (receiptErr) {
+        // Log silently so visitor receipt errors never block the primary church inquiry submission
+        console.warn("Could not dispatch visitor confirmation receipt:", receiptErr);
+      }
     }
 
     return { success: true, data };
