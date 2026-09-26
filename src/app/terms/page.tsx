@@ -36,7 +36,7 @@ export default function TermsOfServicePage() {
               2. User Accounts & Listing Submissions
             </h2>
             <p>
-              You may register an account using email credentials or verified OAuth services (Google/Apple). When adding a church, pastor, worship leader, or event listing:
+              You may register an account using email credentials or verified OAuth services (Google). When adding a church, pastor, worship leader, or event listing:
             </p>
             <ul style={{ paddingLeft: "24px", margin: "12px 0" }}>
               <li>You warrant that all submitted details (names, service times, addresses, ministry roles) are accurate and truthful.</li>

@@ -47,12 +47,13 @@ export async function getEventBySlug(sb: SupabaseClient, slug: string): Promise<
   if (error) throw error;
   if (!ev) return null;
 
-  const [{ data: sessions }, { data: speakers }, { data: tickets }, { count }] = await Promise.all([
+  const [{ data: sessions }, { data: speakers }, { data: tickets }, regRes] = await Promise.all([
     sb.from('event_sessions').select('*').eq('event_id', ev.id).order('sort_order'),
     sb.from('event_speakers').select('*').eq('event_id', ev.id).order('sort_order'),
     sb.from('event_tickets').select('*').eq('event_id', ev.id).order('sort_order'),
-    sb.from('event_registrations').select('id', { count: 'exact', head: true }).eq('event_id', ev.id).neq('status', 'cancelled'),
+    Promise.resolve(sb.from('event_registrations').select('id', { count: 'exact', head: true }).eq('event_id', ev.id).neq('status', 'cancelled')).catch(() => ({ count: 0 })),
   ]);
+  const count = (regRes as any)?.count ?? 0;
 
   return {
     ...(ev as any),

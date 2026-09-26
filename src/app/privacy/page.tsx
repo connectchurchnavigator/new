@@ -39,7 +39,7 @@ export default function PrivacyPolicyPage() {
               When you interact with ChurchNavigator, create an account, submit a church listing, or contact a pastor, we may collect the following information:
             </p>
             <ul style={{ paddingLeft: "24px", margin: "12px 0" }}>
-              <li><strong>Account & Profile Information:</strong> When you register via email or third-party OAuth providers (Google or Apple), we receive your name, email address, profile photo, and authenticated user ID.</li>
+              <li><strong>Account & Profile Information:</strong> When you register via email or third-party OAuth providers (Google), we receive your name, email address, profile photo, and authenticated user ID.</li>
               <li><strong>Ministry & Listing Data:</strong> Church names, physical locations, service times, leadership bio, phone numbers, public social media links, and event schedules submitted by administrators.</li>
               <li><strong>Communication & Enquiries:</strong> Names, email addresses, phone numbers, and messages sent through the &ldquo;Send Enquiry&rdquo; or &ldquo;Contact Pastor&rdquo; forms on public listings.</li>
               <li><strong>Technical Data:</strong> Browser type, device characteristics, operating system, and anonymized analytics to ensure smooth performance across all devices.</li>

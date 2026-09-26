@@ -105,7 +105,7 @@ export default async function DashboardPage(props: DashboardPageProps) {
   try {
     let query = adminSb
       .from('events')
-      .select('*, event_registrations(*), event_tickets(*)')
+      .select('*, event_tickets(*)')
       .order('created_at', { ascending: false });
 
     // Match by created_by or host church / pastor
@@ -124,7 +124,7 @@ export default async function DashboardPage(props: DashboardPageProps) {
       // Fallback only for primary admins, never for delegated team members
       const { data: fallbackEvents } = await adminSb
         .from('events')
-        .select('*, event_registrations(*), event_tickets(*)')
+        .select('*, event_tickets(*)')
         .order('created_at', { ascending: false })
         .limit(20);
       userEvents = fallbackEvents || [];

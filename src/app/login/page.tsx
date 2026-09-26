@@ -53,15 +53,12 @@ function LoginForm() {
     setBusy(true);
     setAuthStep(0);
 
-    const stepTimer1 = setTimeout(() => setAuthStep(1), 800);
-    const stepTimer2 = setTimeout(() => setAuthStep(2), 1800);
-
     try {
       if (activeTab === "register") {
         const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
         const redirectUrl = typeof window !== "undefined"
           ? `${window.location.origin}/add-church`
-          : "https://chruch-gold.vercel.app/add-church";
+          : "https://churchnavigator.com/add-church";
 
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
@@ -76,30 +73,27 @@ function LoginForm() {
         if (signUpError) throw signUpError;
 
         // Try to immediately log in the user so they bypass confirmation if enabled/possible
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        const { data: signInData } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (signInData?.session || signUpData?.session) {
           setAuthStep(2);
-          router.push(searchParams.get("next") || "/add-church");
-          router.refresh();
+          router.replace(searchParams.get("next") || "/add-church");
         } else {
           setInfoMsg("📩 Confirmation email sent! Please check your inbox and click the activation link to complete registration.");
           setActiveTab("signin");
           setBusy(false);
         }
       } else {
+        setAuthStep(1);
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         setAuthStep(2);
-        router.push(nextUrl);
-        router.refresh();
+        router.replace(nextUrl);
       }
     } catch (err: any) {
-      clearTimeout(stepTimer1);
-      clearTimeout(stepTimer2);
       setErrorMsg(err.message || "An error occurred during authentication.");
       setBusy(false);
     }
@@ -316,7 +310,7 @@ function LoginForm() {
             try {
               const redirectUrl = typeof window !== "undefined"
                 ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextUrl)}`
-                : "https://chruch-gold.vercel.app/auth/callback";
+                : "https://churchnavigator.com/auth/callback";
 
               const { error } = await supabase.auth.signInWithOAuth({
                 provider: "google",

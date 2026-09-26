@@ -279,13 +279,13 @@ export default async function Home() {
       <footer style={{ background: "#0f172a", color: "#94a3b8", padding: "50px 24px 30px", borderTop: "1px solid #1e293b" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "40px", marginBottom: "36px" }}>
           <div>
-            <div style={{ fontSize: "20px", fontWeight: 900, color: "#ffffff", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{ marginBottom: "14px", display: "flex", alignItems: "center" }}>
               <Image 
                 src="/icon.png" 
                 alt="ChurchNavigator" 
-                width={160} 
-                height={50} 
-                style={{ height: "32px", width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }} 
+                width={240} 
+                height={75} 
+                style={{ height: "48px", width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }} 
               />
             </div>
             <p style={{ fontSize: "13.5px", lineHeight: 1.6 }}>
