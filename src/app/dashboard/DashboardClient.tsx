@@ -206,13 +206,15 @@ export default function DashboardClient({
     addedAt: string;
   }
 
+  const storageKey = user?.id ? `cn_dashboard_team_members_${user.id}` : null;
+
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('cn_dashboard_team_members');
+    if (typeof window !== 'undefined' && storageKey) {
+      const saved = localStorage.getItem(storageKey);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed)) return parsed;
         } catch {}
       }
     }
@@ -258,6 +260,13 @@ export default function DashboardClient({
   const [isResettingMemberPassword, setIsResettingMemberPassword] = useState(false);
   const [resetModalMsg, setResetModalMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Clean legacy shared localStorage key once on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('cn_dashboard_team_members');
+    }
+  }, []);
+
   // Load live team members from Supabase Auth via API
   useEffect(() => {
     async function loadTeamMembers() {
@@ -265,10 +274,10 @@ export default function DashboardClient({
         const res = await fetch('/api/dashboard/team');
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data.teamUsers) && data.teamUsers.length > 0) {
+          if (Array.isArray(data.teamUsers)) {
             setTeamMembers(data.teamUsers);
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('cn_dashboard_team_members', JSON.stringify(data.teamUsers));
+            if (typeof window !== 'undefined' && storageKey) {
+              localStorage.setItem(storageKey, JSON.stringify(data.teamUsers));
             }
           }
         }
@@ -277,7 +286,7 @@ export default function DashboardClient({
       }
     }
     loadTeamMembers();
-  }, []);
+  }, [storageKey]);
 
   const handleAddTeamMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -341,8 +350,8 @@ export default function DashboardClient({
 
       const updated = [newMember, ...teamMembers.filter((m) => m.email !== newMember.email)];
       setTeamMembers(updated);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('cn_dashboard_team_members', JSON.stringify(updated));
+      if (typeof window !== 'undefined' && storageKey) {
+        localStorage.setItem(storageKey, JSON.stringify(updated));
       }
 
       setNewMemberName('');
@@ -360,8 +369,8 @@ export default function DashboardClient({
   const handleRemoveTeamMember = async (id: string, email?: string) => {
     const updated = teamMembers.filter((m) => m.id !== id);
     setTeamMembers(updated);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('cn_dashboard_team_members', JSON.stringify(updated));
+    if (typeof window !== 'undefined' && storageKey) {
+      localStorage.setItem(storageKey, JSON.stringify(updated));
     }
 
     try {

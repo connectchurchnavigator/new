@@ -142,6 +142,7 @@ export async function POST(req: NextRequest) {
               full_name: name.trim(),
               name: name.trim(),
               is_team_member: true,
+              invited_by: callerUser?.id || existing.user_metadata?.invited_by || null,
               team_role: role,
               assigned_churches: assignedChurches,
               assigned_pastors: assignedPastors,
