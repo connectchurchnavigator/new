@@ -155,6 +155,7 @@ export default function ChurchProfileClient({
               <ChurchEventsSection
                 events={initialEvents}
                 churchName={church.name}
+                isEditing={isEditing}
               />
             }
             profileContent={

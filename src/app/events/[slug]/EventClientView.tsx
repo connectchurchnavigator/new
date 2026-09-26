@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import TopNav from "@/components/layout/TopNav";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase-browser";
 
 interface EventClientViewProps {
   slug: string;
@@ -29,6 +30,7 @@ export default function EventClientView({ slug }: EventClientViewProps) {
   const [attendeeEmail, setAttendeeEmail] = useState("");
   const [attendeePhone, setAttendeePhone] = useState("");
   const [registerSuccess, setRegisterSuccess] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     async function fetchEvent() {
@@ -45,6 +47,23 @@ export default function EventClientView({ slug }: EventClientViewProps) {
           throw new Error("Event not found");
         }
         setEventData(data.event);
+        try {
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const superAdmins = (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase());
+            const userEmail = (user.email || "").toLowerCase();
+            const isSuperAdmin = superAdmins.includes(userEmail);
+            const isCreator = Boolean(data.event?.created_by && data.event.created_by === user.id);
+            const isHostChurchOwner = Boolean(data.event?.host_church?.owner_id && data.event.host_church.owner_id === user.id);
+            const isHostPastorOwner = Boolean(data.event?.host_pastor?.owner_id && data.event.host_pastor.owner_id === user.id);
+            if (isSuperAdmin || isCreator || isHostChurchOwner || isHostPastorOwner) {
+              setIsOwner(true);
+            }
+          }
+        } catch (authErr) {
+          console.warn("Event owner check error:", authErr);
+        }
       } catch (err: any) {
         setError(err.message || "Failed to load event");
       } finally {
@@ -213,8 +232,8 @@ export default function EventClientView({ slug }: EventClientViewProps) {
               <i className="ti ti-arrow-left"></i> Events / Conferences
             </Link>
 
-            <Link
-              href={`/onboarding/events?id=${eventData.id}`}
+            {isOwner && (
+                <Link href={`/onboarding/events?id=${eventData.id}`}
               style={{
                 fontSize: "12.5px",
                 fontWeight: 700,
@@ -233,6 +252,7 @@ export default function EventClientView({ slug }: EventClientViewProps) {
             >
               <i className="ti ti-edit" style={{ fontSize: "15px", color: "#fbbf24" }}></i> Owner Edit Access
             </Link>
+          )}
           </div>
 
           <div style={{ marginTop: "auto" }}>
@@ -317,12 +337,14 @@ export default function EventClientView({ slug }: EventClientViewProps) {
                 <i className="ti ti-qrcode" style={{ fontSize: "16px" }}></i> Get QR
               </button>
 
-              <Link
-                href={`/onboarding/events?id=${eventData.id}`}
-                style={{ display: "inline-flex", alignItems: "center", gap: "7px", fontSize: "13.5px", fontWeight: 700, padding: "11px 18px", borderRadius: "12px", background: "rgba(255,255,255,0.25)", backdropFilter: "blur(6px)", color: "#fff", border: "1px solid rgba(255,255,255,0.4)", textDecoration: "none", transition: "all 0.2s" }}
-              >
-                <i className="ti ti-edit" style={{ fontSize: "16px", color: "#fbbf24" }}></i> Edit Event
-              </Link>
+              {isOwner && (
+                <Link
+                  href={`/onboarding/events?id=${eventData.id}`}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "7px", fontSize: "13.5px", fontWeight: 700, padding: "11px 18px", borderRadius: "12px", background: "rgba(255,255,255,0.25)", backdropFilter: "blur(6px)", color: "#fff", border: "1px solid rgba(255,255,255,0.4)", textDecoration: "none", transition: "all 0.2s" }}
+                >
+                  <i className="ti ti-edit" style={{ fontSize: "16px", color: "#fbbf24" }}></i> Edit Event
+                </Link>
+              )}
             </div>
           </div>
         </div>

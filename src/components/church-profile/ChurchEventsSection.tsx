@@ -7,9 +7,10 @@ import { EventCard } from "@/lib/events-types";
 interface ChurchEventsSectionProps {
   events: EventCard[];
   churchName: string;
+  isEditing?: boolean;
 }
 
-export default function ChurchEventsSection({ events, churchName }: ChurchEventsSectionProps) {
+export default function ChurchEventsSection({ events, churchName, isEditing = false }: ChurchEventsSectionProps) {
   const [eventTab, setEventTab] = React.useState<"upcoming" | "past">("upcoming");
 
   if (!events || events.length === 0) {
@@ -24,24 +25,26 @@ export default function ChurchEventsSection({ events, churchName }: ChurchEvents
         <p style={{ fontSize: "14px", color: "var(--muted)", maxWidth: "420px", margin: "0 auto 20px" }}>
           Events organized by or hosted at {churchName} will automatically be displayed here.
         </p>
-        <Link
-          href="/onboarding/events"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            background: "linear-gradient(135deg, #7c3aed, #9333ea)",
-            color: "#fff",
-            fontWeight: 700,
-            fontSize: "13.5px",
-            padding: "10px 20px",
-            borderRadius: "30px",
-            textDecoration: "none",
-            boxShadow: "0 8px 18px -6px rgba(124, 58, 237, 0.4)"
-          }}
-        >
-          <i className="ti ti-plus"></i> Create an Event
-        </Link>
+        {isEditing && (
+          <Link
+            href="/onboarding/events"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              background: "linear-gradient(135deg, #7c3aed, #9333ea)",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: "13.5px",
+              padding: "10px 20px",
+              borderRadius: "30px",
+              textDecoration: "none",
+              boxShadow: "0 8px 18px -6px rgba(124, 58, 237, 0.4)"
+            }}
+          >
+            <i className="ti ti-plus"></i> Create an Event
+          </Link>
+        )}
       </div>
     );
   }
@@ -114,20 +117,22 @@ export default function ChurchEventsSection({ events, churchName }: ChurchEvents
           </button>
         </div>
 
-        <Link
-          href="/onboarding/events"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-            color: "#7c3aed",
-            fontWeight: 700,
-            fontSize: "13px",
-            textDecoration: "none"
-          }}
-        >
-          <i className="ti ti-plus"></i> Add Event
-        </Link>
+        {isEditing && (
+          <Link
+            href="/onboarding/events"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              color: "#7c3aed",
+              fontWeight: 700,
+              fontSize: "13px",
+              textDecoration: "none"
+            }}
+          >
+            <i className="ti ti-plus"></i> Add Event
+          </Link>
+        )}
       </div>
 
       {displayedEvents.length === 0 ? (
