@@ -22,94 +22,125 @@ export default async function DashboardPage(props: DashboardPageProps) {
 
   const adminSb = createAdminClient();
 
-  // Role detection: is the user a delegated team member?
+  // Role detection: is the user a super admin or delegated team member?
+  const isSuperAdmin = (
+    user.user_metadata?.role === 'super_admin' ||
+    user.app_metadata?.role === 'super_admin' ||
+    (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS || '')
+      .split(',')
+      .map((e: string) => e.trim().toLowerCase())
+      .filter(Boolean)
+      .includes(user.email?.toLowerCase() || '')
+  );
+
   const isTeamMember = !!(user.user_metadata?.is_team_member || user.user_metadata?.team_role);
   const teamRole: 'events_only' | 'events_and_church_edit' | null = user.user_metadata?.team_role || (isTeamMember ? 'events_only' : null);
-  const assignedChurchIds: string[] = user.user_metadata?.assigned_churches || (user.user_metadata?.assigned_church ? [user.user_metadata.assigned_church] : []);
-  const assignedPastorIds: string[] = user.user_metadata?.assigned_pastors || (user.user_metadata?.assigned_pastor ? [user.user_metadata.assigned_pastor] : []);
 
-  // Fetch all organizations owned by this user (only for org owners)
+  // If this user was added as a co-manager/team member by another user, get that owner's ID
+  const invitedByUserId: string | null = user.user_metadata?.invited_by || null;
+  // Effective owner IDs for listings: current user + invited_by user (if co-manager)
+  const effectiveOwnerIds: string[] = [user.id];
+  if (invitedByUserId && !effectiveOwnerIds.includes(invitedByUserId)) {
+    effectiveOwnerIds.push(invitedByUserId);
+  }
+
+  // Fetch all organizations owned by effective owners
   const { data: userOrgs } = await adminSb
     .from('organizations')
     .select('id, name, slug')
-    .eq('owner_id', user.id);
+    .in('owner_id', effectiveOwnerIds);
 
   const orgIds = (userOrgs || []).map((o) => o.id);
 
-  // Fetch all churches
-  const { data: churchesData } = await adminSb
-    .from('churches')
-    .select('*, church_services(*), leaders(*)')
-    .order('created_at', { ascending: false });
-
-  const allChurches = churchesData || [];
-
-  // Co-manager / Team Member scoping:
-  // Both primary owners and team members share full access to the listings
+  // Fetch churches:
+  // - Super admins see all churches
+  // - Regular users see strictly churches matching their owned organizations (or created by them)
   let userChurches: any[] = [];
-  if (orgIds.length > 0) {
-    userChurches = allChurches.filter((c) => orgIds.includes(c.org_id));
+  if (isSuperAdmin) {
+    const { data: allChurchesData } = await adminSb
+      .from('churches')
+      .select('*, church_services(*), leaders(*)')
+      .order('created_at', { ascending: false });
+    userChurches = allChurchesData || [];
+  } else if (orgIds.length > 0) {
+    const { data: matchingChurches } = await adminSb
+      .from('churches')
+      .select('*, church_services(*), leaders(*)')
+      .in('org_id', orgIds)
+      .order('created_at', { ascending: false });
+    userChurches = matchingChurches || [];
   } else {
-    userChurches = allChurches;
+    // New user with no churches created yet
+    userChurches = [];
   }
 
   const churchIds = userChurches.map((c: any) => c.id);
 
-  // Fetch other entity types owned or linked to this user in parallel
+  // Fetch other entity types owned or linked to this user
   let userPastors: any[] = [];
   let userWorshipLeaders: any[] = [];
 
-  const [pastorsRes, worshipLeadersRes] = await Promise.all([
-    adminSb
-      .from('pastors')
-      .select('*')
-      .order('created_at', { ascending: false }),
-    adminSb
-      .from('worship_leaders')
-      .select('*')
-      .order('created_at', { ascending: false }),
-  ]);
-  userPastors = pastorsRes.data || [];
-  userWorshipLeaders = worshipLeadersRes.data || [];
+  if (isSuperAdmin) {
+    const [pastorsRes, worshipLeadersRes] = await Promise.all([
+      adminSb.from('pastors').select('*').order('created_at', { ascending: false }),
+      adminSb.from('worship_leaders').select('*').order('created_at', { ascending: false }),
+    ]);
+    userPastors = pastorsRes.data || [];
+    userWorshipLeaders = worshipLeadersRes.data || [];
+  } else {
+    const [pastorsRes, worshipLeadersRes] = await Promise.all([
+      adminSb.from('pastors').select('*').in('owner_id', effectiveOwnerIds).order('created_at', { ascending: false }),
+      adminSb.from('worship_leaders').select('*').in('owner_id', effectiveOwnerIds).order('created_at', { ascending: false }),
+    ]);
+    userPastors = pastorsRes.data || [];
+    userWorshipLeaders = worshipLeadersRes.data || [];
+  }
 
   const pastorIds = userPastors.map((p: any) => p.id);
 
-  // Fetch events created by this user or hosted by user's assigned churches/pastors
+  // Fetch events created by this user or hosted by user's churches/pastors
   let userEvents: any[] = [];
   try {
-    let query = adminSb
-      .from('events')
-      .select('*, event_tickets(*)')
-      .order('created_at', { ascending: false });
-
-    // Match by created_by or host church / pastor
-    const filters: string[] = [`created_by.eq.${user.id}`];
-    if (churchIds.length > 0) {
-      filters.push(`host_church_id.in.(${churchIds.join(',')})`);
-    }
-    if (pastorIds.length > 0) {
-      filters.push(`host_pastor_id.in.(${pastorIds.join(',')})`);
-    }
-
-    const { data: matchedEvents, error: evErr } = await query.or(filters.join(','));
-    if (!evErr && matchedEvents && matchedEvents.length > 0) {
-      userEvents = matchedEvents;
-    } else {
-      const { data: fallbackEvents } = await adminSb
+    if (isSuperAdmin) {
+      const { data: allEvents } = await adminSb
         .from('events')
         .select('*, event_tickets(*)')
-        .order('created_at', { ascending: false })
-        .limit(20);
-      userEvents = fallbackEvents || [];
+        .order('created_at', { ascending: false });
+      userEvents = allEvents || [];
+    } else {
+      const filters: string[] = effectiveOwnerIds.map((id) => `created_by.eq.${id}`);
+      if (churchIds.length > 0) {
+        filters.push(`host_church_id.in.(${churchIds.join(',')})`);
+      }
+      if (pastorIds.length > 0) {
+        filters.push(`host_pastor_id.in.(${pastorIds.join(',')})`);
+      }
+
+      if (filters.length > 0) {
+        const { data: matchedEvents, error: evErr } = await adminSb
+          .from('events')
+          .select('*, event_tickets(*)')
+          .or(filters.join(','))
+          .order('created_at', { ascending: false });
+
+        if (!evErr && matchedEvents) {
+          userEvents = matchedEvents;
+        }
+      }
     }
   } catch (e) {
     console.error('Error fetching events for dashboard:', e);
   }
 
-  // Fetch enquiries for all pastors owned by this user
+  // Fetch enquiries for pastors owned by this user
   let pastorEnquiries: any[] = [];
-  if (userPastors.length > 0) {
-    const pastorIds = userPastors.map((p) => p.id);
+  if (isSuperAdmin) {
+    const { data: enquiries } = await adminSb
+      .from('pastor_enquiries')
+      .select('*')
+      .order('created_at', { ascending: false });
+    pastorEnquiries = enquiries || [];
+  } else if (pastorIds.length > 0) {
     const { data: enquiries } = await adminSb
       .from('pastor_enquiries')
       .select('*')
@@ -118,39 +149,43 @@ export default async function DashboardPage(props: DashboardPageProps) {
     pastorEnquiries = enquiries || [];
   }
 
-  // Fetch visitor insights for target church (requestedChurchId or e97ae738-0436-444d-b1d5-33f0e23df18c or user's church)
-  const targetChurchId = requestedChurchId || 'e97ae738-0436-444d-b1d5-33f0e23df18c';
-  const { data: targetChurchData } = await adminSb
-    .from('churches')
-    .select('id, name, slug')
-    .eq('id', targetChurchId)
-    .maybeSingle();
+  // Fetch visitor insights for target church
+  const targetChurchId = requestedChurchId || churchIds[0] || null;
+  let insightsChurch: any = null;
 
-  const insightsChurch = targetChurchData || userChurches.find((c: any) => c.id === targetChurchId) || userChurches[0] || {
-    id: targetChurchId,
-    name: 'ASCA',
-    slug: 'grace-cathedral-international-6932'
-  };
+  if (targetChurchId) {
+    const { data: targetChurchData } = await adminSb
+      .from('churches')
+      .select('id, name, slug')
+      .eq('id', targetChurchId)
+      .maybeSingle();
+
+    insightsChurch = targetChurchData || userChurches.find((c: any) => c.id === targetChurchId) || userChurches[0] || null;
+  } else if (userChurches.length > 0) {
+    insightsChurch = userChurches[0];
+  }
 
   let insightsStats = null;
   let insightsFunnel: { stage: string; count: number }[] = [];
   let insightsSources: any = [];
   let insightsVisitors: any[] = [];
 
-  try {
-    const { getVisitorStats, getVisitorFunnel, getVisitorSources, getVisitors } = await import('@/lib/api');
-    const [stRes, fnRes, scRes, vtRes] = await Promise.all([
-      getVisitorStats(adminSb, insightsChurch.id).catch(() => null),
-      getVisitorFunnel(adminSb, insightsChurch.id).catch(() => []),
-      getVisitorSources(adminSb, insightsChurch.id).catch(() => []),
-      getVisitors(adminSb, insightsChurch.id).catch(() => []),
-    ]);
-    insightsStats = stRes;
-    insightsFunnel = fnRes || [];
-    insightsSources = scRes || [];
-    insightsVisitors = vtRes || [];
-  } catch (err) {
-    console.error('Error fetching insights for dashboard:', err);
+  if (insightsChurch?.id) {
+    try {
+      const { getVisitorStats, getVisitorFunnel, getVisitorSources, getVisitors } = await import('@/lib/api');
+      const [stRes, fnRes, scRes, vtRes] = await Promise.all([
+        getVisitorStats(adminSb, insightsChurch.id).catch(() => null),
+        getVisitorFunnel(adminSb, insightsChurch.id).catch(() => []),
+        getVisitorSources(adminSb, insightsChurch.id).catch(() => []),
+        getVisitors(adminSb, insightsChurch.id).catch(() => []),
+      ]);
+      insightsStats = stRes;
+      insightsFunnel = fnRes || [];
+      insightsSources = scRes || [];
+      insightsVisitors = vtRes || [];
+    } catch (err) {
+      console.error('Error fetching insights for dashboard:', err);
+    }
   }
 
   return (
@@ -163,8 +198,8 @@ export default async function DashboardPage(props: DashboardPageProps) {
       pastorEnquiries={pastorEnquiries}
       initialSection={initialSection}
       insightsData={{
-        churchName: insightsChurch.name,
-        churchId: insightsChurch.id,
+        churchName: insightsChurch?.name || 'No Church Selected',
+        churchId: insightsChurch?.id || '',
         stats: insightsStats,
         funnel: insightsFunnel,
         sources: insightsSources,

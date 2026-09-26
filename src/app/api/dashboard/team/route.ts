@@ -1,13 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
 
+function isSuperAdmin(user: any): boolean {
+  if (!user) return false;
+  const email = (user.email || "").toLowerCase();
+  const superAdminEmails = (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (superAdminEmails.includes(email)) return true;
+  if (user.user_metadata?.role === "super_admin" || user.app_metadata?.role === "super_admin") return true;
+  return false;
+}
+
 /**
- * GET: List all provisioned team members across all churches / pastors
+ * GET: List team members scoped to current manager / caller (or all if super admin)
  */
 export async function GET() {
   try {
+    const callerSb = await createServerSupabaseClient();
+    const { data: { user: callerUser } } = await callerSb.auth.getUser();
+
+    if (!callerUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const supabase = createAdminClient();
     const { data: users, error } = await supabase.auth.admin.listUsers({ perPage: 1000 });
 
@@ -15,9 +36,23 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    const isCallerSuperAdmin = isSuperAdmin(callerUser);
+
     // Filter users who have team role metadata
     const teamUsers = (users.users || [])
-      .filter((u) => u.user_metadata?.is_team_member || u.user_metadata?.team_role)
+      .filter((u) => {
+        const hasTeamRole = u.user_metadata?.is_team_member || u.user_metadata?.team_role;
+        if (!hasTeamRole) return false;
+        // Don't show caller themselves in their own team list
+        if (u.id === callerUser.id) return false;
+
+        // If super admin, they can see all team members across the platform
+        if (isCallerSuperAdmin) return true;
+
+        // Regular listing managers should only see team members they invited/created
+        const invitedBy = u.user_metadata?.invited_by;
+        return invitedBy === callerUser.id;
+      })
       .map((u) => ({
         id: u.id,
         name: u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split("@")[0] || "Team Member",
@@ -42,6 +77,9 @@ export async function GET() {
  */
 export async function POST(req: NextRequest) {
   try {
+    const callerSb = await createServerSupabaseClient();
+    const { data: { user: callerUser } } = await callerSb.auth.getUser();
+
     const body = await req.json();
     const {
       name,
@@ -79,10 +117,11 @@ export async function POST(req: NextRequest) {
         full_name: name.trim(),
         name: name.trim(),
         is_team_member: true,
+        invited_by: callerUser?.id || null,
         team_role: role,
         role: "listing_manager", // base role allowing dashboard access
         assigned_churches: assignedChurches,
-        assigned_pastors: assignedPastors,
+        assignedPastors: assignedPastors,
         assigned_church_names: churchNames,
         assigned_pastor_names: pastorNames,
       },
