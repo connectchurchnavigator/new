@@ -79,19 +79,17 @@ function LoginForm() {
         });
 
         if (signInData?.session || signUpData?.session) {
-          setAuthStep(2);
-          router.replace(searchParams.get("next") || "/add-church");
+          window.location.href = searchParams.get("next") || "/dashboard";
         } else {
           setInfoMsg("📩 Confirmation email sent! Please check your inbox and click the activation link to complete registration.");
           setActiveTab("signin");
           setBusy(false);
         }
       } else {
-        setAuthStep(1);
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        setAuthStep(2);
-        router.replace(nextUrl);
+        // Direct instant navigation to dashboard or destination
+        window.location.href = nextUrl;
       }
     } catch (err: any) {
       setErrorMsg(err.message || "An error occurred during authentication.");
@@ -390,8 +388,8 @@ function LoginForm() {
           position: "fixed",
           inset: 0,
           zIndex: 9999,
-          background: "rgba(15, 23, 42, 0.75)",
-          backdropFilter: "blur(6px)",
+          background: "rgba(15, 23, 42, 0.6)",
+          backdropFilter: "blur(4px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -399,79 +397,34 @@ function LoginForm() {
         }}>
           <div style={{
             background: "#ffffff",
-            borderRadius: "24px",
-            padding: "40px 32px",
-            maxWidth: "420px",
+            borderRadius: "20px",
+            padding: "32px 28px",
+            maxWidth: "340px",
             width: "100%",
             textAlign: "center",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            boxShadow: "0 20px 40px -12px rgba(0, 0, 0, 0.25)",
             border: "1px solid #f1f5f9"
           }}>
-            {/* Animated Brand Icon */}
             <div style={{
-              width: "64px",
-              height: "64px",
-              margin: "0 auto 20px",
+              width: "52px",
+              height: "52px",
+              margin: "0 auto 16px",
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+              background: "#f3e8ff",
+              color: "#7c3aed",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 10px 25px -5px rgba(124, 58, 237, 0.4)"
             }}>
-              <i className="ti ti-sparkles" style={{ fontSize: "28px", color: "#ffffff" }}></i>
+              <i className="ti ti-loader-2" style={{ fontSize: "28px", animation: "cnSpin 0.7s linear infinite" }}></i>
             </div>
 
-            <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a", marginBottom: "6px" }}>
-              {activeTab === "signin" ? "Signing You In..." : "Creating Account..."}
+            <h3 style={{ fontSize: "17px", fontWeight: 800, color: "#0f172a", marginBottom: "4px" }}>
+              {activeTab === "signin" ? "Signing In..." : "Creating Account..."}
             </h3>
-            <p style={{ fontSize: "13.5px", color: "#64748b", margin: "0 0 24px" }}>
-              Please wait while we verify your credentials and launch your portal.
+            <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+              Redirecting you to your portal...
             </p>
-
-            {/* Dynamic Step Checklist */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", textAlign: "left", background: "#f8fafc", padding: "16px", borderRadius: "16px", border: "1px solid #e2e8f0" }}>
-              {[
-                { title: "Verifying email & password", icon: "ti-key" },
-                { title: "Retrieving user account & permissions", icon: "ti-user-check" },
-                { title: "Redirecting to portal...", icon: "ti-arrow-right" }
-              ].map((step, idx) => {
-                const isDone = authStep > idx;
-                const isCurrent = authStep === idx;
-                return (
-                  <div key={idx} style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    fontSize: "13px",
-                    fontWeight: isCurrent || isDone ? 700 : 500,
-                    color: isDone ? "#15803d" : isCurrent ? "#7c3aed" : "#94a3b8",
-                    transition: "all 0.3s"
-                  }}>
-                    <div style={{
-                      width: "22px",
-                      height: "22px",
-                      borderRadius: "50%",
-                      background: isDone ? "#dcfce7" : isCurrent ? "#f3e8ff" : "#f1f5f9",
-                      border: `1.5px solid ${isDone ? "#86efac" : isCurrent ? "#c084fc" : "#cbd5e1"}`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0
-                    }}>
-                      {isDone ? (
-                        <i className="ti ti-check" style={{ fontSize: "12px", color: "#16a34a" }}></i>
-                      ) : isCurrent ? (
-                        <i className="ti ti-loader-2" style={{ fontSize: "12px", color: "#7c3aed" }}></i>
-                      ) : (
-                        <span style={{ fontSize: "10px", color: "#94a3b8" }}>{idx + 1}</span>
-                      )}
-                    </div>
-                    <span>{step.title}</span>
-                  </div>
-                );
-              })}
-            </div>
           </div>
         </div>
       )}

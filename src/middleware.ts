@@ -37,14 +37,20 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
-
   const path = request.nextUrl.pathname;
   const isProtectedRoute =
     path.startsWith('/dashboard') ||
     path.startsWith('/onboarding') ||
     path.startsWith('/admin') ||
     (path.startsWith('/add-church') && !path.startsWith('/add-church-new'));
+  const isAuthRoute = path === '/login';
+
+  // Fast path for public routes: bypass external network auth check completely
+  if (!isProtectedRoute && !isAuthRoute) {
+    return response;
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();
@@ -58,7 +64,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // If user is already logged in and visits /login, redirect to next target or dashboard
-  if (user && path === '/login') {
+  if (user && isAuthRoute) {
     const next = request.nextUrl.searchParams.get('next') || '/dashboard';
     const redirectResponse = NextResponse.redirect(new URL(next, request.url));
     response.cookies.getAll().forEach((cookie) => {
