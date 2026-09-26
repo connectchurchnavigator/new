@@ -46,7 +46,7 @@ export default function ContactSection({ churchName, email, phone, address, soci
       if (result.success) {
         setSent(true);
         setTimeout(() => setSent(false), 4000);
-        e.currentTarget.reset();
+        (e.target as HTMLFormElement)?.reset();
       } else {
         setError(result.error || "Failed to send email");
       }
