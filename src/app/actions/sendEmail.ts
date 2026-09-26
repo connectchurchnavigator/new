@@ -18,7 +18,7 @@ export async function sendEmailAction(formData: FormData) {
      return { success: false, error: "Email service is temporarily unavailable. Please try again later." };
   }
 
-  const fromEmail = process.env.RESEND_FROM_EMAIL || "Church Navigator <onboarding@resend.dev>";
+  const fromEmail = process.env.RESEND_FROM_EMAIL || "ChurchNavigator <notifications@churchnavigator.com>";
   const resend = new Resend(process.env.RESEND_API_KEY);
 
   try {
