@@ -1,6 +1,7 @@
 "use server";
 
 import { Resend } from "resend";
+import { buildEnquiryReceivedEmail } from "@/emails/templates/enquiries";
 
 export async function sendEmailAction(formData: FormData) {
   const name = formData.get("name") as string;
@@ -21,19 +22,24 @@ export async function sendEmailAction(formData: FormData) {
   const fromEmail = process.env.RESEND_FROM_EMAIL || "ChurchNavigator <notifications@churchnavigator.com>";
   const resend = new Resend(process.env.RESEND_API_KEY);
 
+  // Generate the high-conversion, professional branded ChurchNavigator email template
+  const { html: emailHtml, subject: emailSubject } = buildEnquiryReceivedEmail({
+    recipientName: churchName || "Church Team",
+    senderName: name || "Website Visitor",
+    senderEmail: email,
+    subject: subject || "New Contact Message",
+    message: message,
+    entityName: churchName || "Church",
+    entityType: "church",
+  });
+
   try {
     let { data, error } = await resend.emails.send({
       from: fromEmail,
       to: [targetEmail],
       replyTo: email,
-      subject: `New message for ${churchName}: ${subject}`,
-      html: `
-        <h2>You have a new message from Church Navigator!</h2>
-        <p><strong>From:</strong> ${name} (${email})</p>
-        <p><strong>Subject:</strong> ${subject}</p>
-        <hr />
-        <p style="white-space: pre-wrap;">${message}</p>
-      `,
+      subject: `[ChurchNavigator] ${subject ? `${subject} - ` : ""}${churchName}`,
+      html: emailHtml,
     });
 
     // If Resend gives the testing domain restriction error, forward to admin/testing email so message is not lost
