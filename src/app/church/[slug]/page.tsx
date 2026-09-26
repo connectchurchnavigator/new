@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getChurchBySlug, searchChurches } from '@/lib/api';
 import { createAdminClient } from '@/lib/supabase-admin';
@@ -16,6 +17,40 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 import HeroHeader from '@/components/church-profile/HeroHeader';
 import Footer from '@/components/Footer';
 import './church.css';
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> | { slug: string } }): Promise<Metadata> {
+  const sb = createAdminClient();
+  const resolvedParams = await params;
+  const church = await getChurchBySlug(sb, resolvedParams.slug);
+  if (!church) return { title: 'Church Not Found — ChurchNavigator' };
+
+  const title = `${church.name} — ChurchNavigator`;
+  const description = church.about?.slice(0, 160) || `${church.name} in ${church.city || 'your area'} on ChurchNavigator.`;
+  const image = church.cover_url || church.logo_url || '/og-image.jpg';
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [
+        {
+          url: image,
+          width: 800,
+          height: 600,
+          alt: church.name,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    },
+  };
+}
 
 export default async function ChurchProfilePage({ params, searchParams }: { params: Promise<{ slug: string }> | { slug: string }, searchParams?: Promise<{ [key: string]: string | string[] | undefined }> | { [key: string]: string | string[] | undefined } }) {
   const sb = createAdminClient();

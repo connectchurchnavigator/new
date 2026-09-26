@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 import PastorSearch from './PastorSearch';
 
 export const metadata = {
-  title: 'Find a Pastor — Ekklesia',
+  title: 'Find a Pastor — ChurchNavigator',
   description: 'Browse and book pastors, ministers and speakers across the UK and beyond.',
 };
 

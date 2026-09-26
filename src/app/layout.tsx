@@ -8,15 +8,42 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ChurchNavigator",
-  description: "Find and list churches with ChurchNavigator",
+  metadataBase: new URL("https://www.churchnavigator.com"),
+  title: {
+    default: "ChurchNavigator — Discover Churches, Pastors & Faith Events",
+    template: "%s | ChurchNavigator",
+  },
+  description: "Find and connect with Christian churches, pastors, worship leaders, and faith events across the UK and worldwide on ChurchNavigator.",
   icons: {
     icon: [
-      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "32x32" },
       { url: "/favicon.png", type: "image/png" },
+      { url: "/icon.png", type: "image/png" },
     ],
-    shortcut: "/icon.png",
-    apple: "/icon.png",
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_GB",
+    url: "https://www.churchnavigator.com",
+    siteName: "ChurchNavigator",
+    title: "ChurchNavigator — Discover Churches, Pastors & Faith Events",
+    description: "Find and connect with Christian churches, pastors, worship leaders, and faith events.",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "ChurchNavigator",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ChurchNavigator — Discover Churches, Pastors & Faith Events",
+    description: "Find and connect with Christian churches, pastors, worship leaders, and faith events.",
+    images: ["/og-image.jpg"],
   },
 };
 

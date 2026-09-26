@@ -41,10 +41,33 @@ async function getWorshipLeader(slug: string) {
 export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const params = await props.params;
   const leader = await getWorshipLeader(params.slug);
-  if (!leader) return { title: 'Worship Leader not found — Ekklesia' };
+  if (!leader) return { title: 'Worship Leader not found — ChurchNavigator' };
+  
+  const title = `${leader.display_name} — ChurchNavigator`;
+  const description = leader.bio?.slice(0, 160) ?? `${leader.display_name} on ChurchNavigator`;
+  const image = leader.avatar_url || leader.cover_photo_urls?.[0] || '/og-image.jpg';
+
   return {
-    title: `${leader.display_name} — Ekklesia`,
-    description: leader.bio?.slice(0, 160) ?? `${leader.display_name}'s profile on Ekklesia`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [
+        {
+          url: image,
+          width: 800,
+          height: 600,
+          alt: leader.display_name,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    },
   };
 }
 

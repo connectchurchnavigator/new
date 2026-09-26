@@ -43,6 +43,7 @@ const STAGES = [
 
 const SOURCE_COLORS: Record<string, string> = {
   'Search': '#7c3aed',
+  'ChurchNavigator directory': '#f43f5e',
   'Ekklesia directory': '#f43f5e',
   'Shared links': '#2dd4bf',
   'Social media': '#f59e0b',

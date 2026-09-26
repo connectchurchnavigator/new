@@ -584,7 +584,7 @@ export default function DashboardClient({
   }, [insightsData]);
 
   const activePublicUrl = selectedOverviewEntity ? selectedOverviewEntity.publicUrl : allEntities[0]?.publicUrl || '/';
-  const origin = isMounted ? window.location.origin : 'https://ekklesia.app';
+  const origin = isMounted ? window.location.origin : 'https://www.churchnavigator.com';
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
     `${origin}${activePublicUrl}`
   )}&color=7c3aed`;

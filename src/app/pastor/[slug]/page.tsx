@@ -146,10 +146,33 @@ async function getPastor(slug: string): Promise<PastorProfile | null> {
 export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const params = await props.params;
   const pastor = await getPastor(params.slug);
-  if (!pastor) return { title: 'Pastor not found — Ekklesia' };
+  if (!pastor) return { title: 'Pastor not found — ChurchNavigator' };
+  
+  const title = `${pastor.full_name} — ChurchNavigator`;
+  const description = pastor.bio?.slice(0, 160) ?? `${pastor.full_name} on ChurchNavigator`;
+  const image = pastor.avatar_url || pastor.cover_photo_urls?.[0] || '/og-image.jpg';
+
   return {
-    title: `${pastor.full_name} — Ekklesia`,
-    description: pastor.bio?.slice(0, 160) ?? `${pastor.full_name}'s profile on Ekklesia`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [
+        {
+          url: image,
+          width: 800,
+          height: 600,
+          alt: pastor.full_name,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    },
   };
 }
 

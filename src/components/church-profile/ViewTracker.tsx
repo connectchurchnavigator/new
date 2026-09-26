@@ -25,7 +25,7 @@ export default function ViewTracker({ churchId }: { churchId: string }) {
     // Override if they came from directory search
     const params = new URLSearchParams(window.location.search);
     if (params.get('ref') === 'directory') {
-      source = 'Ekklesia directory';
+      source = 'ChurchNavigator directory';
     } else if (!document.referrer && !params.get('ref')) {
       source = 'Shared links'; // Fallback for direct traffic
     }
