@@ -38,7 +38,7 @@ export async function sendEmailAction(formData: FormData) {
       from: fromEmail,
       to: [targetEmail],
       replyTo: email,
-      subject: `[ChurchNavigator] ${subject ? `${subject} - ` : ""}${churchName}`,
+      subject: emailSubject || `[ChurchNavigator] New Enquiry regarding ${churchName}`,
       html: emailHtml,
     });
 

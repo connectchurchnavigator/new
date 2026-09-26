@@ -29,16 +29,28 @@ export function buildEnquiryReceivedEmail(props: EnquiryNotificationProps) {
     dashboardUrl = `${APP_BASE_URL}/dashboard?section=enquiries`,
   } = props;
 
+  // Determine clean entity label (Church Name, Pastor Name, Event Name, etc.)
+  const entityLabel =
+    entityType === "church"
+      ? "Church Name"
+      : entityType === "pastor"
+      ? "Pastor Name"
+      : entityType === "worship_leader"
+      ? "Leader Name"
+      : entityType === "event"
+      ? "Event Name"
+      : "Church Name";
+
   const contentHtml = `
     <p style="margin: 0 0 16px;">
-      Hello <strong>${recipientName}</strong>,
+      Hello,
     </p>
     <p style="margin: 0 0 20px;">
       You have received a new contact enquiry regarding <strong>${entityName}</strong> on ChurchNavigator.
     </p>
 
     <!-- Message Summary Card -->
-    <div style="background-color: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 18px 20px; margin-bottom: 22px;">
+    <div style="background-color: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 18px 20px; margin-bottom: 12px;">
       <table border="0" cellpadding="0" cellspacing="0" width="100%">
         <tr>
           <td style="padding-bottom: 8px; font-size: 13px; color: #64748b; font-weight: 700; width: 110px;">From:</td>
@@ -59,8 +71,8 @@ export function buildEnquiryReceivedEmail(props: EnquiryNotificationProps) {
             : ""
         }
         <tr>
-          <td style="padding-bottom: 8px; font-size: 13px; color: #64748b; font-weight: 700;">Regarding:</td>
-          <td style="padding-bottom: 8px; font-size: 14px; color: #0f172a; font-weight: 600;">${entityName} (${entityType})</td>
+          <td style="padding-bottom: 8px; font-size: 13px; color: #64748b; font-weight: 700;">${entityLabel}:</td>
+          <td style="padding-bottom: 8px; font-size: 14px; color: #0f172a; font-weight: 600;">${entityName}</td>
         </tr>
       </table>
 
@@ -68,34 +80,25 @@ export function buildEnquiryReceivedEmail(props: EnquiryNotificationProps) {
       <div style="margin-top: 14px; padding-top: 14px; border-top: 1px dashed #cbd5e1;">
         <div style="font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.05em;">Message Content:</div>
         <div style="background-color: #ffffff; padding: 14px; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 14px; color: #334155; line-height: 1.6; white-space: pre-wrap;">
-"${message}"
+${message}
         </div>
       </div>
     </div>
-
-    <p style="margin: 0; font-size: 13px; color: #64748b;">
-      You can reply directly to <a href="mailto:${senderEmail}" style="color: #7c3aed; font-weight: 700;">${senderEmail}</a> or manage all your incoming visitor leads inside your ChurchNavigator dashboard.
-    </p>
   `;
 
   const html = renderEmailLayout({
-    title: "New Enquiry Received",
-    previewText: `${senderName} sent an enquiry regarding ${entityName}`,
+    title: "New Contact Enquiry",
+    previewText: `New enquiry regarding ${entityName} from ${senderName}`,
     badge: {
       text: "Incoming Message",
       bg: "#fef3c7",
       color: "#b45309",
     },
     contentHtml,
-    cta: {
-      text: "View & Reply in Dashboard",
-      url: dashboardUrl,
-      bg: "#7c3aed",
-    },
   });
 
   return {
-    subject: `[ChurchNavigator] New Enquiry from ${senderName} - ${entityName}`,
+    subject: `[ChurchNavigator] New Enquiry regarding ${entityName} from ${senderName}`,
     html,
   };
 }
