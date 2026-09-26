@@ -16,7 +16,7 @@ export async function POST(
 
   const { data: pastor, error: pastorError } = await supabase
     .from('pastors')
-    .select('id, name, full_name, email, contact_email')
+    .select('id, full_name, email')
     .eq('slug', params.slug)
     .eq('is_published', true)
     .maybeSingle();
@@ -52,38 +52,36 @@ export async function POST(
     return NextResponse.json({ error: 'Failed to submit enquiry' }, { status: 500 });
   }
 
-  // Asynchronously dispatch Resend email notifications (non-blocking)
-  (async () => {
-    try {
-      const { sendEnquiryNotificationEmail, sendEnquiryReceiptEmail } = await import('@/emails');
-      const pastorName = pastor.name || 'Pastor';
-      const recipientEmail = pastor.email || pastor.contact_email;
+  // Dispatch Resend email notifications
+  try {
+    const { sendEnquiryNotificationEmail, sendEnquiryReceiptEmail } = await import('@/emails');
+    const pastorName = pastor.full_name || 'Pastor';
+    const recipientEmail = pastor.email;
 
-      // 1. Email notification to pastor/church
-      if (recipientEmail) {
-        await sendEnquiryNotificationEmail(recipientEmail, {
-          recipientName: pastorName,
-          senderName: parsed.data.sender_name,
-          senderEmail: parsed.data.sender_email,
-          subject: parsed.data.event_type ? `Enquiry regarding ${parsed.data.event_type}` : undefined,
-          message: parsed.data.message,
-          entityName: pastorName,
-          entityType: 'pastor',
-        });
-      }
-
-      // 2. Instant receipt back to the visitor
-      if (parsed.data.sender_email) {
-        await sendEnquiryReceiptEmail(parsed.data.sender_email, {
-          senderName: parsed.data.sender_name,
-          entityName: pastorName,
-          message: parsed.data.message,
-        });
-      }
-    } catch (emailErr) {
-      console.error('[Email Notification Error]', emailErr);
+    // 1. Email notification to pastor
+    if (recipientEmail) {
+      await sendEnquiryNotificationEmail(recipientEmail, {
+        recipientName: pastorName,
+        senderName: parsed.data.sender_name,
+        senderEmail: parsed.data.sender_email,
+        subject: parsed.data.event_type ? `Enquiry regarding ${parsed.data.event_type}` : undefined,
+        message: parsed.data.message,
+        entityName: pastorName,
+        entityType: 'pastor',
+      });
     }
-  })();
+
+    // 2. Instant receipt back to the visitor
+    if (parsed.data.sender_email) {
+      await sendEnquiryReceiptEmail(parsed.data.sender_email, {
+        senderName: parsed.data.sender_name,
+        entityName: pastorName,
+        message: parsed.data.message,
+      });
+    }
+  } catch (emailErr) {
+    console.error('[Email Notification Error]', emailErr);
+  }
 
   return NextResponse.json({ success: true }, { status: 201 });
 }
