@@ -641,6 +641,46 @@ export default function DashboardClient({
   // Live booked attendees map from localStorage: { [eventId]: number }
   const [localEventBookings, setLocalEventBookings] = useState<Record<string, number>>({});
 
+  // Attendees Roster Modal State
+  const [attendeeModalEvent, setAttendeeModalEvent] = useState<any | null>(null);
+  const [attendeeModalList, setAttendeeModalList] = useState<any[]>([]);
+  const [isAttendeeModalOpen, setIsAttendeeModalOpen] = useState(false);
+
+  const openAttendeesModal = (ev: any) => {
+    setAttendeeModalEvent(ev);
+    try {
+      const storageKey = `cn_event_bookings_${ev.id}`;
+      const localList = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      setAttendeeModalList(localList);
+    } catch {
+      setAttendeeModalList([]);
+    }
+    setIsAttendeeModalOpen(true);
+  };
+
+  const exportAttendeesCSV = () => {
+    if (!attendeeModalEvent || attendeeModalList.length === 0) return;
+    const headers = ['SNo', 'Date of Purchase', 'Name', 'Email', 'Phone', 'Seats Reserved', 'Ticket Type'];
+    const rows = attendeeModalList.map((a, idx) => [
+      idx + 1,
+      a.created_at ? new Date(a.created_at).toLocaleDateString('en-GB') : '—',
+      `"${(a.name || '').replace(/"/g, '""')}"`,
+      `"${(a.email || '').replace(/"/g, '""')}"`,
+      `"${(a.phone || '').replace(/"/g, '""')}"`,
+      a.party_size || 1,
+      `"${(a.ticket_name || 'RSVP').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `${(attendeeModalEvent.title || 'event').replace(/[^a-z0-9]/gi, '_')}_attendees.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   useEffect(() => {
     const loadBookings = () => {
       try {
@@ -5427,89 +5467,121 @@ export default function DashboardClient({
                               {/* Actions: Direct Edit & View Live */}
                               <td style={{ padding: '16px 22px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                                  {/* Direct Edit Button */}
-                                  <Link
-                                    href={`/onboarding/events?id=${ev.id}`}
-                                    style={{
-                                      background: '#16a34a',
-                                      color: '#ffffff',
-                                      padding: '7px 13px',
-                                      borderRadius: '9px',
-                                      fontSize: '12px',
-                                      fontWeight: 800,
-                                      textDecoration: 'none',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '5px',
-                                      boxShadow: '0 1px 3px rgba(22, 163, 74, 0.2)',
-                                      transition: 'background-color 0.15s ease',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#15803d';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#16a34a';
-                                    }}
-                                  >
-                                    <i className="ti ti-edit" style={{ fontSize: '13px' }}></i>
-                                    Edit
-                                  </Link>
+                                  {/* View Attendees Button */}
+                                   <button
+                                     type="button"
+                                     onClick={() => openAttendeesModal(ev)}
+                                     title="View Attendees Roster"
+                                     style={{
+                                       background: '#f0fdf4',
+                                       color: '#16a34a',
+                                       border: '1px solid #bbf7d0',
+                                       padding: '7px 11px',
+                                       borderRadius: '9px',
+                                       fontSize: '12px',
+                                       fontWeight: 700,
+                                       cursor: 'pointer',
+                                       display: 'inline-flex',
+                                       alignItems: 'center',
+                                       gap: '5px',
+                                       transition: 'all 0.15s ease',
+                                     }}
+                                     onMouseEnter={(e) => {
+                                       e.currentTarget.style.backgroundColor = '#dcfce7';
+                                       e.currentTarget.style.borderColor = '#86efac';
+                                     }}
+                                     onMouseLeave={(e) => {
+                                       e.currentTarget.style.backgroundColor = '#f0fdf4';
+                                       e.currentTarget.style.borderColor = '#bbf7d0';
+                                     }}
+                                   >
+                                     <i className="ti ti-users" style={{ fontSize: '13px' }}></i>
+                                     <span>Attendees</span>
+                                   </button>
 
-                                  {/* Quick Drawer Edit Button */}
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      openDrawerForEntity({
-                                        id: ev.id,
-                                        title: ev.title,
-                                        type: 'event',
-                                        typeLabel: 'Event',
-                                        raw: ev,
-                                      })
-                                    }
-                                    title="Quick Edit Details"
-                                    style={{
-                                      background: '#f1f5f9',
-                                      color: '#475569',
-                                      border: '1px solid #cbd5e1',
-                                      padding: '7px 9px',
-                                      borderRadius: '9px',
-                                      fontSize: '12px',
-                                      fontWeight: 700,
-                                      cursor: 'pointer',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                    }}
-                                  >
-                                    <i className="ti ti-adjustments" style={{ fontSize: '13px' }}></i>
-                                  </button>
+                                   {/* Direct Edit Button */}
+                                   <Link
+                                     href={`/onboarding/events?id=${ev.id}`}
+                                     style={{
+                                       background: '#16a34a',
+                                       color: '#ffffff',
+                                       padding: '7px 13px',
+                                       borderRadius: '9px',
+                                       fontSize: '12px',
+                                       fontWeight: 800,
+                                       textDecoration: 'none',
+                                       display: 'inline-flex',
+                                       alignItems: 'center',
+                                       gap: '5px',
+                                       boxShadow: '0 1px 3px rgba(22, 163, 74, 0.2)',
+                                       transition: 'background-color 0.15s ease',
+                                     }}
+                                     onMouseEnter={(e) => {
+                                       e.currentTarget.style.backgroundColor = '#15803d';
+                                     }}
+                                     onMouseLeave={(e) => {
+                                       e.currentTarget.style.backgroundColor = '#16a34a';
+                                     }}
+                                   >
+                                     <i className="ti ti-edit" style={{ fontSize: '13px' }}></i>
+                                     Edit
+                                   </Link>
 
-                                  {/* View Live Page */}
-                                  <Link
-                                    href={`/events/${ev.slug || ev.id}`}
-                                    target="_blank"
-                                    style={{
-                                      background: '#ffffff',
-                                      color: '#475569',
-                                      border: '1px solid #cbd5e1',
-                                      padding: '7px 11px',
-                                      borderRadius: '9px',
-                                      fontSize: '12px',
-                                      fontWeight: 700,
-                                      textDecoration: 'none',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                    }}
-                                  >
-                                    <span>View</span>
-                                    <i className="ti ti-external-link" style={{ fontSize: '12px' }}></i>
-                                  </Link>
-                                </div>
-                              </td>
-                            </tr>
-                          );
+                                   {/* Quick Drawer Edit Button */}
+                                   <button
+                                     type="button"
+                                     onClick={() =>
+                                       openDrawerForEntity({
+                                         id: ev.id,
+                                         title: ev.title,
+                                         type: 'event',
+                                         typeLabel: 'Event',
+                                         raw: ev,
+                                       })
+                                     }
+                                     title="Quick Edit Details"
+                                     style={{
+                                       background: '#f1f5f9',
+                                       color: '#475569',
+                                       border: '1px solid #cbd5e1',
+                                       padding: '7px 9px',
+                                       borderRadius: '9px',
+                                       fontSize: '12px',
+                                       fontWeight: 700,
+                                       cursor: 'pointer',
+                                       display: 'inline-flex',
+                                       alignItems: 'center',
+                                       justifyContent: 'center',
+                                     }}
+                                   >
+                                     <i className="ti ti-adjustments" style={{ fontSize: '13px' }}></i>
+                                   </button>
+
+                                   {/* View Live Page */}
+                                   <Link
+                                     href={`/events/${ev.slug || ev.id}`}
+                                     target="_blank"
+                                     style={{
+                                       background: '#ffffff',
+                                       color: '#475569',
+                                       border: '1px solid #cbd5e1',
+                                       padding: '7px 11px',
+                                       borderRadius: '9px',
+                                       fontSize: '12px',
+                                       fontWeight: 700,
+                                       textDecoration: 'none',
+                                       display: 'inline-flex',
+                                       alignItems: 'center',
+                                       gap: '4px',
+                                     }}
+                                   >
+                                     <span>View</span>
+                                     <i className="ti ti-external-link" style={{ fontSize: '12px' }}></i>
+                                   </Link>
+                                 </div>
+                               </td>
+                             </tr>
+                           );
                         })
                       )}
                     </tbody>
@@ -7198,6 +7270,271 @@ export default function DashboardClient({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* EVENT ATTENDEES ROSTER MODAL */}
+      {isAttendeeModalOpen && attendeeModalEvent && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(5px)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsAttendeeModalOpen(false);
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '24px',
+              maxWidth: '840px',
+              width: '100%',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              overflow: 'hidden',
+              border: '1px solid #e2e8f0',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '22px 28px',
+                borderBottom: '1px solid #f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#fafafa',
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      background: '#dcfce7',
+                      color: '#16a34a',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                    }}
+                  >
+                    <i className="ti ti-users"></i>
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Attendee Roster
+                  </h3>
+                </div>
+                <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0' }}>
+                  {attendeeModalEvent.title || 'Event'} • {attendeeModalList.reduce((acc, curr) => acc + (Number(curr.party_size) || 1), 0)} total attendee(s) registered
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {attendeeModalList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={exportAttendeesCSV}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      background: '#ffffff',
+                      color: '#0f172a',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    }}
+                  >
+                    <i className="ti ti-download" style={{ fontSize: '14px', color: '#16a34a' }}></i>
+                    Download CSV
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsAttendeeModalOpen(false)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: '#f1f5f9',
+                    border: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                  }}
+                >
+                  <i className="ti ti-x" style={{ fontSize: '16px' }}></i>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body / Table */}
+            <div style={{ padding: '24px 28px', overflowY: 'auto', flex: 1 }}>
+              {attendeeModalList.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '48px 20px', color: '#64748b' }}>
+                  <div
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '50%',
+                      background: '#f1f5f9',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto 12px',
+                      fontSize: '24px',
+                      color: '#94a3b8',
+                    }}
+                  >
+                    <i className="ti ti-ticket-off"></i>
+                  </div>
+                  <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
+                    No Registered Attendees Yet
+                  </h4>
+                  <p style={{ fontSize: '13px', margin: 0, maxWidth: '380px', marginInline: 'auto' }}>
+                    When visitors register or RSVP directly on your event page, their full name, email, and phone number will appear right here in real time.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ border: '1px solid #f1f5f9', borderRadius: '16px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        <th style={{ padding: '12px 16px', width: '50px' }}>S.No</th>
+                        <th style={{ padding: '12px 16px' }}>Date</th>
+                        <th style={{ padding: '12px 16px' }}>Name</th>
+                        <th style={{ padding: '12px 16px' }}>Email</th>
+                        <th style={{ padding: '12px 16px' }}>Phone</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'center' }}>Seats</th>
+                        <th style={{ padding: '12px 16px' }}>Ticket Type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {attendeeModalList.map((item, idx) => {
+                        const dateStr = item.created_at
+                          ? new Date(item.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                          : '—';
+                        return (
+                          <tr
+                            key={item.id || idx}
+                            style={{
+                              borderBottom: idx === attendeeModalList.length - 1 ? 'none' : '1px solid #f1f5f9',
+                              backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fafafa',
+                            }}
+                          >
+                            <td style={{ padding: '12px 16px', fontWeight: 700, color: '#64748b' }}>
+                              {idx + 1}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#475569', whiteSpace: 'nowrap' }}>
+                              {dateStr}
+                            </td>
+                            <td style={{ padding: '12px 16px', fontWeight: 800, color: '#0f172a' }}>
+                              {item.name || 'Anonymous'}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#2563eb' }}>
+                              {item.email ? (
+                                <a href={`mailto:${item.email}`} style={{ color: '#2563eb', textDecoration: 'none' }}>
+                                  {item.email}
+                                </a>
+                              ) : '—'}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#475569' }}>
+                              {item.phone && item.phone !== '—' ? (
+                                <a href={`tel:${item.phone}`} style={{ color: '#475569', textDecoration: 'none' }}>
+                                  {item.phone}
+                                </a>
+                              ) : (
+                                <span style={{ color: '#94a3b8' }}>—</span>
+                              )}
+                            </td>
+                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                              <span
+                                style={{
+                                  display: 'inline-block',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  backgroundColor: '#f1f5f9',
+                                  color: '#0f172a',
+                                  fontWeight: 800,
+                                  fontSize: '12px',
+                                }}
+                              >
+                                {item.party_size || 1}
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  padding: '3px 9px',
+                                  borderRadius: '12px',
+                                  backgroundColor: item.ticket_name?.toLowerCase().includes('free') ? '#f0fdf4' : '#eff6ff',
+                                  color: item.ticket_name?.toLowerCase().includes('free') ? '#16a34a' : '#2563eb',
+                                  fontSize: '11.5px',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {item.ticket_name || 'Free RSVP'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '16px 28px',
+                borderTop: '1px solid #f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                background: '#fafafa',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setIsAttendeeModalOpen(false)}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  background: '#0f172a',
+                  color: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

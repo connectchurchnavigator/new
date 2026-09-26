@@ -23,6 +23,13 @@ export default function EventClientView({ slug }: EventClientViewProps) {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [activeDayTab, setActiveDayTab] = useState<number>(1);
 
+  // Elegant RSVP attendee details modal state
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [attendeeName, setAttendeeName] = useState("");
+  const [attendeeEmail, setAttendeeEmail] = useState("");
+  const [attendeePhone, setAttendeePhone] = useState("");
+  const [registerSuccess, setRegisterSuccess] = useState(false);
+
   useEffect(() => {
     async function fetchEvent() {
       try {
@@ -864,33 +871,15 @@ export default function EventClientView({ slug }: EventClientViewProps) {
                 const currentTicket = tickets[selectedTicket];
                 const bookingUrl = currentTicket?.booking_url || currentTicket?.bookingUrl;
                 if (bookingUrl) {
+                  // Direct external redirect — no confirmations here or in dashboard
                   window.open(bookingUrl, "_blank");
                 } else {
-                  setRegisteredCount(prev => prev + seatQuantity);
-                  // Persist booking to localStorage for live dashboard sync
-                  try {
-                    const eventId = eventData?.id;
-                    if (eventId && typeof window !== "undefined") {
-                      const storageKey = `cn_event_bookings_${eventId}`;
-                      const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
-                      existing.push({
-                        id: `book_${Date.now()}`,
-                        event_id: eventId,
-                        party_size: seatQuantity,
-                        ticket_name: currentTicket?.name || (selectedTicket === 1 ? "Paid" : "Free RSVP"),
-                        created_at: new Date().toISOString()
-                      });
-                      localStorage.setItem(storageKey, JSON.stringify(existing));
-
-                      // Also maintain an index of all booked events
-                      const allBookedEvents = JSON.parse(localStorage.getItem("cn_all_event_bookings") || "{}");
-                      allBookedEvents[eventId] = (allBookedEvents[eventId] || 0) + seatQuantity;
-                      localStorage.setItem("cn_all_event_bookings", JSON.stringify(allBookedEvents));
-                    }
-                  } catch (e) {
-                    console.error("Failed to save booking:", e);
-                  }
-                  alert(`Thank you for registering! Reserved ${seatQuantity} seat${seatQuantity > 1 ? "s" : ""}.`);
+                  // Internal registration: Open beautiful modal to collect Name, Email, Phone
+                  setAttendeeName("");
+                  setAttendeeEmail("");
+                  setAttendeePhone("");
+                  setRegisterSuccess(false);
+                  setShowRegisterModal(true);
                 }
               }}
               style={{
@@ -1080,6 +1069,266 @@ export default function EventClientView({ slug }: EventClientViewProps) {
             >
               <i className="ti ti-share" style={{ fontSize: "15px" }}></i> {copied ? "Link Copied!" : "Share Link"}
             </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ATTENDEE DETAILS RSVP MODAL */}
+      {showRegisterModal && typeof document !== "undefined" && createPortal(
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.7)",
+            backdropFilter: "blur(6px)",
+            zIndex: 99999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowRegisterModal(false);
+          }}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "24px",
+              padding: "32px 28px",
+              maxWidth: "460px",
+              width: "100%",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
+              position: "relative",
+              border: "1px solid #f1f5f9"
+            }}
+          >
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setShowRegisterModal(false)}
+              style={{
+                position: "absolute",
+                top: "18px",
+                right: "18px",
+                width: "32px",
+                height: "32px",
+                borderRadius: "50%",
+                background: "#f1f5f9",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: "#64748b"
+              }}
+            >
+              <i className="ti ti-x" style={{ fontSize: "16px" }}></i>
+            </button>
+
+            {!registerSuccess ? (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "14px",
+                      background: "linear-gradient(135deg, #e11d48 0%, #7c3aed 100%)",
+                      color: "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "20px",
+                      flexShrink: 0
+                    }}
+                  >
+                    <i className="ti ti-ticket"></i>
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: "19px", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                      Complete Registration
+                    </h3>
+                    <p style={{ fontSize: "13px", color: "#64748b", margin: "2px 0 0" }}>
+                      Reserving {seatQuantity} seat{seatQuantity > 1 ? "s" : ""} for {tickets[selectedTicket]?.name || (selectedTicket === 1 ? "Paid" : "Free RSVP")}
+                    </p>
+                  </div>
+                </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!attendeeName.trim() || !attendeeEmail.trim()) return;
+
+                    const currentTicket = tickets[selectedTicket];
+                    const eventId = eventData?.id;
+
+                    if (eventId && typeof window !== "undefined") {
+                      try {
+                        const storageKey = `cn_event_bookings_${eventId}`;
+                        const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
+                        existing.push({
+                          id: `book_${Date.now()}`,
+                          event_id: eventId,
+                          party_size: seatQuantity,
+                          name: attendeeName.trim(),
+                          email: attendeeEmail.trim(),
+                          phone: attendeePhone.trim() || "—",
+                          ticket_name: currentTicket?.name || (selectedTicket === 1 ? "Paid" : "Free RSVP"),
+                          created_at: new Date().toISOString()
+                        });
+                        localStorage.setItem(storageKey, JSON.stringify(existing));
+
+                        // Maintain master registry of booked events
+                        const allBookedEvents = JSON.parse(localStorage.getItem("cn_all_event_bookings") || "{}");
+                        allBookedEvents[eventId] = (allBookedEvents[eventId] || 0) + seatQuantity;
+                        localStorage.setItem("cn_all_event_bookings", JSON.stringify(allBookedEvents));
+
+                        // Dispatch storage event for instant live sync across windows/tabs
+                        window.dispatchEvent(new Event("storage"));
+                      } catch (err) {
+                        console.error("Failed to store booking:", err);
+                      }
+                    }
+
+                    setRegisteredCount(prev => prev + seatQuantity);
+                    setRegisterSuccess(true);
+                  }}
+                  style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "18px" }}
+                >
+                  <div>
+                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                      Full Name <span style={{ color: "#e11d48" }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. John Doe"
+                      value={attendeeName}
+                      onChange={(e) => setAttendeeName(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "11px 14px",
+                        borderRadius: "12px",
+                        border: "1.5px solid #cbd5e1",
+                        fontSize: "14px",
+                        outline: "none",
+                        color: "#0f172a"
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                      Email Address <span style={{ color: "#e11d48" }}>*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. john@example.com"
+                      value={attendeeEmail}
+                      onChange={(e) => setAttendeeEmail(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "11px 14px",
+                        borderRadius: "12px",
+                        border: "1.5px solid #cbd5e1",
+                        fontSize: "14px",
+                        outline: "none",
+                        color: "#0f172a"
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                      Phone Number <span style={{ color: "#94a3b8", fontWeight: 500 }}>(Optional)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. +44 7911 123456"
+                      value={attendeePhone}
+                      onChange={(e) => setAttendeePhone(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "11px 14px",
+                        borderRadius: "12px",
+                        border: "1.5px solid #cbd5e1",
+                        fontSize: "14px",
+                        outline: "none",
+                        color: "#0f172a"
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    style={{
+                      marginTop: "8px",
+                      width: "100%",
+                      padding: "13px",
+                      borderRadius: "12px",
+                      background: "linear-gradient(135deg, #e11d48 0%, #7c3aed 100%)",
+                      color: "#fff",
+                      fontSize: "15px",
+                      fontWeight: 800,
+                      border: "none",
+                      cursor: "pointer",
+                      boxShadow: "0 8px 20px -6px rgba(225, 29, 72, 0.4)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px"
+                    }}
+                  >
+                    <i className="ti ti-check" style={{ fontSize: "16px" }}></i>
+                    Confirm Reservation
+                  </button>
+                </form>
+              </>
+            ) : (
+              <div style={{ textAlign: "center", padding: "20px 8px" }}>
+                <div
+                  style={{
+                    width: "60px",
+                    height: "60px",
+                    borderRadius: "50%",
+                    background: "#dcfce7",
+                    color: "#16a34a",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "30px",
+                    margin: "0 auto 16px"
+                  }}
+                >
+                  <i className="ti ti-check"></i>
+                </div>
+                <h3 style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a", marginBottom: "6px" }}>
+                  Registration Confirmed!
+                </h3>
+                <p style={{ fontSize: "14px", color: "#64748b", margin: "0 0 20px", lineHeight: 1.5 }}>
+                  Thank you, <strong>{attendeeName}</strong>! Your {seatQuantity} seat{seatQuantity > 1 ? "s" : ""} have been reserved for <strong>{eventData?.title}</strong>.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowRegisterModal(false)}
+                  style={{
+                    padding: "10px 24px",
+                    borderRadius: "12px",
+                    background: "#7c3aed",
+                    color: "#fff",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    border: "none",
+                    cursor: "pointer"
+                  }}
+                >
+                  Done
+                </button>
+              </div>
+            )}
           </div>
         </div>,
         document.body
