@@ -547,11 +547,13 @@ export default function DashboardClient({
     setIsMounted(true);
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get('tab');
-      if (tabParam === 'my-profile') {
+      const tabParam = params.get('tab') || params.get('section');
+      if (tabParam === 'my-profile' || tabParam === 'profile') {
         setSection('my-profile');
-      } else if (tabParam === 'visitor-insights') {
+      } else if (tabParam === 'visitor-insights' || tabParam === 'insights') {
         setSection('visitor-insights');
+      } else if (tabParam === 'users' || tabParam === 'team') {
+        setSection('users');
       } else if (tabParam === 'overview') {
         setSection('overview');
       }
@@ -1774,8 +1776,7 @@ export default function DashboardClient({
             { id: 'worship-leaders', label: 'Worship leaders', icon: 'ti-microphone-2', unread: null, allowed: !isTeamMember },
             { id: 'events', label: 'Events', icon: 'ti-calendar-event', unread: null, allowed: true },
             { id: 'enquiries', label: 'Enquiries', icon: 'ti-mail', unread: unreadEnquiriesCount, allowed: !isTeamMember || teamRole === 'events_and_church_edit' },
-            // Users / Team management hidden for the time being:
-            // { id: 'users', label: 'Users', icon: 'ti-users', unread: null, allowed: !isTeamMember },
+            { id: 'users', label: 'Users & Team', icon: 'ti-users', unread: null, allowed: true },
           ].filter(item => item.allowed).map((item) => {
             const isSel = section === item.id;
             return (
@@ -2057,6 +2058,33 @@ export default function DashboardClient({
                 >
                   <i className="ti ti-user" style={{ fontSize: '16px', color: '#7c3aed' }}></i>
                   My Profile
+                </button>
+
+                {/* 2b. Users & Team */}
+                <button
+                  onClick={() => {
+                    setSection('users');
+                    setIsUserMenuOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '9px 12px',
+                    borderRadius: '10px',
+                    fontSize: '13.5px',
+                    fontWeight: 600,
+                    color: section === 'users' ? '#7c3aed' : '#334155',
+                    background: section === 'users' ? '#faf5ff' : 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    textAlign: 'left',
+                  }}
+                >
+                  <i className="ti ti-users" style={{ fontSize: '16px', color: '#7c3aed' }}></i>
+                  Users & Team
                 </button>
 
                 {/* 3. Super Admin (Restricted strictly to super administrators) */}
