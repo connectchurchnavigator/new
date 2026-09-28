@@ -1571,24 +1571,39 @@ export default function DashboardClient({
     const nextStatus: 'published' | 'unpublished' = item.status === 'published' ? 'unpublished' : 'published';
     setIsTogglingStatusId(item.id);
     try {
-      const supabase = createClient();
-      const tableName = item.type === 'church' ? 'churches'
-        : item.type === 'pastor' ? 'pastors'
-        : item.type === 'worship-leader' ? 'worship_leaders'
-        : 'events';
-
-      const dbStatus = nextStatus === 'published' ? 'published' : 'draft';
-      const { error } = await supabase.from(tableName).update({ status: dbStatus }).eq('id', item.rawId);
-      if (error) {
-        console.warn('Status update warning (might lack permission or column):', error.message);
+      if (item.type === 'church') {
+        await fetch('/api/admin/churches', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ churchId: item.rawId, status: nextStatus }),
+        });
+      } else if (item.type === 'pastor') {
+        await fetch('/api/admin/pastors', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pastorId: item.rawId, is_published: nextStatus === 'published' }),
+        });
+      } else if (item.type === 'worship-leader') {
+        await fetch('/api/admin/worship-leaders', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ worshipLeaderId: item.rawId, is_published: nextStatus === 'published' }),
+        });
+      } else if (item.type === 'event') {
+        await fetch('/api/admin/events', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId: item.rawId, status: nextStatus === 'published' ? 'published' : 'draft' }),
+        });
       }
+
       setStatusOverrides((prev) => ({
         ...prev,
         [item.id]: nextStatus,
       }));
+      router.refresh();
     } catch (e: any) {
       console.error('Error toggling status:', e);
-      // Still update UI override for snappy response
       setStatusOverrides((prev) => ({
         ...prev,
         [item.id]: nextStatus,
@@ -1603,6 +1618,26 @@ export default function DashboardClient({
     setItemToDelete(item);
     setDeletePassword('');
     setDeleteError(null);
+  };
+
+  // Helper to delete an entity through the admin API
+  const deleteSingleEntity = async (type: string, rawId: string) => {
+    let url = '';
+    if (type === 'church') {
+      url = `/api/admin/churches?churchId=${encodeURIComponent(rawId)}`;
+    } else if (type === 'pastor') {
+      url = `/api/admin/pastors?pastorId=${encodeURIComponent(rawId)}`;
+    } else if (type === 'worship-leader') {
+      url = `/api/admin/worship-leaders?worshipLeaderId=${encodeURIComponent(rawId)}`;
+    } else {
+      url = `/api/admin/events?eventId=${encodeURIComponent(rawId)}`;
+    }
+
+    const res = await fetch(url, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Failed to delete ${type}`);
+    }
   };
 
   // Confirm delete with profile password
@@ -1633,40 +1668,26 @@ export default function DashboardClient({
         }
       }
 
-      // Delete from the corresponding table
+      // Delete via secure server-side admin API routes (bypasses browser RLS and handles child cascading)
       if (itemToDelete.isBulk && Array.isArray(itemToDelete.items)) {
         for (const it of itemToDelete.items) {
-          const tableName = it.type === 'church' ? 'churches'
-            : it.type === 'pastor' ? 'pastors'
-            : it.type === 'worship-leader' ? 'worship_leaders'
-            : 'events';
-          await supabase.from(tableName).delete().eq('id', it.rawId);
+          await deleteSingleEntity(it.type, it.rawId);
         }
         const idsToRemove = itemToDelete.items.map((i: any) => i.id);
         setDeletedListingIds((prev) => [...prev, ...idsToRemove]);
         setSelectedAllIds([]);
       } else {
-        const tableName = itemToDelete.type === 'church' ? 'churches'
-          : itemToDelete.type === 'pastor' ? 'pastors'
-          : itemToDelete.type === 'worship-leader' ? 'worship_leaders'
-          : 'events';
-
-        const { error: delError } = await supabase
-          .from(tableName)
-          .delete()
-          .eq('id', itemToDelete.rawId);
-
-        if (delError) {
-          console.warn('DB delete warning:', delError.message);
-        }
+        await deleteSingleEntity(itemToDelete.type, itemToDelete.rawId);
 
         // Mark as deleted in local state
         setDeletedListingIds((prev) => [...prev, itemToDelete.id]);
         setSelectedAllIds((prev) => prev.filter((id) => id !== itemToDelete.id));
       }
+
       setItemToDelete(null);
       setDeletePassword('');
       setDeleteError(null);
+      router.refresh();
     } catch (err: any) {
       setDeleteError(err.message || 'Failed to delete listing.');
     } finally {
@@ -1679,21 +1700,41 @@ export default function DashboardClient({
     if (selectedAllIds.length === 0) return;
     const targets = filteredAllListings.filter((l) => selectedAllIds.includes(l.id));
     const newOverrides: Record<string, 'published' | 'unpublished'> = { ...statusOverrides };
-    const supabase = createClient();
     for (const item of targets) {
       newOverrides[item.id] = 'unpublished';
-      const tableName = item.type === 'church' ? 'churches'
-        : item.type === 'pastor' ? 'pastors'
-        : item.type === 'worship-leader' ? 'worship_leaders'
-        : 'events';
       try {
-        await supabase.from(tableName).update({ status: 'draft' }).eq('id', item.rawId);
+        if (item.type === 'church') {
+          await fetch('/api/admin/churches', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ churchId: item.rawId, status: 'unpublished' }),
+          });
+        } else if (item.type === 'pastor') {
+          await fetch('/api/admin/pastors', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pastorId: item.rawId, is_published: false }),
+          });
+        } else if (item.type === 'worship-leader') {
+          await fetch('/api/admin/worship-leaders', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ worshipLeaderId: item.rawId, is_published: false }),
+          });
+        } else if (item.type === 'event') {
+          await fetch('/api/admin/events', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ eventId: item.rawId, status: 'draft' }),
+          });
+        }
       } catch {
         // Continue for next items
       }
     }
     setStatusOverrides(newOverrides);
     setSelectedAllIds([]);
+    router.refresh();
   };
 
   const handleBulkDeleteRequest = () => {

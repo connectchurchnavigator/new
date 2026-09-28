@@ -44,6 +44,23 @@ export async function DELETE(req: NextRequest) {
     }
 
     const supabase = createAdminClient();
+
+    // Clean up dependent child rows before deleting the church
+    await Promise.allSettled([
+      supabase.from("church_services").delete().eq("church_id", churchId),
+      supabase.from("leaders").delete().eq("church_id", churchId),
+      supabase.from("teams").delete().eq("church_id", churchId),
+      supabase.from("visitors").delete().eq("church_id", churchId),
+      supabase.from("check_ins").delete().eq("church_id", churchId),
+      supabase.from("listing_views").delete().eq("church_id", churchId),
+      supabase.from("branches").delete().eq("church_id", churchId),
+      supabase.from("church_teams").delete().eq("church_id", churchId),
+      // Disassociate pastors if linked without cascading
+      supabase.from("pastors").update({ church_id: null }).eq("church_id", churchId),
+      // Delete events hosted by this church
+      supabase.from("events").delete().eq("host_church_id", churchId),
+    ]);
+
     const { error } = await supabase
       .from("churches")
       .delete()

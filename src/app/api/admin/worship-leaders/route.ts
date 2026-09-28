@@ -45,6 +45,12 @@ export async function DELETE(req: NextRequest) {
     }
 
     const supabase = createAdminClient();
+
+    // Clean up dependent child rows before deleting worship leader
+    await Promise.allSettled([
+      supabase.from("worship_leader_tags").delete().eq("worship_leader_id", worshipLeaderId),
+    ]);
+
     const { error } = await supabase
       .from("worship_leaders")
       .delete()

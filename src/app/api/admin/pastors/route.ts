@@ -44,6 +44,22 @@ export async function DELETE(req: NextRequest) {
     }
 
     const supabase = createAdminClient();
+
+    // Clean up dependent child rows before deleting the pastor
+    await Promise.allSettled([
+      supabase.from("pastor_languages").delete().eq("pastor_id", pastorId),
+      supabase.from("pastor_tags").delete().eq("pastor_id", pastorId),
+      supabase.from("pastor_sermons").delete().eq("pastor_id", pastorId),
+      supabase.from("pastor_education").delete().eq("pastor_id", pastorId),
+      supabase.from("pastor_awards").delete().eq("pastor_id", pastorId),
+      supabase.from("pastor_timeline").delete().eq("pastor_id", pastorId),
+      supabase.from("pastor_affiliations").delete().eq("pastor_id", pastorId),
+      supabase.from("pastor_gallery").delete().eq("pastor_id", pastorId),
+      supabase.from("pastor_enquiries").delete().eq("pastor_id", pastorId),
+      supabase.from("pastor_reviews").delete().eq("pastor_id", pastorId),
+      supabase.from("events").delete().eq("host_pastor_id", pastorId),
+    ]);
+
     const { error } = await supabase
       .from("pastors")
       .delete()
