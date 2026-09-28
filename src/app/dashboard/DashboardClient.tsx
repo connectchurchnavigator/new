@@ -1379,7 +1379,7 @@ export default function DashboardClient({
         status: normStatus,
         is_verified: p.verified || p.is_verified,
         viewUrl: `/pastor/${p.slug}`,
-        editUrl: `/onboarding/pastor`,
+        editUrl: `/onboarding/pastor?edit=${p.slug}`,
       });
     });
     worshipLeaders.forEach((wl) => {
@@ -1419,7 +1419,7 @@ export default function DashboardClient({
         status: normStatus,
         is_verified: true,
         viewUrl: `/events/${e.slug}`,
-        editUrl: `/onboarding/events`,
+        editUrl: `/onboarding/events?id=${e.id}`,
       });
     });
 
