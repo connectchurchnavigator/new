@@ -75,103 +75,167 @@ export default function Step4Languages({ onNext, onBack }: Step4LanguagesProps) 
           Which languages are services held in, or interpreted into?
         </div>
 
-        <div ref={containerRef} id="f-languages" style={{ position: "relative", marginBottom: "14px" }}>
-          <i className="ti ti-search" style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "var(--cn-gray-light)", zIndex: 2 }}></i>
-          <input 
-            placeholder="Search languages..." 
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setIsOpen(true);
-            }}
-            onFocus={() => setIsOpen(true)}
-            style={{ paddingLeft: "42px", border: error && selectedLangs.length === 0 ? "1.5px solid red" : "" }} 
-            autoComplete="off"
-          />
-          {isOpen && (
-            <div className="autocomplete-dropdown" style={{ display: "block", maxHeight: "250px", overflowY: "auto" }}>
-              {filtered.length === 0 ? (
-                <div>
-                  <div style={{ padding: "10px 14px", fontSize: "12.5px", color: "var(--cn-gray)", lineHeight: 1.4 }}>
-                    No language found for "{searchQuery}" — you can still add it as a custom language below
-                  </div>
-                  <div 
-                    className="autocomplete-item" 
-                    onClick={() => {
-                      const val = searchQuery.trim().replace(/(^|\s)(\w)/g, (m, p, c) => p + c.toUpperCase());
-                      if (val && !selectedLangs.includes(val)) {
-                        setSelectedLangs(prev => [...prev, val]);
-                        setError(null);
-                      }
-                      setSearchQuery("");
-                      setIsOpen(false);
-                    }}
-                    style={{ borderTop: "1px solid var(--cn-border)", fontWeight: 600, color: "var(--cn-purple)", display: "flex", alignItems: "center", gap: "8px", padding: "11px 14px" }}
-                  >
-                    <i className="ti ti-plus" style={{ fontSize: "14px" }}></i> Add "{searchQuery}"
-                  </div>
-                </div>
-              ) : (
-                filtered.slice(0, 100).map(lang => {
-                  const isAdded = selectedLangs.includes(lang);
-                  return (
-                    <div 
-                      key={lang}
-                      onClick={() => {
-                        toggleLang(lang);
-                        setSearchQuery("");
-                        setIsOpen(false);
-                      }}
-                      className="autocomplete-item"
-                      style={{
-                        padding: "9px 14px",
-                        cursor: "pointer",
-                        fontSize: "13px",
-                        color: isAdded ? "var(--cn-gray-light)" : "var(--cn-ink)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px"
-                      }}
-                    >
-                      {isAdded ? (
-                        <i className="ti ti-check" style={{ fontSize: "13px", color: "var(--cn-purple)" }}></i>
-                      ) : (
-                        <i className="ti ti-language" style={{ fontSize: "13px", color: "var(--cn-gray-light)" }}></i>
-                      )}
-                      {lang}
-                      {isAdded && (
-                        <span style={{ marginLeft: "auto", fontSize: "10px", color: "var(--cn-gray-light)" }}>Added</span>
-                      )}
-                    </div>
-                  );
-                })
-              )}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
+          
+          {/* COMMON / GLOBAL */}
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-purple-dark)", letterSpacing: "0.05em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <i className="ti ti-world" style={{ fontSize: "14px" }}></i> COMMON & GLOBAL
             </div>
-          )}
+            {[
+              { id: "English", icon: "ti-language" },
+              { id: "Spanish", icon: "ti-language" },
+              { id: "French", icon: "ti-language" },
+              { id: "Portuguese", icon: "ti-language" }
+            ].map(item => (
+              <button 
+                key={item.id}
+                type="button"
+                className={`fac-chip ${selectedLangs.includes(item.id) ? "on" : ""}`} 
+                onClick={() => toggleLang(item.id)}
+              >
+                <div className="fac-icon"><i className={`ti ${item.icon}`} style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i></div>
+                {item.id}
+              </button>
+            ))}
+          </div>
+
+          {/* EUROPEAN */}
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-purple-dark)", letterSpacing: "0.05em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <i className="ti ti-building" style={{ fontSize: "14px" }}></i> EUROPEAN
+            </div>
+            {[
+              { id: "German", icon: "ti-language" },
+              { id: "Italian", icon: "ti-language" },
+              { id: "Polish", icon: "ti-language" },
+              { id: "Romanian", icon: "ti-language" }
+            ].map(item => (
+              <button 
+                key={item.id}
+                type="button"
+                className={`fac-chip ${selectedLangs.includes(item.id) ? "on" : ""}`} 
+                onClick={() => toggleLang(item.id)}
+              >
+                <div className="fac-icon"><i className={`ti ${item.icon}`} style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i></div>
+                {item.id}
+              </button>
+            ))}
+          </div>
+
+          {/* ASIAN */}
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-purple-dark)", letterSpacing: "0.05em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <i className="ti ti-compass" style={{ fontSize: "14px" }}></i> ASIAN
+            </div>
+            {[
+              { id: "Mandarin", icon: "ti-language" },
+              { id: "Cantonese", icon: "ti-language" },
+              { id: "Hindi", icon: "ti-language" },
+              { id: "Tagalog", icon: "ti-language" }
+            ].map(item => (
+              <button 
+                key={item.id}
+                type="button"
+                className={`fac-chip ${selectedLangs.includes(item.id) ? "on" : ""}`} 
+                onClick={() => toggleLang(item.id)}
+              >
+                <div className="fac-icon"><i className={`ti ${item.icon}`} style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i></div>
+                {item.id}
+              </button>
+            ))}
+          </div>
+
+          {/* AFRICAN & MIDDLE EASTERN */}
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-purple-dark)", letterSpacing: "0.05em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <i className="ti ti-map-pin" style={{ fontSize: "14px" }}></i> AFRICAN & MIDDLE EASTERN
+            </div>
+            {[
+              { id: "Yoruba", icon: "ti-language" },
+              { id: "Igbo", icon: "ti-language" },
+              { id: "Twi", icon: "ti-language" },
+              { id: "Arabic", icon: "ti-language" }
+            ].map(item => (
+              <button 
+                key={item.id}
+                type="button"
+                className={`fac-chip ${selectedLangs.includes(item.id) ? "on" : ""}`} 
+                onClick={() => toggleLang(item.id)}
+              >
+                <div className="fac-icon"><i className={`ti ${item.icon}`} style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i></div>
+                {item.id}
+              </button>
+            ))}
+          </div>
+
         </div>
 
+        {/* Custom Language Adder */}
+        <div style={{ marginTop: "16px", marginBottom: "16px" }}>
+          <div style={{ fontSize: "12px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.03em", marginBottom: "8px" }}>
+            ADD A CUSTOM LANGUAGE
+          </div>
+          <div style={{ display: "flex", gap: "9px" }}>
+            <input 
+              placeholder="Don't see your language? Type custom language (e.g. Swahili, Korean, Ukrainian)..." 
+              style={{ fontSize: "13px", flex: 1, padding: "10px 14px", borderRadius: "10px", border: "1.5px solid var(--cn-border)" }} 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => { 
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const val = searchQuery.trim().replace(/(^|\s)(\w)/g, (m, p, c) => p + c.toUpperCase());
+                  if (val && !selectedLangs.includes(val)) {
+                    setSelectedLangs(prev => [...prev, val]);
+                    setError(null);
+                  }
+                  setSearchQuery("");
+                }
+              }}
+            />
+            <button 
+              type="button"
+              onClick={() => {
+                const val = searchQuery.trim().replace(/(^|\s)(\w)/g, (m, p, c) => p + c.toUpperCase());
+                if (val && !selectedLangs.includes(val)) {
+                  setSelectedLangs(prev => [...prev, val]);
+                  setError(null);
+                }
+                setSearchQuery("");
+              }}
+              style={{ flexShrink: 0, fontSize: "13px", fontWeight: 700, color: "#fff", background: "var(--cn-purple)", border: "none", padding: "0 18px", borderRadius: "10px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
+            >
+              <i className="ti ti-plus" style={{ fontSize: "15px" }}></i> Add
+            </button>
+          </div>
+        </div>
+
+        {/* Selected Languages Pills */}
         {selectedLangs.length > 0 && (
-          <>
-            <div id="lang-selected-label" style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "8px" }}>SELECTED</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "18px" }}>
+          <div style={{ marginTop: "12px" }}>
+            <div id="lang-selected-label" style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "8px" }}>
+              SELECTED LANGUAGES ({selectedLangs.length})
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
               {selectedLangs.map(lang => (
                 <div 
                   key={lang} 
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: "5px",
+                    gap: "6px",
                     background: "var(--cn-purple)",
                     color: "#fff",
                     borderRadius: "20px",
-                    padding: "6px 10px 6px 14px",
-                    fontSize: "13px",
+                    padding: "6px 12px",
+                    fontSize: "12.5px",
                     fontWeight: 600,
-                    margin: "3px",
                     cursor: "pointer"
                   }}
                   onClick={() => toggleLang(lang)}
                 >
+                  <i className="ti ti-check" style={{ fontSize: "12px" }}></i>
                   {lang}
                   <span 
                     style={{
@@ -184,7 +248,8 @@ export default function Step4Languages({ onNext, onBack }: Step4LanguagesProps) 
                       justifyContent: "center",
                       color: "#fff",
                       fontSize: "11px",
-                      lineHeight: 1
+                      lineHeight: 1,
+                      marginLeft: "2px"
                     }}
                   >
                     ×
@@ -192,22 +257,9 @@ export default function Step4Languages({ onNext, onBack }: Step4LanguagesProps) 
                 </div>
               ))}
             </div>
-          </>
+          </div>
         )}
 
-        <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "9px" }}>QUICK PICKS</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-          {quickPicks.map(lang => (
-            <div 
-              key={lang} 
-              className={`chip ${selectedLangs.includes(lang) ? "on" : ""} ${error && selectedLangs.length === 0 ? "error-border" : ""}`} 
-              onClick={() => toggleLang(lang)}
-              style={{ cursor: "pointer", border: error && selectedLangs.length === 0 ? "1.5px solid red" : "" }}
-            >
-              {lang}
-            </div>
-          ))}
-        </div>
         {error && <div style={{ color: "red", fontSize: "12px", marginTop: "12px" }}>{error}</div>}
       </div>
 
