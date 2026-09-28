@@ -204,3 +204,32 @@ label { font-size: 13px; font-weight: 700; color: var(--cn-ink); display: block;
   opacity: 1 !important;
 }
 
+/* Responsive TopNav */
+@media (max-width: 900px) {
+  .topnav-search-desktop {
+    display: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .topnav-inner {
+    padding: 0 14px !important;
+    height: 54px !important;
+  }
+  .topnav-logo img {
+    height: 28px !important;
+    width: auto !important;
+  }
+  .topnav-explore-link {
+    display: none !important;
+  }
+  .topnav-actions {
+    gap: 8px !important;
+  }
+  .topnav-add-btn {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    border-radius: 9px !important;
+  }
+}
+

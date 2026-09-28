@@ -83,18 +83,18 @@ export default function TopNav() {
   };
 
   return (
-    <div className="topnav" style={{ position: "sticky", top: 0, zIndex: 1000, background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(14px)", borderBottom: "1px solid var(--cn-border, #ececf2)", width: "100%" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "58px", padding: "0 36px", width: "100%" }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", textDecoration: "none", flexShrink: 0 }}>
-          <Image src={logoImg} alt="ChurchNavigator Logo" width={175} height={42} style={{ objectFit: "contain" }} priority />
+    <div className="topnav" style={{ position: "sticky", top: 0, zIndex: 1000, background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(14px)", borderBottom: "1px solid var(--cn-border, #ececf2)", width: "100%", padding: 0 }}>
+      <div className="topnav-inner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "58px", padding: "0 24px", width: "100%", maxWidth: "1280px", margin: "0 auto" }}>
+        <Link href="/" className="topnav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none", flexShrink: 0 }}>
+          <Image src={logoImg} alt="ChurchNavigator Logo" width={160} height={38} style={{ objectFit: "contain", width: "auto", height: "34px" }} priority />
         </Link>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "24px", flexShrink: 0 }}>
+        <div className="topnav-actions" style={{ display: "flex", alignItems: "center", gap: "16px", flexShrink: 0 }}>
           <form 
             onSubmit={handleSearch}
-            className="nav-search" 
+            className="nav-search topnav-search-desktop" 
             style={{
-              width: "360px",
+              width: "320px",
               background: "#f8fafc",
               borderRadius: "20px",
               padding: "7px 16px",
@@ -129,16 +129,16 @@ export default function TopNav() {
             />
           </form>
 
-          <Link href="/explore" style={{ fontSize: "14px", fontWeight: 600, color: "var(--cn-ink, #14142b)", textDecoration: "none" }}>
+          <Link href="/explore" className="topnav-explore-link" style={{ fontSize: "14px", fontWeight: 600, color: "var(--cn-ink, #14142b)", textDecoration: "none" }}>
             Explore
           </Link>
 
           <button 
             onClick={() => router.push("/add-listing")} 
-            className="nav-cta"
-            style={{ background: "var(--cn-purple, #7c3aed)", color: "#fff", border: "none", borderRadius: "12px", padding: "9px 22px", fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", boxShadow: "0 4px 14px rgba(124, 58, 237, 0.28)" }}
+            className="nav-cta topnav-add-btn"
+            style={{ background: "var(--cn-purple, #7c3aed)", color: "#fff", border: "none", borderRadius: "12px", padding: "8px 18px", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", boxShadow: "0 4px 14px rgba(124, 58, 237, 0.28)", whiteSpace: "nowrap" }}
           >
-            Add Listing
+            <span>+ Add Listing</span>
           </button>
 
           {/* User Account / Sign In Dropdown */}

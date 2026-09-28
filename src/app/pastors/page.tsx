@@ -35,6 +35,27 @@ const AVAIL = {
 
 const GRADS = ['from-coral to-purple', 'from-purple to-indigo-500', 'from-pink-500 to-purple', 'from-violet-500 to-fuchsia-500'];
 
+function cleanLocation(cityOrAddress: string | null | undefined, country: string | null | undefined): string {
+  const ctry = (country || '').trim();
+  let raw = (cityOrAddress || '').trim();
+  if (!raw) return ctry;
+  if (ctry) {
+    raw = raw.replace(new RegExp(`,?\\s*${ctry}$`, 'i'), '').trim();
+  }
+  raw = raw.replace(/\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi, '').replace(/\b\d{5}(?:-\d{4})?\b/g, '').trim();
+  const segs = raw.split(',').map((s) => s.trim()).filter(Boolean);
+  let cleanCity = '';
+  if (segs.length <= 1) {
+    cleanCity = segs[0] || '';
+  } else {
+    const nonStreet = segs.filter((s) => !/^\d+/i.test(s) && !/\b(street|road|st|rd|ave|avenue|lane|ln|close|cl|drive|dr|court|ct|way|walk|flat|unit|house|building)\b/i.test(s));
+    cleanCity = nonStreet.length > 0 ? nonStreet.slice(-2).join(', ') : segs[segs.length - 1];
+  }
+  cleanCity = cleanCity.replace(/^[\s,]+|[\s,]+$/g, '').trim();
+  if (cleanCity && ctry) return `${cleanCity}, ${ctry}`;
+  return cleanCity || ctry;
+}
+
 export default async function PastorsDirectory(props: {
   searchParams: Promise<{ q?: string; city?: string; specialism?: string; page?: string }>;
 }) {
@@ -166,7 +187,11 @@ export default async function PastorsDirectory(props: {
                         {p.is_verified && <i className="ti ti-rosette-discount-check-filled text-green-500 text-base" />}
                       </div>
                       {p.title && <p className="text-xs font-semibold text-purple-dark">{p.title}</p>}
-                      {p.city && <p className="text-xs text-gray mt-0.5"><i className="ti ti-map-pin text-xs" /> {p.city}, {p.country}</p>}
+                      {(p.city || p.country) && (
+                        <p className="text-xs text-gray mt-0.5">
+                          <i className="ti ti-map-pin text-xs" /> {cleanLocation(p.city, p.country)}
+                        </p>
+                      )}
                     </div>
                   </div>
 

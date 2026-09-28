@@ -182,6 +182,60 @@ function fmtK(n: number | null | undefined): string {
   return String(n);
 }
 
+/**
+ * Sanitizes location strings to keep pastor home addresses private.
+ * Strips out UK postcodes, US zip codes, street numbers, and road names,
+ * displaying only "City / State, Country".
+ */
+function cleanPublicLocation(cityOrAddress: string | null | undefined, country: string | null | undefined): string {
+  const ctry = (country || '').trim();
+  let raw = (cityOrAddress || '').trim();
+  if (!raw) return ctry;
+
+  // Remove country duplicate if present at the end
+  if (ctry) {
+    const ctryRegex = new RegExp(`,?\\s*${ctry}$`, 'i');
+    raw = raw.replace(ctryRegex, '').trim();
+  }
+
+  // Remove UK postcodes (e.g., E12 6SG, SW1A 1AA) and 5-digit zip codes
+  raw = raw
+    .replace(/\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi, '')
+    .replace(/\b\d{5}(?:-\d{4})?\b/g, '')
+    .trim();
+
+  // Split by comma into segments, cleaning whitespace and empty items
+  const segments = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  let cleanCity = '';
+  if (segments.length === 0) {
+    cleanCity = '';
+  } else if (segments.length === 1) {
+    // If it's a single segment that isn't a street number/road
+    cleanCity = segments[0];
+  } else {
+    // Drop leading street address components (segments starting with numbers or common street words)
+    const nonStreetSegments = segments.filter((seg) => !/^\d+/i.test(seg) && !/\b(street|road|st|rd|ave|avenue|lane|ln|close|cl|drive|dr|court|ct|way|walk|flat|unit|house|building)\b/i.test(seg));
+    if (nonStreetSegments.length > 0) {
+      // Pick the main city/state (e.g. "Greater London" or "London")
+      cleanCity = nonStreetSegments.slice(-2).join(', ');
+    } else {
+      cleanCity = segments[segments.length - 1];
+    }
+  }
+
+  // Clean trailing commas or extra spaces
+  cleanCity = cleanCity.replace(/^[\s,]+|[\s,]+$/g, '').trim();
+
+  if (cleanCity && ctry) {
+    return `${cleanCity}, ${ctry}`;
+  }
+  return cleanCity || ctry;
+}
+
 export default async function PastorProfilePage(props: {
   params: Promise<{ slug: string }> | { slug: string };
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }> | { [key: string]: string | string[] | undefined };
@@ -278,9 +332,9 @@ export default async function PastorProfilePage(props: {
                     <i className="ti ti-sparkles"></i> {pastor.title}
                   </span>
                 )}
-                {pastor.city && (
+                {(pastor.city || pastor.country) && (
                   <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <i className="ti ti-map-pin"></i> {pastor.city}, {pastor.country}
+                    <i className="ti ti-map-pin"></i> {cleanPublicLocation(pastor.city, pastor.country)}
                   </span>
                 )}
                 {pastor.years_in_ministry && (
@@ -424,7 +478,7 @@ export default async function PastorProfilePage(props: {
             churchName={pastor.full_name}
             email={pastor.email || undefined}
             phone={pastor.phone || undefined}
-            address={pastor.city ? `${pastor.city}, ${pastor.country}` : undefined}
+            address={cleanPublicLocation(pastor.city, pastor.country) || undefined}
             socials={{
               facebook: pastor.facebook_url || undefined,
               instagram: pastor.instagram_url || undefined,
@@ -746,7 +800,7 @@ function Sidebar({ pastor }: { pastor: PastorProfile }) {
                 <div>
                   <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f0f1a' }}>{pastor.church_name_cache}</div>
                   <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#6d28d9', marginTop: '2px' }}>Senior Pastor &amp; Founder</div>
-                  {pastor.city && <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>{pastor.city}</div>}
+                  {pastor.city && <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>{cleanPublicLocation(pastor.city, pastor.country)}</div>}
                 </div>
               </div>
             )}
@@ -760,10 +814,10 @@ function Sidebar({ pastor }: { pastor: PastorProfile }) {
           <h3>Travel &amp; availability</h3>
         </div>
         <div style={{ marginTop: '8px' }}>
-          {pastor.city && (
+          {(pastor.city || pastor.country) && (
             <div className="spec-row">
               <span className="k">Based in</span>
-              <span className="v">{pastor.city}</span>
+              <span className="v">{cleanPublicLocation(pastor.city, pastor.country)}</span>
             </div>
           )}
           {pastor.travel_range && (

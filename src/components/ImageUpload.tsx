@@ -91,8 +91,30 @@ export function ImageUpload({ kind, label, onUploaded, onMultipleUploaded, curre
           <div className="text-center text-gray-light">
             <i className="ti ti-cloud-upload text-2xl block mx-auto mb-1.5" />
             <div className="text-xs">
-              {uploading ? 'Uploading photos…' : multiple ? `Click to upload multiple photos` : `Click to upload ${kind}`}
+              {uploading ? 'Uploading image…' : multiple ? `Click to upload multiple photos` : `Click to upload ${kind}`}
             </div>
+          </div>
+        )}
+
+        {/* Persistent Uploading Overlay */}
+        {uploading && (
+          <div 
+            style={{ 
+              position: "absolute", 
+              inset: 0, 
+              background: "rgba(15, 23, 42, 0.75)", 
+              backdropFilter: "blur(2px)",
+              display: "flex", 
+              flexDirection: "column", 
+              alignItems: "center", 
+              justifyContent: "center", 
+              color: "#ffffff", 
+              zIndex: 20 
+            }}
+          >
+            <i className="ti ti-loader-2 animate-spin" style={{ fontSize: "28px", color: "#a855f7", marginBottom: "8px" }} />
+            <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.02em" }}>Uploading image...</span>
+            <span style={{ fontSize: "11px", color: "#cbd5e1", marginTop: "2px" }}>Please wait a moment</span>
           </div>
         )}
         <input

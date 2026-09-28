@@ -57,7 +57,7 @@ export default function HeroHeader({
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-            <h1 style={{ color: '#fff', fontSize: '56px', fontWeight: 800, margin: 0, letterSpacing: '-0.03em', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
+            <h1 style={{ color: '#fff', fontSize: 'clamp(28px, 5vw, 56px)', fontWeight: 800, margin: 0, letterSpacing: '-0.03em', textShadow: '0 2px 10px rgba(0,0,0,0.5)', wordBreak: 'break-word', lineHeight: 1.15 }}>
               {church.name}
             </h1>
             {church.is_verified && (

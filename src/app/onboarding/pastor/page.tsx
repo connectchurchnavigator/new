@@ -163,6 +163,7 @@ function PastorOnboardingContent() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [verified, setVerified] = useState<Record<string, boolean>>({});
   const [toastMsg, setToastMsg] = useState("");
+  const [uploadingGallery, setUploadingGallery] = useState(false);
 
   // Keep edit slug synced if searchParams updates
   useEffect(() => {
@@ -518,7 +519,32 @@ function PastorOnboardingContent() {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    if (Object.keys(newErrors).length > 0) {
+      const firstField = Object.keys(newErrors)[0];
+      setTimeout(() => {
+        // Try precise ID, data-field attribute, input name, or error container
+        const targetElement = 
+          document.getElementById(`f-${firstField}`) ||
+          document.getElementById(`f-address-pastor-main`) ||
+          document.querySelector(`[data-field="${firstField}"]`) ||
+          document.querySelector(`input[name="${firstField}"]`) ||
+          document.querySelector(`textarea[name="${firstField}"]`) ||
+          document.querySelector(`[style*="border: 1.5px solid red"]`) ||
+          document.querySelector(`[style*="border: 1.5px solid rgb(239, 68, 68)"]`) ||
+          document.querySelector('.field-error');
+
+        if (targetElement) {
+          targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if ('focus' in targetElement && typeof (targetElement as any).focus === 'function') {
+            (targetElement as any).focus();
+          }
+        }
+      }, 50);
+      return false;
+    }
+
+    return true;
   }
 
   function goToStep(n: number) {
@@ -771,20 +797,22 @@ function PastorOnboardingContent() {
                       onChange={(e) => update('title', e.target.value)}
                       style={{ fontWeight: 600 }}
                     >
-                      <option>Senior Pastor</option>
-                      <option>Lead Pastor</option>
-                      <option>Associate Pastor</option>
-                      <option>Youth Pastor</option>
-                      <option>Bishop</option>
                       <option>Apostle</option>
-                      <option>Prophet / Prophetess</option>
+                      <option>Associate Pastor</option>
+                      <option>Bishop</option>
                       <option>Evangelist</option>
+                      <option>Lead Pastor</option>
+                      <option>Prophet / Prophetess</option>
                       <option>Reverend</option>
+                      <option>Senior Pastor</option>
+                      <option>Youth Pastor</option>
                       <option>Other</option>
                     </select>
                   </Field>
                   <Field label="Full Name" required>
                     <input
+                      id="f-full_name"
+                      data-field="full_name"
                       value={form.full_name}
                       onChange={(e) => {
                         update('full_name', e.target.value);
@@ -1076,8 +1104,18 @@ function PastorOnboardingContent() {
                 }}
                 onUpdateAddress={(val) => {
                   update('address', val);
-                  update('city', val);
                   if (errors.address) setErrors(prev => ({ ...prev, address: '' }));
+                }}
+                onUpdateCity={(cityName) => {
+                  update('city', cityName);
+                }}
+                onLocationSelected={(loc) => {
+                  if (loc.city) {
+                    update('city', loc.city);
+                  } else if (loc.area) {
+                    update('city', loc.area);
+                  }
+                  if (loc.country) update('country', loc.country);
                 }}
                 onUpdateCoordinates={(lat, lng) => {
                   setForm(f => ({ ...f, latitude: lat, longitude: lng }));
@@ -1631,6 +1669,8 @@ function PastorOnboardingContent() {
                   <Field label="Official Email" required>
                     <div style={{ position: "relative" }}>
                       <input
+                        id="f-email"
+                        data-field="email"
                         type="email"
                         value={form.email}
                         onChange={(e) => {
@@ -1655,6 +1695,8 @@ function PastorOnboardingContent() {
                   <Field label="Phone / WhatsApp Contact">
                     <div style={{ position: "relative" }}>
                       <input
+                        id="f-phone"
+                        data-field="phone"
                         value={form.phone}
                         onChange={(e) => {
                           const val = e.target.value.replace(/[^\d\s\+\-\(\)]/g, '');
@@ -1793,19 +1835,21 @@ function PastorOnboardingContent() {
             {/* Section 2: Languages, Sermons & Education */}
             <Card title="Languages, Sermons & Education" icon="ti-school">
               <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                <Field label="Languages you minister in" required>
-                  <TagInput
-                    value={form.languages}
-                    onChange={(v) => {
-                      update('languages', v);
-                      if (errors.languages) setErrors(prev => ({ ...prev, languages: '' }));
-                    }}
-                    placeholder="Search or type language and press Enter..."
-                    suggestions={COMMON_LANGUAGES}
-                    labelPrefix="SELECTED LANGUAGES"
-                  />
-                  {errors.languages && <p style={{ color: "#ef4444", fontSize: "13px", marginTop: "6px", fontWeight: 600 }}>{errors.languages}</p>}
-                </Field>
+                <div id="f-languages" data-field="languages">
+                  <Field label="Languages you minister in" required>
+                    <TagInput
+                      value={form.languages}
+                      onChange={(v) => {
+                        update('languages', v);
+                        if (errors.languages) setErrors(prev => ({ ...prev, languages: '' }));
+                      }}
+                      placeholder="Search or type language and press Enter..."
+                      suggestions={COMMON_LANGUAGES}
+                      labelPrefix="SELECTED LANGUAGES"
+                    />
+                    {errors.languages && <p style={{ color: "#ef4444", fontSize: "13px", marginTop: "6px", fontWeight: 600 }}>{errors.languages}</p>}
+                  </Field>
+                </div>
 
                 {/* Subtle Divider */}
                 <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "4px 0" }}></div>
@@ -2145,54 +2189,83 @@ function PastorOnboardingContent() {
 
                   {/* Single Big Dropzone Box */}
                   <div
-                    onClick={() => document.getElementById('gallery-multi-upload')?.click()}
+                    onClick={() => {
+                      if (!uploadingGallery) {
+                        document.getElementById('gallery-multi-upload')?.click();
+                      }
+                    }}
                     style={{
                       border: "2px dashed #cbd5e1",
                       borderRadius: "16px",
                       padding: "32px 20px",
                       textAlign: "center",
-                      cursor: "pointer",
-                      background: "#f8fafc",
+                      cursor: uploadingGallery ? "not-allowed" : "pointer",
+                      background: uploadingGallery ? "#f1f5f9" : "#f8fafc",
                       transition: "all 0.2s",
-                      marginBottom: "16px"
+                      marginBottom: "16px",
+                      position: "relative",
+                      overflow: "hidden"
                     }}
-                    className="hover:border-purple hover:bg-purple/5"
+                    className={!uploadingGallery ? "hover:border-purple hover:bg-purple/5" : ""}
                   >
-                    <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px auto", color: "#64748b" }}>
-                      <i className="ti ti-cloud-upload" style={{ fontSize: "24px" }}></i>
-                    </div>
-                    <div style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a" }}>
-                      Click to select multiple photos
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#64748b", marginTop: "4px" }}>
-                      Upload PNG, JPG, or WEBP images
-                    </div>
+                    {uploadingGallery ? (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#ede9fe", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px auto", color: "#7c3aed" }}>
+                          <i className="ti ti-loader-2 animate-spin" style={{ fontSize: "24px" }}></i>
+                        </div>
+                        <div style={{ fontSize: "14px", fontWeight: 700, color: "#7c3aed" }}>
+                          Uploading photos...
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#64748b", marginTop: "4px" }}>
+                          Please wait while your media is being processed
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px auto", color: "#64748b" }}>
+                          <i className="ti ti-cloud-upload" style={{ fontSize: "24px" }}></i>
+                        </div>
+                        <div style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a" }}>
+                          Click to select multiple photos
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#64748b", marginTop: "4px" }}>
+                          Upload PNG, JPG, or WEBP images
+                        </div>
+                      </>
+                    )}
                     <input
                       id="gallery-multi-upload"
                       type="file"
                       multiple
+                      disabled={uploadingGallery}
                       accept="image/jpeg,image/png,image/webp,image/gif"
                       style={{ display: "none" }}
                       onChange={async (e) => {
                         const files = Array.from(e.target.files || []);
                         if (files.length === 0) return;
 
+                        setUploadingGallery(true);
                         const currentPhotos = [...((form as any).gallery_photo_urls || [])];
-                        for (const file of files) {
-                          try {
-                            const formData = new FormData();
-                            formData.append('file', file);
-                            formData.append('kind', 'gallery');
-                            const res = await fetch('/api/upload', { method: 'POST', body: formData });
-                            const data = await res.json();
-                            if (res.ok && data.url) {
-                              currentPhotos.push(data.url);
+                        try {
+                          for (const file of files) {
+                            try {
+                              const formData = new FormData();
+                              formData.append('file', file);
+                              formData.append('kind', 'gallery');
+                              const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                              const data = await res.json();
+                              if (res.ok && data.url) {
+                                currentPhotos.push(data.url);
+                              }
+                            } catch (err) {
+                              console.error('Gallery image upload failed', err);
                             }
-                          } catch (err) {
-                            console.error('Gallery image upload failed', err);
                           }
+                          update('gallery_photo_urls' as any, currentPhotos);
+                        } finally {
+                          setUploadingGallery(false);
+                          if (e.target) e.target.value = '';
                         }
-                        update('gallery_photo_urls' as any, currentPhotos);
                       }}
                     />
                   </div>

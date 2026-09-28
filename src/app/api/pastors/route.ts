@@ -62,6 +62,22 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Sanitize city so house numbers, road names, and postcodes are never saved into city
+  const sanitizePastorCity = (cityOrAddr: string | null | undefined, country: string | null | undefined): string | null => {
+    if (!cityOrAddr) return null;
+    let raw = cityOrAddr.trim();
+    const ctry = (country || '').trim();
+    if (ctry) {
+      raw = raw.replace(new RegExp(`,?\\s*${ctry}$`, 'i'), '').trim();
+    }
+    raw = raw.replace(/\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/gi, '').replace(/\b\d{5}(?:-\d{4})?\b/g, '').trim();
+    const segs = raw.split(',').map((s) => s.trim()).filter(Boolean);
+    if (segs.length === 0) return null;
+    const nonStreet = segs.filter((s) => !/^\d+/i.test(s) && !/\b(street|road|st|rd|ave|avenue|lane|ln|close|cl|drive|dr|court|ct|way|walk|flat|unit|house|building)\b/i.test(s));
+    const result = nonStreet.length > 0 ? nonStreet.slice(-2).join(', ') : segs[segs.length - 1];
+    return result.replace(/^[\s,]+|[\s,]+$/g, '').trim() || null;
+  };
+
   const baseInsert = {
     slug,
     owner_id: user.id,
@@ -71,13 +87,13 @@ export async function POST(req: NextRequest) {
     avatar_url: data.avatar_url ?? null,
     cover_photo_urls: data.cover_photo_urls || [],
 
-      church_id: data.church_id ?? null,
-      church_name_cache: (Array.isArray(data.associated_churches) && data.associated_churches.find((c: any) => c.name?.trim())?.name) || data.church_name_cache || null,
+    church_id: data.church_id ?? null,
+    church_name_cache: (Array.isArray(data.associated_churches) && data.associated_churches.find((c: any) => c.name?.trim())?.name) || data.church_name_cache || null,
 
-      city: data.city ?? null,
-      country: data.country,
+    city: sanitizePastorCity(data.city || data.address, data.country),
+    country: data.country,
 
-      bio: data.bio ?? null,
+    bio: data.bio ?? null,
       vision_statement: (() => {
         let stmt = data.vision_statement || '';
         if (Array.isArray(data.core_values) && data.core_values.length > 0) {

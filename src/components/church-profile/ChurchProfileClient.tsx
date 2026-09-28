@@ -129,7 +129,7 @@ export default function ChurchProfileClient({
       </div>
 
       {/* Main content grid */}
-      <div className="wrap" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "40px", marginTop: "40px" }}>
+      <div className="wrap church-detail-grid" style={{ marginTop: "40px" }}>
         <div className="main-col">
           <ClientTabs
             activeTab={activeTab}
