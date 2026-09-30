@@ -6,6 +6,7 @@ import TopNav from "@/components/layout/TopNav";
 import StepBarWL from "@/components/onboarding/worship-leader/StepBarWL";
 import SharedAddressField from "@/components/add-church/steps/SharedAddressField";
 import { TagInput } from "@/components/TagInput";
+import { useTaxonomies } from "@/hooks/useTaxonomies";
 
 const ALL_LANGUAGES = [
   'English','Spanish','French','Portuguese','German','Italian','Dutch','Polish','Romanian','Hungarian',
@@ -96,10 +97,20 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
   const [contactErrors, setContactErrors] = useState<{ [key: string]: string }>({});
   const [contactVerified, setContactVerified] = useState<{ [key: string]: boolean }>({});
 
+  const taxonomies = useTaxonomies();
+
   // Options & Custom entries (Alphabetically sorted)
   const [styleOptions, setStyleOptions] = useState<string[]>([
     "Acoustic", "Afro-Gospel", "Contemporary", "Gospel", "Hymns", "Prophetic", "Spontaneous"
   ]);
+
+  // Sync with dynamic taxonomies whenever they update
+  useEffect(() => {
+    if (taxonomies.worshipStyles?.length) {
+      setStyleOptions(prev => Array.from(new Set([...taxonomies.worshipStyles, ...prev])).sort());
+    }
+  }, [taxonomies.worshipStyles]);
+
   const [instrumentOptions, setInstrumentOptions] = useState<string[]>([
     "Acoustic guitar", "Bass", "Drums", "Electric guitar", "Keys", "Piano", "Vocals"
   ]);
@@ -120,7 +131,7 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
   const [langSearchQuery, setLangSearchQuery] = useState("");
   const [isLangOpen, setIsLangOpen] = useState(false);
   const langContainerRef = useRef<HTMLDivElement>(null);
-  const quickPickLanguages = ["English", "Spanish", "French", "Portuguese", "German", "Mandarin", "Arabic", "Hindi"];
+  const quickPickLanguages = taxonomies.languages?.length ? taxonomies.languages.slice(0, 10) : ["English", "Spanish", "French", "Portuguese", "German", "Mandarin", "Arabic", "Hindi"];
 
   // Click outside listener for language dropdown
   useEffect(() => {
@@ -595,11 +606,64 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
       setTwitterUrl("https://x.com/davidokonkwo");
       setLinkedinUrl("https://linkedin.com/in/davidokonkwo");
       setTiktokUrl("https://tiktok.com/@davidokonkwolive");
-      setSpotifyUrl("https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT");
       setToastMsg("✨ Full sample worship leader profile loaded!");
     }
 
     setTimeout(() => setToastMsg(""), 4500);
+  };
+
+  const handleClearDraft = () => {
+    if (window.confirm("Are you sure you want to clear your current draft? All entered worship leader details will be reset.")) {
+      setDisplayName("");
+      setTagline("");
+      setCountry("United Kingdom");
+      setCity("");
+      setArea("");
+      setPostcode("");
+      setAddress("");
+      setAddressDetails("");
+      setLatitude(undefined);
+      setLongitude(undefined);
+      setYearsLeading("");
+      setBio("");
+      setAvatarPreview("");
+      setAvatarFile(null);
+      setCoverPreview("");
+      setCoverFile(null);
+      setStyles([]);
+      setInstruments([]);
+      setLanguages([]);
+      setAvailableFor([]);
+      setFeeModel([]);
+      setTravelRange("UK-wide");
+      setLeadTime("2 weeks preferred");
+      setEmail("");
+      setPhone("");
+      setWebsiteUrl("");
+      setFacebookUrl("");
+      setInstagramUrl("");
+      setYoutubeUrl("");
+      setTwitterUrl("");
+      setLinkedinUrl("");
+      setTiktokUrl("");
+      setSongFiles([]);
+      setVideoFiles([]);
+      setPhotoFiles([]);
+      setExistingPhotos([]);
+      setExistingSongUrl("");
+      setExistingVideoUrl("");
+      setSpotifyUrl("");
+      setExtraSpotifyUrls([]);
+      setYoutubeUrls([]);
+      setLinks([""]);
+      setFieldErrors({});
+      setContactErrors({});
+      setContactVerified({});
+      setCurrentStep(1);
+      setToastMsg("Draft cleared successfully!");
+      setTimeout(() => setToastMsg(""), 3500);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   // Step 1 Next validation
@@ -910,6 +974,29 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              type="button"
+              onClick={handleClearDraft}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "7px",
+                padding: "8px 16px",
+                borderRadius: "12px",
+                border: "1.5px solid #fca5a5",
+                background: "#fef2f2",
+                color: "#dc2626",
+                fontSize: "13.5px",
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(239, 68, 68, 0.1)",
+                transition: "all 0.2s",
+              }}
+              title="Clear all entered data and reset form draft"
+            >
+              <i className="ti ti-trash" style={{ fontSize: "15px", color: "#dc2626" }}></i>
+              Clear Draft
+            </button>
             <button
               type="button"
               onClick={handleLoadSampleData}

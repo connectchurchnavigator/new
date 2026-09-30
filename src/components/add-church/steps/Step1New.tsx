@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useFormContext } from "@/context/FormContext";
 import SharedAddressField from "./SharedAddressField";
+import { useTaxonomies } from "@/hooks/useTaxonomies";
 
 interface Step1NewProps {
   onNext: () => void;
@@ -46,9 +47,29 @@ const validateSocialUrl = (field: string, value: string): string => {
 
 export default function Step1New({ onNext }: Step1NewProps) {
   const { formData, updateFormData } = useFormContext();
+  const taxonomies = useTaxonomies();
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [verified, setVerified] = useState<{ [key: string]: boolean }>({});
   const [slugStatus, setSlugStatus] = useState<{ loading: boolean; available: boolean | null }>({ loading: false, available: null });
+
+  // Searchable Denomination state
+  const [isDenomOpen, setIsDenomOpen] = useState(false);
+  const [denomSearch, setDenomSearch] = useState("");
+  const denomRef = React.useRef<HTMLDivElement>(null);
+
+  const sortedDenominations = React.useMemo(() => {
+    return [...taxonomies.denominations].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [taxonomies.denominations]);
+
+  React.useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (denomRef.current && !denomRef.current.contains(e.target as Node)) {
+        setIsDenomOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   // Debounced check for URL slug availability against /api/churches/check-slug
   React.useEffect(() => {
@@ -213,21 +234,179 @@ export default function Step1New({ onNext }: Step1NewProps) {
           </div>
           <div>
             <label>Denomination</label>
-            <select
-              value={formData.denomination || ""}
-              onChange={(e) => updateFormData({ denomination: e.target.value })}
-            >
-              <option value="">Select denomination</option>
-              <option value="Anglican">Anglican</option>
-              <option value="Baptist">Baptist</option>
-              <option value="Catholic">Catholic</option>
-              <option value="Methodist">Methodist</option>
-              <option value="Non-Denominational">Non-Denominational</option>
-              <option value="Orthodox">Orthodox</option>
-              <option value="Pentecostal">Pentecostal</option>
-              <option value="Presbyterian">Presbyterian</option>
-              <option value="Other">Other</option>
-            </select>
+            <div ref={denomRef} style={{ position: "relative" }}>
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <input
+                  type="text"
+                  placeholder="Select or search denomination..."
+                  value={isDenomOpen ? denomSearch : (formData.denomination || "")}
+                  onChange={(e) => {
+                    setDenomSearch(e.target.value);
+                    if (!isDenomOpen) setIsDenomOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (denomSearch.trim()) {
+                        updateFormData({ denomination: denomSearch.trim() });
+                        setIsDenomOpen(false);
+                      }
+                    }
+                  }}
+                  onFocus={() => {
+                    setDenomSearch(formData.denomination || "");
+                    setIsDenomOpen(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    paddingRight: "36px",
+                    cursor: "pointer",
+                    textOverflow: "ellipsis"
+                  }}
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsDenomOpen(!isDenomOpen)}
+                  style={{
+                    position: "absolute",
+                    right: "10px",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--cn-gray)"
+                  }}
+                >
+                  <i className={`ti ${isDenomOpen ? 'ti-chevron-up' : 'ti-chevron-down'}`} style={{ fontSize: "14px" }}></i>
+                </button>
+              </div>
+
+              {isDenomOpen && (
+                <div
+                  className="autocomplete-dropdown"
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 4px)",
+                    left: 0,
+                    right: 0,
+                    maxHeight: "240px",
+                    overflowY: "auto",
+                    background: "#fff",
+                    borderRadius: "10px",
+                    boxShadow: "0 10px 25px -5px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)",
+                    zIndex: 1000,
+                    padding: "4px 0"
+                  }}
+                >
+                  <div
+                    onClick={() => {
+                      updateFormData({ denomination: "" });
+                      setDenomSearch("");
+                      setIsDenomOpen(false);
+                    }}
+                    className="autocomplete-item"
+                    style={{
+                      padding: "9px 14px",
+                      cursor: "pointer",
+                      fontSize: "13.5px",
+                      color: "var(--cn-gray)",
+                      borderBottom: "1px solid #f1f5f9"
+                    }}
+                  >
+                    Clear selection
+                  </div>
+                  {(() => {
+                    const filtered = sortedDenominations.filter(d => !denomSearch.trim() || d.toLowerCase().includes(denomSearch.toLowerCase()));
+                    const trimmedSearch = denomSearch.trim();
+                    const exactMatch = sortedDenominations.some(d => d.toLowerCase() === trimmedSearch.toLowerCase());
+
+                    return (
+                      <>
+                        {filtered.length === 0 ? (
+                          <div style={{ padding: "12px 14px", fontSize: "13px", color: "var(--cn-gray)" }}>
+                            No denomination found
+                          </div>
+                        ) : (
+                          filtered.map((d) => {
+                            const isSelected = formData.denomination === d;
+                            return (
+                              <div
+                                key={d}
+                                onClick={() => {
+                                  updateFormData({ denomination: d });
+                                  setDenomSearch(d);
+                                  setIsDenomOpen(false);
+                                }}
+                                className="autocomplete-item"
+                                style={{
+                                  padding: "9px 14px",
+                                  cursor: "pointer",
+                                  fontSize: "13.5px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  background: isSelected ? "#f3e8ff" : "transparent",
+                                  color: isSelected ? "#7e22ce" : "var(--cn-ink)",
+                                  fontWeight: isSelected ? 600 : 400
+                                }}
+                              >
+                                <span>{d}</span>
+                                {isSelected && <i className="ti ti-check" style={{ fontSize: "14px", color: "#7e22ce" }}></i>}
+                              </div>
+                            );
+                          })
+                        )}
+
+                        {trimmedSearch && !exactMatch && (
+                          <div
+                            onClick={() => {
+                              updateFormData({ denomination: trimmedSearch });
+                              setDenomSearch(trimmedSearch);
+                              setIsDenomOpen(false);
+                            }}
+                            className="autocomplete-item"
+                            style={{
+                              padding: "10px 14px",
+                              cursor: "pointer",
+                              fontSize: "13.5px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              borderTop: "1px solid #e2e8f0",
+                              background: "#faf5ff",
+                              color: "#7e22ce",
+                              fontWeight: 700
+                            }}
+                          >
+                            <i className="ti ti-plus" style={{ fontSize: "14px" }}></i>
+                            <span>Add &quot;{trimmedSearch}&quot; as denomination</span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
+            <label>Established Year</label>
+            <input
+              id="f-establishedYear"
+              type="text"
+              inputMode="numeric"
+              placeholder="e.g. 1998"
+              maxLength={4}
+              value={formData.establishedYear || ""}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9]/g, "");
+                updateFormData({ establishedYear: val });
+              }}
+            />
           </div>
         </div>
 

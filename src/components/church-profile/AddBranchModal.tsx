@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import SharedAddressField from "../add-church/steps/SharedAddressField";
+import { useTaxonomies } from "@/hooks/useTaxonomies";
 
 interface AddBranchModalProps {
   onClose: () => void;
@@ -11,6 +12,7 @@ interface AddBranchModalProps {
 }
 
 export default function AddBranchModal({ onClose, onSave, onDelete, initialData }: AddBranchModalProps) {
+  const taxonomies = useTaxonomies();
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
     address: initialData?.address || "",
@@ -122,16 +124,11 @@ export default function AddBranchModal({ onClose, onSave, onDelete, initialData 
           <div>
             <label style={{ display: "block", fontSize: "14px", fontWeight: 800, color: "var(--ink)", marginBottom: "8px" }}>Denomination</label>
             <select name="denomination" value={formData.denomination} onChange={handleChange as any} style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1px solid var(--line)", outline: "none", fontSize: "14.5px", background: "#fff", cursor: "pointer", appearance: "none" }}>
-              <option value="Non-Denominational">Non-Denominational</option>
-              <option value="Baptist">Baptist</option>
-              <option value="Pentecostal">Pentecostal</option>
-              <option value="Catholic">Catholic</option>
-              <option value="Methodist">Methodist</option>
-              <option value="Presbyterian">Presbyterian</option>
-              <option value="Anglican / Episcopal">Anglican / Episcopal</option>
-              <option value="Assemblies of God">Assemblies of God</option>
-              <option value="Church of God">Church of God</option>
-              <option value="Other">Other</option>
+              {taxonomies.denominations.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
             </select>
           </div>
 

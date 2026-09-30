@@ -65,23 +65,39 @@ export default async function ChurchProfilePage({ params, searchParams }: { para
 
   if (!church) return notFound();
 
-  // Check if current user is the actual verified owner of this church
+  // Check if current user is the actual verified owner of this church, and resolve registered owner email
   let isActualOwner = false;
+  let ownerEmail: string | null = null;
   try {
     const serverSupabase = await createServerSupabaseClient();
     const { data: { user } } = await serverSupabase.auth.getUser();
-    if (user && church.org_id) {
+    if (church.org_id) {
       const { data: org } = await sb
         .from('organizations')
         .select('owner_id')
         .eq('id', church.org_id)
         .single();
-      if (org && org.owner_id === user.id) {
-        isActualOwner = true;
+      if (org && org.owner_id) {
+        if (user && org.owner_id === user.id) {
+          isActualOwner = true;
+        }
+        try {
+          const { data: userData } = await sb.auth.admin.getUserById(org.owner_id);
+          if (userData?.user?.email) {
+            ownerEmail = userData.user.email;
+          }
+        } catch (e) {
+          console.warn('Failed to fetch org owner email via admin:', e);
+        }
       }
     }
   } catch (authErr) {
     console.warn('Owner auth verification check failed:', authErr);
+  }
+
+  // If church.email is empty or missing, fallback to the client's registered account email
+  if (!church.email && ownerEmail) {
+    church.email = ownerEmail;
   }
 
   const resolvedSearchParams = searchParams ? await searchParams : {};
@@ -170,42 +186,30 @@ export default async function ChurchProfilePage({ params, searchParams }: { para
   const languages = safeParseJsonArray<string>(church.languages);
   const facilities = safeParseJsonArray<string>(church.facilities);
   const ministries = safeParseJsonArray<string>(church.ministries);
-  const worshipStyles = safeParseJsonArray<string>(church.worship_style);
+  const worshipStyles = safeParseJsonArray<string>(church.worship_styles || church.worship_style);
+
+  // Attach normalized array properties to church object
+  church.languages = languages;
+  church.facilities = facilities;
+  church.ministries = ministries;
+  church.worship_styles = worshipStyles;
+  church.worshipStyles = worshipStyles;
 
   return (
     <>
       {!isOwner && <ViewTracker churchId={church.id} />}
       {isEditing && <EditCoverModal church={church} />}
-      {isOwner && <div style={{ height: '48px', width: '100%' }} />}
       
       {/* ===== NAV ===== */}
       <TopNav />
 
       <main id="detail" style={{ background: '#f8fafc', minHeight: '100vh', paddingBottom: '60px' }}>
-        <div className="wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0' }}>
-          <Link className="back" href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#0f172a', textDecoration: 'none' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            All churches
-          </Link>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            {isActualOwner && isOwner && (
-              <Link href={`/dashboard?section=visitor-insights&church_id=${church.id}`} style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none' }}>
-                <i className="ti ti-chart-bar"></i> Visitor insights
-              </Link>
-            )}
-            {isActualOwner && (
-              <Link id="tour-owner-toggle" href={`/church/${church.slug}${isOwner ? '?owner=false' : '?owner=true'}`} scroll={false} style={{ textDecoration: 'none', background: isOwner ? '#7e22ce' : '#f3e8ff', color: isOwner ? '#fff' : '#7e22ce', border: '1px solid #e9d5ff', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
-                Owner View {isOwner ? 'ON' : 'OFF'}
-              </Link>
-            )}
-          </div>
-        </div>
-
       {/* Main Client Profile */}
 
       <ChurchProfileClient
         initialChurch={church}
         isEditing={isOwner}
+        isActualOwner={isActualOwner}
         twitterUrl={twitterUrl}
         tiktokUrl={tiktokUrl}
         telegramUrl={telegramUrl}

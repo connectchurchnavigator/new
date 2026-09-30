@@ -53,7 +53,7 @@ export default function SidebarContent({ initialChurch, isEditing, onChurchChang
       {((church.church_services && church.church_services.length > 0) || isEditing) && (
         <div className="panel sched-panel" style={{ marginBottom: "24px", padding: "24px" }}>
           <div className="sec-head" style={{ marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
-            <span className="ic c-teal" style={{ width: "30px", height: "30px" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" strokeWidth="2"/><path d="M12 7v5l3 2" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg></span>
+            <span className="ic c-teal" style={{ width: "32px", height: "32px", borderRadius: "9px", display: "grid", placeItems: "center", flexShrink: 0 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" strokeWidth="2"/><path d="M12 7v5l3 2" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg></span>
             <h4 style={{ fontSize: "16px", fontWeight: 800, textTransform: "capitalize", letterSpacing: "0", color: "#0f172a", margin: 0 }}>Service Schedule</h4>
             {renderEditButton("schedule")}
           </div>
@@ -103,7 +103,7 @@ export default function SidebarContent({ initialChurch, isEditing, onChurchChang
       {/* Location & Contact */}
       <div className="scard" style={{ background: "white", padding: "0", borderRadius: "20px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", marginBottom: "24px", overflow: "hidden" }}>
         <div className="scard-h" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "24px 24px 16px 24px", margin: 0 }}>
-          <span className="ic c-coral" style={{ background: "#f43f5e", color: "white", padding: "6px", borderRadius: "8px", display: "flex" }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-5.5 7-12a7 7 0 1 0-14 0c0 6.5 7 12 7 12z" stroke="#fff" strokeWidth="2"/><circle cx="12" cy="9" r="2.5" stroke="#fff" strokeWidth="2"/></svg></span>
+          <span className="ic c-coral" style={{ background: "#f43f5e", color: "white", width: "32px", height: "32px", borderRadius: "9px", display: "grid", placeItems: "center", flexShrink: 0 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-5.5 7-12a7 7 0 1 0-14 0c0 6.5 7 12 7 12z" stroke="#fff" strokeWidth="2"/><circle cx="12" cy="9" r="2.5" stroke="#fff" strokeWidth="2"/></svg></span>
           <h4 style={{ fontSize: "16px", fontWeight: 800, textTransform: church.address_line || (church.latitude && church.longitude) ? "capitalize" : "uppercase", letterSpacing: "0", color: "#0f172a", margin: 0 }}>Location & Contact</h4>
           {renderEditButton("contact")}
         </div>

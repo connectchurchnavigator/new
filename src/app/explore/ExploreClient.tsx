@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Church, ChurchService } from "@/lib/types";
 import dynamic from "next/dynamic";
 import TopNav from "@/components/layout/TopNav";
+import { useTaxonomies } from "@/hooks/useTaxonomies";
 
 const ChurchMap = dynamic(() => import("@/components/explore/ChurchMap"), {
   ssr: false,
@@ -395,6 +396,7 @@ export default function ExploreClient({
   initialDenom = "",
   initialType = "churches",
 }: ExploreClientProps) {
+  const taxonomies = useTaxonomies();
   const [exploreType, setExploreType] = useState<"churches" | "pastors" | "events" | "worship_leaders">(initialType);
   const [cardVersion, setCardVersion] = useState<"v0" | "v1" | "v2" | "v3" | "v4">("v0");
 
@@ -492,6 +494,29 @@ export default function ExploreClient({
   const [selectedCities, setSelectedCities] = useState<string[]>(initialCity ? [initialCity] : []);
   const [sortBy, setSortBy] = useState<"name_asc" | "name_desc" | "nearby" | "latest" | "oldest">("latest");
 
+  // Keep internal filter state synchronized when route search parameters change
+  useEffect(() => {
+    setSearchQuery(initialSearchQuery);
+  }, [initialSearchQuery]);
+
+  useEffect(() => {
+    if (initialCity) {
+      setSelectedCities([initialCity]);
+    }
+  }, [initialCity]);
+
+  useEffect(() => {
+    if (initialDenom) {
+      setSelectedDenoms([initialDenom]);
+    }
+  }, [initialDenom]);
+
+  useEffect(() => {
+    if (initialType) {
+      setExploreType(initialType);
+    }
+  }, [initialType]);
+
   // Event specific filters
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
   const [selectedEventPrice, setSelectedEventPrice] = useState<"all" | "free" | "paid">("all");
@@ -520,6 +545,9 @@ export default function ExploreClient({
   // Extract distinct filter values with counts (sorted Alphabetically A-Z)
   const denominations = useMemo(() => {
     const counts: Record<string, number> = {};
+    (taxonomies.denominations || []).forEach((d) => {
+      counts[d] = 0;
+    });
     initialChurches.forEach((c) => {
       const d = c.denomination?.split("|||")[0].trim();
       if (d) counts[d] = (counts[d] || 0) + 1;
@@ -527,10 +555,13 @@ export default function ExploreClient({
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [initialChurches]);
+  }, [initialChurches, taxonomies.denominations]);
 
   const languages = useMemo(() => {
     const counts: Record<string, number> = {};
+    (taxonomies.languages || []).forEach((l) => {
+      counts[l] = 0;
+    });
     initialChurches.forEach((c) => {
       if (Array.isArray(c.languages)) {
         c.languages.forEach((l) => {
@@ -542,10 +573,13 @@ export default function ExploreClient({
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [initialChurches]);
+  }, [initialChurches, taxonomies.languages]);
 
   const worshipStyles = useMemo(() => {
     const counts: Record<string, number> = {};
+    (taxonomies.worshipStyles || []).forEach((s) => {
+      counts[s] = 0;
+    });
     initialChurches.forEach((c) => {
       const styles = c.worship_style || c.worship_styles;
       if (Array.isArray(styles)) {
@@ -563,10 +597,13 @@ export default function ExploreClient({
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [initialChurches]);
+  }, [initialChurches, taxonomies.worshipStyles]);
 
   const ministries = useMemo(() => {
     const counts: Record<string, number> = {};
+    (taxonomies.ministries || []).forEach((m) => {
+      counts[m] = 0;
+    });
     initialChurches.forEach((c) => {
       if (Array.isArray(c.ministries)) {
         c.ministries.forEach((m) => {
@@ -578,7 +615,7 @@ export default function ExploreClient({
     return Object.entries(counts)
       .map(([label, count]) => ({ label, count }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [initialChurches]);
+  }, [initialChurches, taxonomies.ministries]);
 
   const cities = useMemo(() => {
     const counts: Record<string, number> = {};

@@ -47,7 +47,8 @@ export default function Step9Review() {
 
       localStorage.removeItem('churchFormData');
       const churchName = formData.churchName || formData.name || 'Your Church';
-      router.push(`/add-listing/success?slug=${data.church?.slug || ''}&name=${encodeURIComponent(churchName)}`);
+      router.push(`/onboarding/church/success?slug=${data.church?.slug || ''}&name=${encodeURIComponent(churchName)}`);
+
     } catch (err: any) {
       clearInterval(stepInterval);
       console.error(err);
@@ -204,6 +205,16 @@ export default function Step9Review() {
                 </SectionWrap>
               )}
 
+              {/* WORSHIP STYLES */}
+              {((formData.worshipStyles && formData.worshipStyles.length > 0) || (formData.worship_styles && formData.worship_styles.length > 0)) && (
+                <SectionWrap>
+                  <SectionHeader icon="ti-music" title="Worship Styles" />
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                    {(formData.worshipStyles || formData.worship_styles).map((style: string, i: number) => <Chip key={`${style}-${i}`} text={style} />)}
+                  </div>
+                </SectionWrap>
+              )}
+
               {/* FACILITIES */}
               {formData.facilities && formData.facilities.length > 0 && (
                 <SectionWrap>
@@ -287,7 +298,7 @@ export default function Step9Review() {
       )}
 
       <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "28px" }}>
-        <button onClick={() => router.push("/add-church/3")} className="btn-secondary" disabled={isSubmitting}>
+        <button onClick={() => router.push("/onboarding/church/3")} className="btn-secondary" disabled={isSubmitting}>
           <i className="ti ti-pencil" style={{ fontSize: "14px" }}></i> Keep editing
         </button>
         <button onClick={handleSubmit} className="btn-primary" disabled={isSubmitting} style={{ opacity: isSubmitting ? 0.75 : 1, cursor: isSubmitting ? "not-allowed" : "pointer" }}>

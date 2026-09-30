@@ -9,16 +9,12 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: '/onboarding/church',
-        destination: '/add-listing/1',
-        permanent: false,
-      },
-      {
-        source: '/onboarding/church/:step',
-        destination: '/add-listing/:step',
+        source: '/add-listing/:step(\\d+)',
+        destination: '/onboarding/church/:step',
         permanent: false,
       },
     ];
+
   },
 };
 

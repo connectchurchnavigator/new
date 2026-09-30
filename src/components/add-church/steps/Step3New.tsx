@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useFormContext } from "@/context/FormContext";
 import { compressImage } from "@/lib/image-compressor";
+import { useTaxonomies } from "@/hooks/useTaxonomies";
 
 const ALL_LANGUAGES = ['Acholi','Afar','Afrikaans','Akan','Albanian','Amharic','Arabic','Aramaic','Armenian','Assamese','Ateso','Awadhi','Aymara','Azerbaijani','Balinese','Balochi','Bambara','Basque','Batak','Belarusian','Belizean Creole','Bemba','Bengali','Berber','Bhojpuri','Bikol','Bislama','Bodo','Bosnian','Brahui','Breton','Buginese','Bulgarian','Burmese','Cantonese','Cape Verdean Creole','Catalan','Cebuano','Chamorro','Chichewa','Chin','Chittagonian','Choir','Cornish','Croatian','Czech','Dan','Danish','Dari','Dhivehi','Dogri','Dutch','Dzongkha','Edo','Efik','English','Estonian','Ewe','Fante','Farsi','Fijian','Finnish','French','Frisian','Fula','Ga','Galician','Garifuna','Georgian','German','Gilbertese','Greek','Guarani','Gujarati','Haitian Creole','Hakka','Harari','Hausa','Hawaiian','Hebrew','Hiligaynon','Hindi','Hiri Motu','Hmong','Hokkien','Hungarian','Ibibio','Icelandic','Igbo','Ilocano','Indonesian','Irish','Italian','Jamaican Patois','Japanese','Javanese','Kabyle','Kachin','Kannada','Kanuri','Kapampangan','Karen','Kashmiri','Kazakh','Khasi','Khmer','Kikongo','Kinyarwanda','Kirundi','Konkani','Korean','Kpelle','Krio','Kurdish','Kurmanji','Kyrgyz','Ladino','Lango','Lao','Latvian','Lingala','Lithuanian','Lozi','Luganda','Luxembourgish','Macedonian','Madurese','Maithili','Malagasy','Malay','Malayalam','Maltese','Mandarin','Mandinka','Manipuri','Manx','Maori','Mapudungun','Maranao','Marathi','Marshallese','Maya','Mende','Mien','Minangkabau','Mizo','Mon','Mongolian','Montenegrin','Mossi','Naga','Nahuatl','Nauruan','Ndebele','Nepali','Newari','Norwegian','Nupe','Nyanja','Odia','Oromo','Palauan','Pangasinan','Papiamento','Pashto','Persian','Polish','Portuguese','Punjabi','Quechua','Rajasthani','Rohingya','Romani','Romanian','Runyankole','Russian','Samoan','Sango','Santali','Saraiki','Scottish Gaelic','Seniors Ministry','Sepedi','Serbian','Sesotho','Setswana','Shan','Shona','Sidamo','Sindhi','Sinhala','Slovak','Slovenian','Somali','Sorbian','Sorani','Spanish','Sranan Tongo','Sundanese','Swahili','Swazi','Swedish','Sylheti','Tagalog','Tahitian','Tajik','Tamazight','Tamil','Tashelhit','Telugu','Temne','Tetum','Teochew','Thai','Tibetan','Tigre','Tigrinya','Tiv','Tok Pisin','Tonga','Trinidadian Creole','Tshiluba','Tsonga','Tulu','Turkish','Turkmen','Twi','Ukrainian','Urdu','Uyghur','Uzbek','Venda','Vietnamese','Waray','Welsh','Wolof','Xhosa','Yiddish','Yoruba','Zulu'];
 
@@ -112,49 +113,84 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
     if (pastorPhotoInputRef.current) pastorPhotoInputRef.current.value = "";
   };
 
-  // Ministries
-  const POPULAR_MINISTRIES = [
-    "Bible Study",
-    "Children's Church",
-    "Evangelism",
-    "Food Bank",
-    "Marriage & Family",
-    "Men's Ministry",
-    "Outreach",
-    "Prayer & Intercession",
-    "Ushering",
-    "Women's Ministry",
-    "Worship Team",
-    "Young Adults",
-    "Youth Ministry"
-  ];
+  const taxonomies = useTaxonomies();
 
-  const ALL_MINISTRIES = [
-    "Addiction Recovery", "Benevolence", "Bible Study", "Children's Church", "Choir", 
-    "Church Planting", "College & Career", "Community Café", "Crèche / Nursery", 
-    "Dance Ministry", "Discipleship", "Drama & Theatre", "Evangelism", "Evangelism Team", 
-    "Food Bank", "Global Missions", "Grief Care", "Homeless Ministry", "Hospital Visitation", 
-    "Junior Church", "Local Outreach", "Marriage & Family", "Media & Tech", "Men's Ministry", 
-    "Missions", "Outreach", "Parent & Toddler", "Praise & Worship", "Prayer & Intercession", 
-    "Prison Ministry", "Seniors Ministry", "Single Parents", "Singles Ministry", 
-    "Street Ministry", "Student Ministry", "Technical / Media", "Teen Ministry", 
-    "Ushering", "Women's Ministry", "Worship Team", "Young Adults", "Youth Ministry"
-  ];
+  // Preferred frequently used items (top 5 requested)
+  const PREFERRED_MINISTRIES = ["Youth Ministry", "Children’s Ministry", "Worship Ministry", "Prayer Ministry", "Food Pantry"];
+  const PREFERRED_LANGUAGES = ["English", "French", "Hindi", "German", "Spanish"];
+  const PREFERRED_WORSHIP_STYLES = ["Contemporary Worship", "Traditional Worship", "Charismatic / Spirit-Filled Worship", "Gospel Worship", "Blended Worship"];
+  const PREFERRED_FACILITIES = ["Parking Available", "Wheelchair Accessible", "Free Wifi", "Restrooms", "Fellowship Hall"];
+
+  // Ministries (Dynamic from Taxonomies, sorted ascending)
+  const allMinistriesList = React.useMemo(() => {
+    return [...(taxonomies.ministries || [])].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [taxonomies.ministries]);
+
+  const popularMinistriesList = React.useMemo(() => {
+    const list = taxonomies.ministries || [];
+    const preferred = PREFERRED_MINISTRIES.filter(m => list.some(item => item.toLowerCase() === m.toLowerCase()));
+    const remaining = list.filter(item => !preferred.some(p => p.toLowerCase() === item.toLowerCase()));
+    return [...preferred, ...remaining].slice(0, 5);
+  }, [taxonomies.ministries]);
 
   const [activeMinistries, setActiveMinistries] = useState<string[]>(formData.ministries?.length ? formData.ministries : []);
   const [ministrySearchQuery, setMinistrySearchQuery] = useState("");
   const [isMinistryDropdownOpen, setIsMinistryDropdownOpen] = useState(false);
   const ministryContainerRef = useRef<HTMLDivElement>(null);
 
-  // Languages
+  // Languages (Dynamic from Taxonomies)
+  const allLanguagesList = React.useMemo(() => {
+    return [...(taxonomies.languages || [])].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [taxonomies.languages]);
+
+  const quickPicks = React.useMemo(() => {
+    const list = taxonomies.languages || [];
+    const preferred = PREFERRED_LANGUAGES.filter(l => list.some(item => item.toLowerCase() === l.toLowerCase()));
+    const remaining = list.filter(item => !preferred.some(p => p.toLowerCase() === item.toLowerCase()));
+    return [...preferred, ...remaining].slice(0, 5);
+  }, [taxonomies.languages]);
+
   const [selectedLangs, setSelectedLangs] = useState<string[]>(formData.languages?.length ? formData.languages : ["English"]);
   const [langSearchQuery, setLangSearchQuery] = useState("");
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const langContainerRef = useRef<HTMLDivElement>(null);
-  const quickPicks = ["Arabic", "English", "French", "German", "Hindi", "Mandarin", "Portuguese", "Spanish"];
 
-  // Facilities
+
+  // Worship Styles (Dynamic from Taxonomies, formatted like Ministries/Facilities)
+  const allWorshipStylesList = React.useMemo(() => {
+    return [...(taxonomies.worshipStyles || [])].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [taxonomies.worshipStyles]);
+
+  const popularWorshipStylesList = React.useMemo(() => {
+    const list = taxonomies.worshipStyles || [];
+    const preferred = PREFERRED_WORSHIP_STYLES.filter(w => list.some(item => item.toLowerCase() === w.toLowerCase()));
+    const remaining = list.filter(item => !preferred.some(p => p.toLowerCase() === item.toLowerCase()));
+    return [...preferred, ...remaining].slice(0, 5);
+  }, [taxonomies.worshipStyles]);
+
+  const [activeWorshipStyles, setActiveWorshipStyles] = useState<string[]>(formData.worshipStyles?.length ? formData.worshipStyles : (formData.worship_styles?.length ? formData.worship_styles : []));
+  const [worshipStyleSearchQuery, setWorshipStyleSearchQuery] = useState("");
+  const [isWorshipStyleDropdownOpen, setIsWorshipStyleDropdownOpen] = useState(false);
+  const worshipStyleContainerRef = useRef<HTMLDivElement>(null);
+
+  // Facilities (Dynamic from Taxonomies, formatted like Languages)
+  const allFacilitiesList = React.useMemo(() => {
+    return [...(taxonomies.facilities || [])].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [taxonomies.facilities]);
+
+  const popularFacilitiesList = React.useMemo(() => {
+    const list = taxonomies.facilities || [];
+    const preferred = PREFERRED_FACILITIES.filter(f => list.some(item => item.toLowerCase() === f.toLowerCase()));
+    const remaining = list.filter(item => !preferred.some(p => p.toLowerCase() === item.toLowerCase()));
+    return [...preferred, ...remaining].slice(0, 5);
+  }, [taxonomies.facilities]);
+
+
+
   const [activeFacilities, setActiveFacilities] = useState<string[]>(formData.facilities || []);
+  const [facilitySearchQuery, setFacilitySearchQuery] = useState("");
+  const [isFacilityDropdownOpen, setIsFacilityDropdownOpen] = useState(false);
+  const facilityContainerRef = useRef<HTMLDivElement>(null);
 
   // Validation errors
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -169,6 +205,8 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
     if (formData.ministries?.length) setActiveMinistries(formData.ministries);
     if (formData.languages?.length) setSelectedLangs(formData.languages);
     if (formData.galleryImages?.length) setGalleryImages(formData.galleryImages);
+    if (formData.worshipStyles?.length) setActiveWorshipStyles(formData.worshipStyles);
+    else if (formData.worship_styles?.length) setActiveWorshipStyles(formData.worship_styles);
     if (formData.facilities?.length) setActiveFacilities(formData.facilities);
   }, [formData]);
 
@@ -179,6 +217,12 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
       }
       if (ministryContainerRef.current && !ministryContainerRef.current.contains(e.target as Node)) {
         setIsMinistryDropdownOpen(false);
+      }
+      if (worshipStyleContainerRef.current && !worshipStyleContainerRef.current.contains(e.target as Node)) {
+        setIsWorshipStyleDropdownOpen(false);
+      }
+      if (facilityContainerRef.current && !facilityContainerRef.current.contains(e.target as Node)) {
+        setIsFacilityDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleOutsideClick);
@@ -328,7 +372,7 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
 
   const getFilteredMinistries = () => {
     const q = ministrySearchQuery.trim().toLowerCase();
-    const all = Array.from(new Set([...POPULAR_MINISTRIES, ...ALL_MINISTRIES, ...activeMinistries]));
+    const all = Array.from(new Set([...allMinistriesList, ...activeMinistries]));
     if (!q) return all;
     const starts = all.filter(m => m.toLowerCase().startsWith(q));
     const contains = all.filter(m => !m.toLowerCase().startsWith(q) && m.toLowerCase().includes(q));
@@ -346,17 +390,44 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
 
   const getFilteredLanguages = () => {
     const q = langSearchQuery.trim().toLowerCase();
-    if (!q) return ALL_LANGUAGES;
-    const starts = ALL_LANGUAGES.filter(l => l.toLowerCase().startsWith(q));
-    const contains = ALL_LANGUAGES.filter(l => !l.toLowerCase().startsWith(q) && l.toLowerCase().includes(q));
+    const all = Array.from(new Set([...allLanguagesList, ...selectedLangs]));
+    if (!q) return all;
+    const starts = all.filter(l => l.toLowerCase().startsWith(q));
+    const contains = all.filter(l => !l.toLowerCase().startsWith(q) && l.toLowerCase().includes(q));
+    return [...starts, ...contains];
+  };
+
+
+  // Worship Styles toggle
+  const toggleWorshipStyle = (style: string) => {
+    setActiveWorshipStyles(prev => 
+      prev.includes(style) ? prev.filter(s => s !== style) : [...prev, style]
+    );
+  };
+
+  const getFilteredWorshipStyles = () => {
+    const q = worshipStyleSearchQuery.trim().toLowerCase();
+    const all = Array.from(new Set([...allWorshipStylesList, ...activeWorshipStyles]));
+    if (!q) return all;
+    const starts = all.filter(s => s.toLowerCase().startsWith(q));
+    const contains = all.filter(s => !s.toLowerCase().startsWith(q) && s.toLowerCase().includes(q));
     return [...starts, ...contains];
   };
 
   // Facilities toggle
-  const toggleFacility = (chip: string) => {
+  const toggleFacility = (facility: string) => {
     setActiveFacilities(prev => 
-      prev.includes(chip) ? prev.filter(c => c !== chip) : [...prev, chip]
+      prev.includes(facility) ? prev.filter(c => c !== facility) : [...prev, facility]
     );
+  };
+
+  const getFilteredFacilities = () => {
+    const q = facilitySearchQuery.trim().toLowerCase();
+    const all = Array.from(new Set([...allFacilitiesList, ...activeFacilities]));
+    if (!q) return all;
+    const starts = all.filter(f => f.toLowerCase().startsWith(q));
+    const contains = all.filter(f => !f.toLowerCase().startsWith(q) && f.toLowerCase().includes(q));
+    return [...starts, ...contains];
   };
 
   const isFacilitySelected = (chip: string) => activeFacilities.includes(chip);
@@ -399,6 +470,8 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
       pastor_bio: pastorBio,
       ministries: activeMinistries,
       languages: selectedLangs,
+      worshipStyles: activeWorshipStyles,
+      worship_styles: activeWorshipStyles,
       facilities: activeFacilities,
     });
 
@@ -914,7 +987,7 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
         <div style={{ marginBottom: "16px" }}>
           <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "8px" }}>POPULAR MINISTRIES</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-            {POPULAR_MINISTRIES.map(min => {
+            {popularMinistriesList.map(min => {
               const isSel = activeMinistries.includes(min);
               return (
                 <button 
@@ -1086,50 +1159,53 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
         </div>
 
         {/* Quick Picks */}
-        <div style={{ marginBottom: "16px" }}>
-          <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "8px" }}>POPULAR LANGUAGES</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-            {quickPicks.map(lang => {
-              const isSel = selectedLangs.includes(lang);
-              return (
-                <button 
-                  key={lang} 
-                  type="button"
-                  onClick={() => toggleLang(lang)}
-                  style={{
-                    padding: "7px 14px",
-                    borderRadius: "20px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                    border: isSel ? "1.5px solid #7e22ce" : "1.5px solid var(--cn-border)",
-                    background: isSel ? "#f3e8ff" : "#fff",
-                    color: isSel ? "#7e22ce" : "var(--cn-ink)",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px"
-                  }}
-                >
-                  {isSel && <i className="ti ti-check" style={{ fontSize: "13px", color: "#7e22ce" }}></i>}
-                  {lang}
-                </button>
-              );
-            })}
+        {quickPicks.length > 0 && (
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "8px" }}>POPULAR LANGUAGES</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {quickPicks.map(lang => {
+                const isSel = selectedLangs.includes(lang);
+                return (
+                  <button 
+                    key={lang} 
+                    type="button"
+                    onClick={() => toggleLang(lang)}
+                    style={{
+                      padding: "7px 14px",
+                      borderRadius: "20px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      border: isSel ? "1.5px solid #7e22ce" : "1.5px solid var(--cn-border)",
+                      background: isSel ? "#f3e8ff" : "#fff",
+                      color: isSel ? "#7e22ce" : "var(--cn-ink)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px"
+                    }}
+                  >
+                    {isSel && <i className="ti ti-check" style={{ fontSize: "13px", color: "#7e22ce" }}></i>}
+                    {lang}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Search Input */}
         <div style={{ position: "relative", marginBottom: "14px" }} ref={langContainerRef}>
           <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "var(--cn-gray)" }}></i>
           <input 
-            placeholder="Search 250+ languages (e.g. Yoruba, Swahili, Mandarin)..." 
+            placeholder="Search languages (e.g. Yoruba, Swahili, Mandarin)..." 
             value={langSearchQuery}
             onChange={(e) => {
               setLangSearchQuery(e.target.value);
               setIsLangDropdownOpen(true);
             }}
             onFocus={() => setIsLangDropdownOpen(true)}
+
             style={{ 
               paddingLeft: "40px", 
               fontSize: "13.5px",
@@ -1233,108 +1309,342 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
         )}
       </div>
 
+      {/* WORSHIP STYLES */}
+      <div className="scard" style={{ overflow: "visible" }} id="f-worship-styles">
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+          <div style={{ width: "38px", height: "38px", borderRadius: "11px", background: "linear-gradient(135deg,#f59e0b,#d97706)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <i className="ti ti-music" style={{ fontSize: "18px", color: "#fff" }}></i>
+          </div>
+          <div>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>Worship Styles</div>
+            <div style={{ fontSize: "12.5px", color: "var(--cn-gray)", marginTop: "2px" }}>Select the musical and liturgical style of your services</div>
+          </div>
+        </div>
+
+        {/* Quick Picks / Popular Worship Styles */}
+        {popularWorshipStylesList.length > 0 && (
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "8px" }}>POPULAR WORSHIP STYLES</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {popularWorshipStylesList.map(style => {
+                const isSel = activeWorshipStyles.includes(style);
+                return (
+                  <button 
+                    key={style} 
+                    type="button"
+                    onClick={() => toggleWorshipStyle(style)}
+                    style={{
+                      padding: "7px 14px",
+                      borderRadius: "20px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      border: isSel ? "1.5px solid #d97706" : "1.5px solid var(--cn-border)",
+                      background: isSel ? "#fef3c7" : "#fff",
+                      color: isSel ? "#b45309" : "var(--cn-ink)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px"
+                    }}
+                  >
+                    {isSel && <i className="ti ti-check" style={{ fontSize: "13px", color: "#b45309" }}></i>}
+                    {style}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Search Input */}
+        <div style={{ position: "relative", marginBottom: "14px" }} ref={worshipStyleContainerRef}>
+          <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "var(--cn-gray)" }}></i>
+          <input 
+            placeholder="Search worship styles (e.g. Contemporary Worship, Gospel, Traditional Hymns)..." 
+            value={worshipStyleSearchQuery}
+            onChange={(e) => {
+              setWorshipStyleSearchQuery(e.target.value);
+              setIsWorshipStyleDropdownOpen(true);
+            }}
+            onFocus={() => setIsWorshipStyleDropdownOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const val = worshipStyleSearchQuery.trim().replace(/(^|\s)(\w)/g, (m, p, c) => p + c.toUpperCase());
+                if (val && !activeWorshipStyles.includes(val)) {
+                  toggleWorshipStyle(val);
+                }
+                setWorshipStyleSearchQuery("");
+                setIsWorshipStyleDropdownOpen(false);
+              }
+            }}
+            style={{ 
+              paddingLeft: "40px", 
+              fontSize: "13.5px",
+              height: "44px",
+              borderRadius: "12px",
+              border: "1.5px solid var(--cn-border)" 
+            }}
+            autoComplete="off"
+          />
+
+          {isWorshipStyleDropdownOpen && (
+            <div className="autocomplete-dropdown" style={{ display: "block", maxHeight: "220px", overflowY: "auto", borderRadius: "12px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }}>
+              {getFilteredWorshipStyles().length === 0 ? (
+                <div>
+                  <div style={{ padding: "10px 14px", fontSize: "12.5px", color: "var(--cn-gray)" }}>
+                    No exact match for "{worshipStyleSearchQuery}"
+                  </div>
+                  <div 
+                    className="autocomplete-item" 
+                    onClick={() => {
+                      const val = worshipStyleSearchQuery.trim().replace(/(^|\s)(\w)/g, (m, p, c) => p + c.toUpperCase());
+                      if (val && !activeWorshipStyles.includes(val)) {
+                        toggleWorshipStyle(val);
+                      }
+                      setWorshipStyleSearchQuery("");
+                      setIsWorshipStyleDropdownOpen(false);
+                    }}
+                    style={{ borderTop: "1px solid var(--cn-border)", fontWeight: 600, color: "#d97706", display: "flex", alignItems: "center", gap: "8px", padding: "11px 14px", cursor: "pointer" }}
+                  >
+                    <i className="ti ti-plus" style={{ fontSize: "14px" }}></i> Add "{worshipStyleSearchQuery}" as custom worship style
+                  </div>
+                </div>
+              ) : (
+                getFilteredWorshipStyles().slice(0, 50).map(style => {
+                  const isAdded = activeWorshipStyles.includes(style);
+                  return (
+                    <div 
+                      key={style} 
+                      onClick={() => {
+                        toggleWorshipStyle(style);
+                        setWorshipStyleSearchQuery("");
+                        setIsWorshipStyleDropdownOpen(false);
+                      }}
+                      className="autocomplete-item"
+                      style={{
+                        padding: "10px 14px",
+                        cursor: "pointer",
+                        fontSize: "13.5px",
+                        fontWeight: isAdded ? 600 : 400,
+                        color: isAdded ? "#b45309" : "var(--cn-ink)",
+                        background: isAdded ? "#fef3c7" : "transparent",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between"
+                      }}
+                    >
+                      <span>{style}</span>
+                      {isAdded && <i className="ti ti-check" style={{ fontSize: "14px", color: "#b45309" }}></i>}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Selected Worship Styles Pills */}
+        {activeWorshipStyles.length > 0 && (
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "8px" }}>SELECTED WORSHIP STYLES ({activeWorshipStyles.length})</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {activeWorshipStyles.map(style => (
+                <span 
+                  key={style} 
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    background: "#d97706",
+                    color: "#fff",
+                    borderRadius: "20px",
+                    padding: "6px 12px",
+                    fontSize: "13px",
+                    fontWeight: 600
+                  }}
+                >
+                  {style}
+                  <i 
+                    className="ti ti-x" 
+                    onClick={() => toggleWorshipStyle(style)}
+                    style={{ cursor: "pointer", fontSize: "12px", opacity: 0.8 }}
+                  ></i>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* FACILITIES */}
-      <div className="scard">
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "22px" }}>
+      <div className="scard" style={{ overflow: "visible" }} id="f-facilities">
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
           <div style={{ width: "38px", height: "38px", borderRadius: "11px", background: "linear-gradient(135deg,#22d3ee,#0891b2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <i className="ti ti-accessible" style={{ fontSize: "18px", color: "#fff" }}></i>
           </div>
-          <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>Facilities</div>
+          <div>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>Facilities & Amenities</div>
+            <div style={{ fontSize: "12.5px", color: "var(--cn-gray)", marginTop: "2px" }}>Help visitors plan their visit — especially families & those with accessibility needs</div>
+          </div>
         </div>
-        <div style={{ fontSize: "13px", color: "var(--cn-gray)", marginBottom: "22px" }}>
-          Help visitors plan their visit — especially families & those with accessibility needs
+
+        {/* Quick Picks / Popular Facilities */}
+        {popularFacilitiesList.length > 0 && (
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "8px" }}>POPULAR FACILITIES</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {popularFacilitiesList.map(fac => {
+                const isSel = activeFacilities.includes(fac);
+                return (
+                  <button 
+                    key={fac} 
+                    type="button"
+                    onClick={() => toggleFacility(fac)}
+                    style={{
+                      padding: "7px 14px",
+                      borderRadius: "20px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      border: isSel ? "1.5px solid #0891b2" : "1.5px solid var(--cn-border)",
+                      background: isSel ? "#ecfeff" : "#fff",
+                      color: isSel ? "#0891b2" : "var(--cn-ink)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px"
+                    }}
+                  >
+                    {isSel && <i className="ti ti-check" style={{ fontSize: "13px", color: "#0891b2" }}></i>}
+                    {fac}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Search Input */}
+        <div style={{ position: "relative", marginBottom: "14px" }} ref={facilityContainerRef}>
+          <i className="ti ti-search" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", color: "var(--cn-gray)" }}></i>
+          <input 
+            placeholder="Search facilities (e.g. Wheelchair Access, Free Parking, Hall Available)..." 
+            value={facilitySearchQuery}
+            onChange={(e) => {
+              setFacilitySearchQuery(e.target.value);
+              setIsFacilityDropdownOpen(true);
+            }}
+            onFocus={() => setIsFacilityDropdownOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const val = facilitySearchQuery.trim().replace(/(^|\s)(\w)/g, (m, p, c) => p + c.toUpperCase());
+                if (val && !activeFacilities.includes(val)) {
+                  toggleFacility(val);
+                }
+                setFacilitySearchQuery("");
+                setIsFacilityDropdownOpen(false);
+              }
+            }}
+            style={{ 
+              paddingLeft: "40px", 
+              fontSize: "13.5px",
+              height: "44px",
+              borderRadius: "12px",
+              border: "1.5px solid var(--cn-border)" 
+            }}
+            autoComplete="off"
+          />
+
+          {isFacilityDropdownOpen && (
+            <div className="autocomplete-dropdown" style={{ display: "block", maxHeight: "220px", overflowY: "auto", borderRadius: "12px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }}>
+              {getFilteredFacilities().length === 0 ? (
+                <div>
+                  <div style={{ padding: "10px 14px", fontSize: "12.5px", color: "var(--cn-gray)" }}>
+                    No exact match for "{facilitySearchQuery}"
+                  </div>
+                  <div 
+                    className="autocomplete-item" 
+                    onClick={() => {
+                      const val = facilitySearchQuery.trim().replace(/(^|\s)(\w)/g, (m, p, c) => p + c.toUpperCase());
+                      if (val && !activeFacilities.includes(val)) {
+                        toggleFacility(val);
+                      }
+                      setFacilitySearchQuery("");
+                      setIsFacilityDropdownOpen(false);
+                    }}
+                    style={{ borderTop: "1px solid var(--cn-border)", fontWeight: 600, color: "#0891b2", display: "flex", alignItems: "center", gap: "8px", padding: "11px 14px", cursor: "pointer" }}
+                  >
+                    <i className="ti ti-plus" style={{ fontSize: "14px" }}></i> Add "{facilitySearchQuery}" as custom facility
+                  </div>
+                </div>
+              ) : (
+                getFilteredFacilities().slice(0, 50).map(fac => {
+                  const isAdded = activeFacilities.includes(fac);
+                  return (
+                    <div 
+                      key={fac}
+                      onClick={() => {
+                        toggleFacility(fac);
+                        setFacilitySearchQuery("");
+                        setIsFacilityDropdownOpen(false);
+                      }}
+                      className="autocomplete-item"
+                      style={{
+                        padding: "10px 14px",
+                        cursor: "pointer",
+                        fontSize: "13.5px",
+                        fontWeight: isAdded ? 600 : 400,
+                        color: isAdded ? "#0891b2" : "var(--cn-ink)",
+                        background: isAdded ? "#ecfeff" : "transparent",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between"
+                      }}
+                    >
+                      <span>{fac}</span>
+                      {isAdded && <i className="ti ti-check" style={{ fontSize: "14px", color: "#0891b2" }}></i>}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-          {/* ACCESSIBILITY */}
-          <div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-purple-dark)", letterSpacing: "0.05em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <i className="ti ti-accessible" style={{ fontSize: "14px" }}></i> ACCESSIBILITY
+        {/* Selected Facilities Pills */}
+        {activeFacilities.length > 0 && (
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-gray)", letterSpacing: "0.05em", marginBottom: "8px" }}>SELECTED FACILITIES ({activeFacilities.length})</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {activeFacilities.map(fac => (
+                <span 
+                  key={fac} 
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    background: "#0891b2",
+                    color: "#fff",
+                    borderRadius: "20px",
+                    padding: "6px 12px",
+                    fontSize: "13px",
+                    fontWeight: 600
+                  }}
+                >
+                  {fac}
+                  <i 
+                    className="ti ti-x" 
+                    onClick={() => toggleFacility(fac)}
+                    style={{ cursor: "pointer", fontSize: "12px", opacity: 0.8 }}
+                  ></i>
+                </span>
+              ))}
             </div>
-            {[
-              { id: "Wheelchair Access", icon: "ti-wheelchair" },
-              { id: "Hearing Loop", icon: "ti-ear" },
-              { id: "BSL Interpreter", icon: "ti-hand-stop" },
-              { id: "Accessible Toilets", icon: "ti-accessible" }
-            ].map(item => (
-              <button 
-                key={item.id}
-                className={`fac-chip ${isFacilitySelected(item.id) ? "on" : ""}`} 
-                onClick={() => toggleFacility(item.id)}
-              >
-                <div className="fac-icon"><i className={`ti ${item.icon}`} style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i></div>
-                {item.id}
-              </button>
-            ))}
           </div>
-
-          {/* PARKING */}
-          <div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-purple-dark)", letterSpacing: "0.05em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <i className="ti ti-car" style={{ fontSize: "14px" }}></i> PARKING
-            </div>
-            {[
-              { id: "Free Parking", icon: "ti-car" },
-              { id: "On-site Car Park", icon: "ti-building-bank" },
-              { id: "Good Transport Links", icon: "ti-bus" },
-              { id: "Cycle Storage", icon: "ti-bike" }
-            ].map(item => (
-              <button 
-                key={item.id}
-                className={`fac-chip ${isFacilitySelected(item.id) ? "on" : ""}`} 
-                onClick={() => toggleFacility(item.id)}
-              >
-                <div className="fac-icon"><i className={`ti ${item.icon}`} style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i></div>
-                {item.id}
-              </button>
-            ))}
-          </div>
-
-          {/* FACILITIES */}
-          <div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-purple-dark)", letterSpacing: "0.05em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <i className="ti ti-building" style={{ fontSize: "14px" }}></i> FACILITIES
-            </div>
-            {[
-              { id: "Free WiFi", icon: "ti-wifi" },
-              { id: "Café / Refreshments", icon: "ti-coffee" },
-              { id: "Baby Changing", icon: "ti-baby-carriage" },
-              { id: "Prayer Room", icon: "ti-pray" }
-            ].map(item => (
-              <button 
-                key={item.id}
-                className={`fac-chip ${isFacilitySelected(item.id) ? "on" : ""}`} 
-                onClick={() => toggleFacility(item.id)}
-              >
-                <div className="fac-icon"><i className={`ti ${item.icon}`} style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i></div>
-                {item.id}
-              </button>
-            ))}
-          </div>
-
-          {/* SPACES */}
-          <div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-purple-dark)", letterSpacing: "0.05em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <i className="ti ti-users" style={{ fontSize: "14px" }}></i> SPACES
-            </div>
-            {[
-              { id: "Hall Available", icon: "ti-building-community" },
-              { id: "Meeting Rooms", icon: "ti-door" },
-              { id: "Outdoor Space", icon: "ti-trees" },
-              { id: "Streaming Setup", icon: "ti-broadcast" }
-            ].map(item => (
-              <button 
-                key={item.id}
-                className={`fac-chip ${isFacilitySelected(item.id) ? "on" : ""}`} 
-                onClick={() => toggleFacility(item.id)}
-              >
-                <div className="fac-icon"><i className={`ti ${item.icon}`} style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i></div>
-                {item.id}
-              </button>
-            ))}
-          </div>
-
-        </div>
+        )}
       </div>
 
       <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>

@@ -55,6 +55,7 @@ export interface FormData {
 interface FormContextType {
   formData: FormData;
   updateFormData: (data: Partial<FormData>) => void;
+  clearFormData: () => void;
 }
 
 const defaultFormData: FormData = {
@@ -96,6 +97,17 @@ export function FormProvider({ children }: { children: ReactNode }) {
     setIsLoaded(true);
   }, []);
 
+  const clearFormData = () => {
+    setFormData(defaultFormData);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('churchFormData');
+      } catch (e) {
+        console.warn("Could not remove churchFormData from localStorage", e);
+      }
+    }
+  };
+
   const updateFormData = (data: Partial<FormData>) => {
     setFormData((prev) => {
       const newData = { ...prev, ...data };
@@ -127,7 +139,7 @@ export function FormProvider({ children }: { children: ReactNode }) {
   if (!isLoaded) return null; // Or a loading spinner
 
   return (
-    <FormContext.Provider value={{ formData, updateFormData }}>
+    <FormContext.Provider value={{ formData, updateFormData, clearFormData }}>
       {children}
     </FormContext.Provider>
   );

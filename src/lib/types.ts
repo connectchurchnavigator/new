@@ -46,6 +46,7 @@ export interface Church {
 
   worship_style?: string | string[] | null;
   worship_styles?: string | string[] | null;
+  worshipStyles?: string | string[] | null;
   social_instagram?: string | null;
   social_facebook?: string | null;
   social_youtube?: string | null;

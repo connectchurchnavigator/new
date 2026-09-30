@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import SharedAddressField from "@/components/add-church/steps/SharedAddressField";
+import { useTaxonomies } from "@/hooks/useTaxonomies";
 
 interface EditCoverModalProps {
   church: any;
@@ -107,9 +108,11 @@ export default function EditCoverModal({ church }: EditCoverModalProps) {
     }
   };
 
+  const taxonomies = useTaxonomies();
   if (!mounted) return null;
 
-  const denominationOptions = [
+  const denominationOptions = Array.from(new Set([
+    ...taxonomies.denominations,
     "Pentecostal",
     "Baptist",
     "Catholic",
@@ -130,7 +133,7 @@ export default function EditCoverModal({ church }: EditCoverModalProps) {
     "Apostolic",
     "Independent",
     "Other"
-  ];
+  ]));
 
   return createPortal(
     <div style={{ position: "fixed", inset: 0, zIndex: 999999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,23,42,0.85)", backdropFilter: "blur(6px)", padding: "20px" }}>

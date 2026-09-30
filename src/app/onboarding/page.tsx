@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
 import { createOrganization, createChurch, getMyOrg } from '@/lib/api';
+import { useTaxonomies } from '@/hooks/useTaxonomies';
 
 export default function OnboardingPage() {
   const router = useRouter();
   const supabase = createClient();
+  const taxonomies = useTaxonomies();
   const [orgName, setOrgName] = useState('');
   const [denom, setDenom] = useState('Pentecostal');
   const [city, setCity] = useState('');
@@ -55,7 +57,7 @@ export default function OnboardingPage() {
           <div className="field">
             <label>Denomination</label>
             <select value={denom} onChange={(e) => setDenom(e.target.value)}>
-              {['Pentecostal','Baptist','Catholic','Anglican','Methodist','Non-Denominational','Orthodox','Other'].map((d) => <option key={d}>{d}</option>)}
+              {taxonomies.denominations.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
           <div className="field">

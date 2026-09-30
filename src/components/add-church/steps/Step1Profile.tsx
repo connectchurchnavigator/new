@@ -1,33 +1,35 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useFormContext } from "@/context/FormContext";
 import SharedAddressField from "./SharedAddressField";
+import { useTaxonomies } from "@/hooks/useTaxonomies";
 
 interface Step1ProfileProps {
   onNext: () => void;
 }
 
 const COUNTRIES = [
-  ["GB", "United Kingdom"], ["US", "United States"], ["NG", "Nigeria"], ["GH", "Ghana"], ["KE", "Kenya"],
-  ["ZA", "South Africa"], ["CA", "Canada"], ["AU", "Australia"], ["IE", "Ireland"], ["IN", "India"],
-  ["PK", "Pakistan"], ["BD", "Bangladesh"], ["LK", "Sri Lanka"], ["PH", "Philippines"], ["JM", "Jamaica"],
-  ["TT", "Trinidad & Tobago"], ["BB", "Barbados"], ["NZ", "New Zealand"], ["FR", "France"], ["DE", "Germany"],
-  ["NL", "Netherlands"], ["ES", "Spain"], ["PT", "Portugal"], ["IT", "Italy"], ["BE", "Belgium"],
-  ["CH", "Switzerland"], ["AT", "Austria"], ["SE", "Sweden"], ["NO", "Norway"], ["DK", "Denmark"],
-  ["FI", "Finland"], ["PL", "Poland"], ["RO", "Romania"], ["UA", "Ukraine"], ["GR", "Greece"],
-  ["HU", "Hungary"], ["CZ", "Czechia"], ["LT", "Lithuania"], ["LV", "Latvia"], ["BG", "Bulgaria"],
-  ["HR", "Croatia"], ["RS", "Serbia"], ["AL", "Albania"], ["BR", "Brazil"], ["MX", "Mexico"],
-  ["AR", "Argentina"], ["CO", "Colombia"], ["CL", "Chile"], ["PE", "Peru"], ["EC", "Ecuador"],
-  ["VE", "Venezuela"], ["GT", "Guatemala"], ["CN", "China"], ["HK", "Hong Kong"], ["TW", "Taiwan"],
-  ["KR", "South Korea"], ["JP", "Japan"], ["VN", "Vietnam"], ["TH", "Thailand"], ["MY", "Malaysia"],
-  ["SG", "Singapore"], ["ID", "Indonesia"], ["NP", "Nepal"], ["AE", "United Arab Emirates"], ["SA", "Saudi Arabia"],
-  ["QA", "Qatar"], ["KW", "Kuwait"], ["IL", "Israel"], ["TR", "Turkey"], ["EG", "Egypt"],
-  ["MA", "Morocco"], ["DZ", "Algeria"], ["ET", "Ethiopia"], ["UG", "Uganda"], ["TZ", "Tanzania"],
-  ["RW", "Rwanda"], ["ZW", "Zimbabwe"], ["ZM", "Zambia"], ["CM", "Cameroon"], ["CI", "Côte d'Ivoire"],
-  ["SN", "Senegal"], ["AO", "Angola"], ["MZ", "Mozambique"], ["BW", "Botswana"], ["MW", "Malawi"],
-  ["NA", "Namibia"], ["SL", "Sierra Leone"], ["LR", "Liberia"], ["GM", "Gambia"], ["CD", "DR Congo"],
-  ["RU", "Russia"], ["BY", "Belarus"], ["MD", "Moldova"], ["GE", "Georgia"], ["AM", "Armenia"],
-  ["MT", "Malta"], ["CY", "Cyprus"], ["LU", "Luxembourg"], ["IS", "Iceland"], ["EE", "Estonia"],
-  ["SK", "Slovakia"], ["SI", "Slovenia"]
+  ["GB", "United Kingdom"],
+  ["AL", "Albania"], ["DZ", "Algeria"], ["AO", "Angola"], ["AR", "Argentina"], ["AM", "Armenia"],
+  ["AU", "Australia"], ["AT", "Austria"], ["BD", "Bangladesh"], ["BB", "Barbados"], ["BY", "Belarus"],
+  ["BE", "Belgium"], ["BW", "Botswana"], ["BR", "Brazil"], ["BG", "Bulgaria"], ["CM", "Cameroon"],
+  ["CA", "Canada"], ["CL", "Chile"], ["CN", "China"], ["CO", "Colombia"], ["CI", "Côte d'Ivoire"],
+  ["HR", "Croatia"], ["CY", "Cyprus"], ["CZ", "Czechia"], ["DK", "Denmark"], ["CD", "DR Congo"],
+  ["EC", "Ecuador"], ["EG", "Egypt"], ["EE", "Estonia"], ["ET", "Ethiopia"], ["FI", "Finland"],
+  ["FR", "France"], ["GM", "Gambia"], ["GE", "Georgia"], ["DE", "Germany"], ["GH", "Ghana"],
+  ["GR", "Greece"], ["GT", "Guatemala"], ["HK", "Hong Kong"], ["HU", "Hungary"], ["IS", "Iceland"],
+  ["IN", "India"], ["ID", "Indonesia"], ["IE", "Ireland"], ["IL", "Israel"], ["IT", "Italy"],
+  ["JM", "Jamaica"], ["JP", "Japan"], ["KE", "Kenya"], ["KW", "Kuwait"], ["LV", "Latvia"],
+  ["LR", "Liberia"], ["LT", "Lithuania"], ["LU", "Luxembourg"], ["MW", "Malawi"], ["MY", "Malaysia"],
+  ["MT", "Malta"], ["MX", "Mexico"], ["MD", "Moldova"], ["MA", "Morocco"], ["MZ", "Mozambique"],
+  ["NA", "Namibia"], ["NP", "Nepal"], ["NL", "Netherlands"], ["NZ", "New Zealand"], ["NG", "Nigeria"],
+  ["NO", "Norway"], ["PK", "Pakistan"], ["PE", "Peru"], ["PH", "Philippines"], ["PL", "Poland"],
+  ["PT", "Portugal"], ["QA", "Qatar"], ["RO", "Romania"], ["RU", "Russia"], ["RW", "Rwanda"],
+  ["SA", "Saudi Arabia"], ["SN", "Senegal"], ["RS", "Serbia"], ["SL", "Sierra Leone"], ["SG", "Singapore"],
+  ["SK", "Slovakia"], ["SI", "Slovenia"], ["ZA", "South Africa"], ["KR", "South Korea"], ["ES", "Spain"],
+  ["LK", "Sri Lanka"], ["SE", "Sweden"], ["CH", "Switzerland"], ["TW", "Taiwan"], ["TZ", "Tanzania"],
+  ["TH", "Thailand"], ["TT", "Trinidad & Tobago"], ["TR", "Turkey"], ["UG", "Uganda"], ["UA", "Ukraine"],
+  ["AE", "United Arab Emirates"], ["US", "United States"], ["VE", "Venezuela"], ["VN", "Vietnam"],
+  ["ZM", "Zambia"], ["ZW", "Zimbabwe"]
 ];
 
 function flagEmoji(code: string) {
@@ -36,10 +38,20 @@ function flagEmoji(code: string) {
 
 export default function Step1Profile({ onNext }: Step1ProfileProps) {
   const { formData, updateFormData } = useFormContext();
+  const taxonomies = useTaxonomies();
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   
   const [showDropdown, setShowDropdown] = useState(false);
   const [hasNoPredictions, setHasNoPredictions] = useState(false);
+  
+  // Searchable Denomination state
+  const [isDenomOpen, setIsDenomOpen] = useState(false);
+  const [denomSearch, setDenomSearch] = useState("");
+  const denomRef = useRef<HTMLDivElement>(null);
+
+  const sortedDenominations = React.useMemo(() => {
+    return [...taxonomies.denominations].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [taxonomies.denominations]);
   
   const countryRef = useRef<HTMLDivElement>(null);
   const addressRef = useRef<HTMLDivElement>(null);
@@ -48,6 +60,9 @@ export default function Step1Profile({ onNext }: Step1ProfileProps) {
     function handleClickOutside(event: MouseEvent) {
       if (countryRef.current && !countryRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
+      }
+      if (denomRef.current && !denomRef.current.contains(event.target as Node)) {
+        setIsDenomOpen(false);
       }
       if (addressRef.current && !addressRef.current.contains(event.target as Node)) {
         (window as any).addressPredictions = [];
@@ -107,21 +122,179 @@ export default function Step1Profile({ onNext }: Step1ProfileProps) {
           </div>
           <div>
             <label>Denomination</label>
-            <select
-              value={formData.denomination || ""}
-              onChange={(e) => updateFormData({ denomination: e.target.value })}
-            >
-              <option value="">Select denomination</option>
-              <option value="Anglican">Anglican</option>
-              <option value="Baptist">Baptist</option>
-              <option value="Catholic">Catholic</option>
-              <option value="Methodist">Methodist</option>
-              <option value="Non-Denominational">Non-Denominational</option>
-              <option value="Orthodox">Orthodox</option>
-              <option value="Pentecostal">Pentecostal</option>
-              <option value="Presbyterian">Presbyterian</option>
-              <option value="Other">Other</option>
-            </select>
+            <div ref={denomRef} style={{ position: "relative" }}>
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <input
+                  type="text"
+                  placeholder="Select or search denomination..."
+                  value={isDenomOpen ? denomSearch : (formData.denomination || "")}
+                  onChange={(e) => {
+                    setDenomSearch(e.target.value);
+                    if (!isDenomOpen) setIsDenomOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (denomSearch.trim()) {
+                        updateFormData({ denomination: denomSearch.trim() });
+                        setIsDenomOpen(false);
+                      }
+                    }
+                  }}
+                  onFocus={() => {
+                    setDenomSearch(formData.denomination || "");
+                    setIsDenomOpen(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    paddingRight: "36px",
+                    cursor: "pointer",
+                    textOverflow: "ellipsis"
+                  }}
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsDenomOpen(!isDenomOpen)}
+                  style={{
+                    position: "absolute",
+                    right: "10px",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--cn-gray)"
+                  }}
+                >
+                  <i className={`ti ${isDenomOpen ? 'ti-chevron-up' : 'ti-chevron-down'}`} style={{ fontSize: "14px" }}></i>
+                </button>
+              </div>
+
+              {isDenomOpen && (
+                <div
+                  className="autocomplete-dropdown"
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 4px)",
+                    left: 0,
+                    right: 0,
+                    maxHeight: "240px",
+                    overflowY: "auto",
+                    background: "#fff",
+                    borderRadius: "10px",
+                    boxShadow: "0 10px 25px -5px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)",
+                    zIndex: 1000,
+                    padding: "4px 0"
+                  }}
+                >
+                  <div
+                    onClick={() => {
+                      updateFormData({ denomination: "" });
+                      setDenomSearch("");
+                      setIsDenomOpen(false);
+                    }}
+                    className="autocomplete-item"
+                    style={{
+                      padding: "9px 14px",
+                      cursor: "pointer",
+                      fontSize: "13.5px",
+                      color: "var(--cn-gray)",
+                      borderBottom: "1px solid #f1f5f9"
+                    }}
+                  >
+                    Clear selection
+                  </div>
+                  {(() => {
+                    const filtered = sortedDenominations.filter(d => !denomSearch.trim() || d.toLowerCase().includes(denomSearch.toLowerCase()));
+                    const trimmedSearch = denomSearch.trim();
+                    const exactMatch = sortedDenominations.some(d => d.toLowerCase() === trimmedSearch.toLowerCase());
+
+                    return (
+                      <>
+                        {filtered.length === 0 ? (
+                          <div style={{ padding: "12px 14px", fontSize: "13px", color: "var(--cn-gray)" }}>
+                            No denomination found
+                          </div>
+                        ) : (
+                          filtered.map((d) => {
+                            const isSelected = formData.denomination === d;
+                            return (
+                              <div
+                                key={d}
+                                onClick={() => {
+                                  updateFormData({ denomination: d });
+                                  setDenomSearch(d);
+                                  setIsDenomOpen(false);
+                                }}
+                                className="autocomplete-item"
+                                style={{
+                                  padding: "9px 14px",
+                                  cursor: "pointer",
+                                  fontSize: "13.5px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  background: isSelected ? "#f3e8ff" : "transparent",
+                                  color: isSelected ? "#7e22ce" : "var(--cn-ink)",
+                                  fontWeight: isSelected ? 600 : 400
+                                }}
+                              >
+                                <span>{d}</span>
+                                {isSelected && <i className="ti ti-check" style={{ fontSize: "14px", color: "#7e22ce" }}></i>}
+                              </div>
+                            );
+                          })
+                        )}
+
+                        {trimmedSearch && !exactMatch && (
+                          <div
+                            onClick={() => {
+                              updateFormData({ denomination: trimmedSearch });
+                              setDenomSearch(trimmedSearch);
+                              setIsDenomOpen(false);
+                            }}
+                            className="autocomplete-item"
+                            style={{
+                              padding: "10px 14px",
+                              cursor: "pointer",
+                              fontSize: "13.5px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              borderTop: "1px solid #e2e8f0",
+                              background: "#faf5ff",
+                              color: "#7e22ce",
+                              fontWeight: 700
+                            }}
+                          >
+                            <i className="ti ti-plus" style={{ fontSize: "14px" }}></i>
+                            <span>Add &quot;{trimmedSearch}&quot; as denomination</span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
+            <label>Established Year</label>
+            <input
+              id="f-establishedYear"
+              type="text"
+              inputMode="numeric"
+              placeholder="e.g. 1998"
+              maxLength={4}
+              value={formData.establishedYear || ""}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9]/g, "");
+                updateFormData({ establishedYear: val });
+              }}
+            />
           </div>
         </div>
       </div>

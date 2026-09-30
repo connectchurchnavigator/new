@@ -8,6 +8,7 @@ import { TagInput } from '@/components/TagInput';
 import { ImageUpload } from '@/components/ImageUpload';
 import SharedAddressField from '@/components/add-church/steps/SharedAddressField';
 import logoImg from '@/Assets/logo (1).png';
+import { useTaxonomies } from '@/hooks/useTaxonomies';
 
 export interface AssociatedChurchItem {
   image?: string;
@@ -164,6 +165,7 @@ function PastorOnboardingContent() {
   const [verified, setVerified] = useState<Record<string, boolean>>({});
   const [toastMsg, setToastMsg] = useState("");
   const [uploadingGallery, setUploadingGallery] = useState(false);
+  const taxonomies = useTaxonomies();
 
   // Keep edit slug synced if searchParams updates
   useEffect(() => {
@@ -363,6 +365,18 @@ function PastorOnboardingContent() {
       setToastMsg("✨ Sample contact, media, travel & languages loaded for Step 3!");
     }
     setTimeout(() => setToastMsg(""), 4500);
+  };
+
+  const handleClearDraft = () => {
+    if (window.confirm("Are you sure you want to clear your current draft? All entered pastor details will be reset.")) {
+      setForm(initialState);
+      setErrors({});
+      setVerified({});
+      setStep(1);
+      setToastMsg("Draft cleared successfully!");
+      setTimeout(() => setToastMsg(""), 3500);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const SOCIAL_RULES: { [key: string]: { rx: RegExp, others: RegExp, name: string, ex: string } } = {
@@ -651,6 +665,29 @@ function PastorOnboardingContent() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              type="button"
+              onClick={handleClearDraft}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "7px",
+                padding: "8px 16px",
+                borderRadius: "12px",
+                border: "1.5px solid #fca5a5",
+                background: "#fef2f2",
+                color: "#dc2626",
+                fontSize: "13.5px",
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(239, 68, 68, 0.1)",
+                transition: "all 0.2s",
+              }}
+              title="Clear all entered data and reset form draft"
+            >
+              <i className="ti ti-trash" style={{ fontSize: "15px", color: "#dc2626" }}></i>
+              Clear Draft
+            </button>
             <button
               type="button"
               onClick={handleLoadSampleData}
@@ -1367,7 +1404,7 @@ function PastorOnboardingContent() {
                     value={form.ministry_area_tags}
                     onChange={(v) => update('ministry_area_tags', v)}
                     placeholder="Type a ministry area (e.g. Youth ministry) and press Enter..."
-                    suggestions={MINISTRY_SUGGESTIONS}
+                    suggestions={Array.from(new Set([...taxonomies.ministries, ...MINISTRY_SUGGESTIONS]))}
                     labelPrefix="SELECTED MINISTRY AREAS"
                   />
                 </Field>
@@ -1844,7 +1881,7 @@ function PastorOnboardingContent() {
                         if (errors.languages) setErrors(prev => ({ ...prev, languages: '' }));
                       }}
                       placeholder="Search or type language and press Enter..."
-                      suggestions={COMMON_LANGUAGES}
+                      suggestions={Array.from(new Set([...taxonomies.languages, ...COMMON_LANGUAGES]))}
                       labelPrefix="SELECTED LANGUAGES"
                     />
                     {errors.languages && <p style={{ color: "#ef4444", fontSize: "13px", marginTop: "6px", fontWeight: 600 }}>{errors.languages}</p>}

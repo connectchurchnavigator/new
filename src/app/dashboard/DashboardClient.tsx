@@ -11,6 +11,7 @@ import PastorVisitorMap, { VisitorLocation } from '@/components/dashboard/Pastor
 import BulkUploadModal from '@/components/admin/BulkUploadModal';
 import Papa from 'papaparse';
 import InsightsClient from './insights/InsightsClient';
+import { useTaxonomies } from '@/hooks/useTaxonomies';
 
 interface DashboardClientProps {
   user: any;
@@ -45,6 +46,7 @@ export default function DashboardClient({
   insightsData,
 }: DashboardClientProps) {
   const router = useRouter();
+  const taxonomies = useTaxonomies();
 
   // Role permissions checking
   const isTeamMember = !!(user?.user_metadata?.is_team_member || user?.user_metadata?.team_role);
@@ -1236,13 +1238,13 @@ export default function DashboardClient({
 
   // Denominations list for Churches filter
   const denominations = useMemo(() => {
-    const set = new Set<string>();
+    const set = new Set<string>(taxonomies.denominations || []);
     churches.forEach((c) => {
       const d = c.denomination?.split('|||')[0];
       if (d) set.add(d.trim());
     });
     return Array.from(set).sort();
-  }, [churches]);
+  }, [churches, taxonomies.denominations]);
 
   // Filtered churches for Churches section
   const filteredChurches = useMemo(() => {
@@ -2455,121 +2457,7 @@ export default function DashboardClient({
                 </div>
               </div>
 
-              {/* Profile Completeness Status Banner & Edit Prompt */}
-              {currentPastor && (() => {
-                const pComp = getEntityCompleteness(currentPastor);
-                return (
-                  <div
-                    style={{
-                      background: 'linear-gradient(135deg, #ffffff 0%, #faf5ff 100%)',
-                      borderRadius: '16px',
-                      border: '1.5px solid #e9d5ff',
-                      padding: '16px 20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '14px',
-                      boxShadow: '0 2px 8px rgba(124, 58, 237, 0.04)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div
-                        style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '12px',
-                          background: pComp.score >= 80 ? '#ecfdf5' : '#fef3c7',
-                          color: pComp.score >= 80 ? '#059669' : '#d97706',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '20px',
-                          fontWeight: 900,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {pComp.score >= 80 ? '✓' : '⚡'}
-                      </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a' }}>
-                            Profile Completeness: {pComp.score}%
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 800,
-                              padding: '2px 8px',
-                              borderRadius: '12px',
-                              background: pComp.score >= 80 ? '#d1fae5' : '#fef3c7',
-                              color: pComp.score >= 80 ? '#065f46' : '#92400e',
-                            }}
-                          >
-                            {pComp.score >= 80 ? 'Optimized' : 'Action Recommended'}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
-                          {pComp.score >= 80
-                            ? 'Your pastor profile is complete and ranking with maximum visibility in search!'
-                            : `Boost your search discovery rank by completing remaining details (${pComp.items.filter(i => !i.done).map(i => i.label).join(', ')}).`}
-                        </div>
-                      </div>
-                    </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      {(!isTeamMember || teamRole === 'events_and_church_edit') && (
-                        <button
-                          type="button"
-                          onClick={() => openDrawerForEntity({
-                            id: currentPastor.id,
-                            title: currentPastor.full_name || currentPastor.name,
-                            type: 'pastor',
-                            typeLabel: 'Pastor',
-                            raw: currentPastor,
-                          })}
-                          style={{
-                            background: '#7c3aed',
-                            color: '#ffffff',
-                            border: 'none',
-                            padding: '8px 16px',
-                            borderRadius: '10px',
-                            fontSize: '12.5px',
-                            fontWeight: 800,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 2px 6px rgba(124, 58, 237, 0.25)',
-                          }}
-                        >
-                          <i className="ti ti-edit" style={{ fontSize: '14px' }}></i> Quick Edit Details
-                        </button>
-                      )}
-
-                      <Link
-                        href={`/pastor/${currentPastor.slug || currentPastor.id}`}
-                        target="_blank"
-                        style={{
-                          background: '#ffffff',
-                          color: '#475569',
-                          border: '1.5px solid #cbd5e1',
-                          padding: '7px 14px',
-                          borderRadius: '10px',
-                          fontSize: '12.5px',
-                          fontWeight: 700,
-                          textDecoration: 'none',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        View Public Profile &rarr;
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })()}
 
               {/* Top Two Cards Row: Profile Views Bar Chart + Where Visitors Come From */}
               <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '20px' }}>
@@ -3968,123 +3856,7 @@ export default function DashboardClient({
                 </div>
               </div>
 
-              {/* Profile Completeness Status Banner & Edit Prompt */}
-              {(() => {
-                const targetChurch = currentSelectedChurch || churches[0];
-                if (!targetChurch) return null;
-                const cComp = getEntityCompleteness(targetChurch);
-                return (
-                  <div
-                    style={{
-                      background: 'linear-gradient(135deg, #ffffff 0%, #faf5ff 100%)',
-                      borderRadius: '16px',
-                      border: '1.5px solid #e9d5ff',
-                      padding: '16px 20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '14px',
-                      boxShadow: '0 2px 8px rgba(124, 58, 237, 0.04)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div
-                        style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '12px',
-                          background: cComp.score >= 80 ? '#ecfdf5' : '#fef3c7',
-                          color: cComp.score >= 80 ? '#059669' : '#d97706',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '20px',
-                          fontWeight: 900,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {cComp.score >= 80 ? '✓' : '⚡'}
-                      </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a' }}>
-                            {currentSelectedChurch ? `${currentSelectedChurch.name} Completeness` : 'Church Profile Completeness'}: {cComp.score}%
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 800,
-                              padding: '2px 8px',
-                              borderRadius: '12px',
-                              background: cComp.score >= 80 ? '#d1fae5' : '#fef3c7',
-                              color: cComp.score >= 80 ? '#065f46' : '#92400e',
-                            }}
-                          >
-                            {cComp.score >= 80 ? 'Optimized' : 'Action Recommended'}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
-                          {cComp.score >= 80
-                            ? 'Your church directory profile is fully enriched and ready to convert visitors!'
-                            : `Complete remaining profile fields (${cComp.items.filter(i => !i.done).map(i => i.label).join(', ')}) to gain higher placement in Sunday search.`}
-                        </div>
-                      </div>
-                    </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      {(!isTeamMember || teamRole === 'events_and_church_edit') && (
-                        <button
-                          type="button"
-                          onClick={() => openDrawerForEntity({
-                            id: targetChurch.id,
-                            title: targetChurch.name,
-                            type: 'church',
-                            typeLabel: 'Church',
-                            raw: targetChurch,
-                          })}
-                          style={{
-                            background: '#7c3aed',
-                            color: '#ffffff',
-                            border: 'none',
-                            padding: '8px 16px',
-                            borderRadius: '10px',
-                            fontSize: '12.5px',
-                            fontWeight: 800,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 2px 6px rgba(124, 58, 237, 0.25)',
-                          }}
-                        >
-                          <i className="ti ti-edit" style={{ fontSize: '14px' }}></i> Quick Edit Church
-                        </button>
-                      )}
-
-                      <Link
-                        href={`/church/${targetChurch.slug || targetChurch.id}`}
-                        target="_blank"
-                        style={{
-                          background: '#ffffff',
-                          color: '#475569',
-                          border: '1.5px solid #cbd5e1',
-                          padding: '7px 14px',
-                          borderRadius: '10px',
-                          fontSize: '12.5px',
-                          fontWeight: 700,
-                          textDecoration: 'none',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        View Public Page &rarr;
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })()}
 
               {/* Top Two Cards Row: Church Views Trend Bar Chart + Where Visitors Come From */}
               <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '20px' }}>
@@ -4436,121 +4208,7 @@ export default function DashboardClient({
                 </div>
               </div>
 
-              {/* Profile Completeness Status Banner & Edit Prompt */}
-              {(() => {
-                const targetWl = currentSelectedWorshipLeader || worshipLeaders[0];
-                if (!targetWl) return null;
-                const wlComp = getEntityCompleteness(targetWl);
-                return (
-                  <div
-                    style={{
-                      background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
-                      borderRadius: '16px',
-                      border: '1.5px solid #bae6fd',
-                      padding: '16px 20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '14px',
-                      boxShadow: '0 2px 8px rgba(2, 132, 199, 0.05)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div
-                        style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '12px',
-                          background: wlComp.score >= 80 ? '#ecfdf5' : '#e0f2fe',
-                          color: wlComp.score >= 80 ? '#059669' : '#0284c7',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '20px',
-                          fontWeight: 900,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {wlComp.score >= 80 ? '✓' : '🎵'}
-                      </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a' }}>
-                            {currentSelectedWorshipLeader ? `${currentSelectedWorshipLeader.display_name} Completeness` : 'Worship Leader Completeness'}: {wlComp.score}%
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 800,
-                              padding: '2px 8px',
-                              borderRadius: '12px',
-                              background: wlComp.score >= 80 ? '#d1fae5' : '#fef3c7',
-                              color: wlComp.score >= 80 ? '#065f46' : '#92400e',
-                            }}
-                          >
-                            {wlComp.score >= 80 ? 'Optimized' : 'Action Recommended'}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
-                          {wlComp.score >= 80
-                            ? 'Your worship leader profile is enriched with ministry bio, instruments, and media!'
-                            : `Complete remaining profile details (${wlComp.items.filter(i => !i.done).map(i => i.label).join(', ')}) to boost church booking requests.`}
-                        </div>
-                      </div>
-                    </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <button
-                        type="button"
-                        onClick={() => openDrawerForEntity({
-                          id: targetWl.id,
-                          title: targetWl.display_name || targetWl.name,
-                          type: 'worship-leader',
-                          typeLabel: 'Worship Leader',
-                          raw: targetWl,
-                        })}
-                        style={{
-                          background: '#0284c7',
-                          color: '#ffffff',
-                          border: 'none',
-                          padding: '8px 16px',
-                          borderRadius: '10px',
-                          fontSize: '12.5px',
-                          fontWeight: 800,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)',
-                        }}
-                      >
-                        <i className="ti ti-edit" style={{ fontSize: '14px' }}></i> Quick Edit Profile
-                      </button>
-
-                      <Link
-                        href={`/worship-leader/${targetWl.slug || targetWl.id}`}
-                        target="_blank"
-                        style={{
-                          background: '#ffffff',
-                          color: '#475569',
-                          border: '1.5px solid #cbd5e1',
-                          padding: '7px 14px',
-                          borderRadius: '10px',
-                          fontSize: '12.5px',
-                          fontWeight: 700,
-                          textDecoration: 'none',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        View Public Profile &rarr;
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })()}
 
               {/* Top Two Cards Row: Worship Leader Views Trend Bar Chart + Where Visitors Come From */}
               <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '20px' }}>
@@ -4900,123 +4558,7 @@ export default function DashboardClient({
                 </div>
               </div>
 
-              {/* Event Completeness Status Banner & Edit Prompt */}
-              {(() => {
-                const targetEvent = currentSelectedEvent || events[0];
-                if (!targetEvent) return null;
-                const eComp = getEntityCompleteness(targetEvent);
-                return (
-                  <div
-                    style={{
-                      background: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)',
-                      borderRadius: '16px',
-                      border: '1.5px solid #bbf7d0',
-                      padding: '16px 20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '14px',
-                      boxShadow: '0 2px 8px rgba(22, 163, 74, 0.05)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div
-                        style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '12px',
-                          background: eComp.score >= 80 ? '#dcfce7' : '#fef3c7',
-                          color: eComp.score >= 80 ? '#16a34a' : '#d97706',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '20px',
-                          fontWeight: 900,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {eComp.score >= 80 ? '✓' : '📅'}
-                      </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a' }}>
-                            {currentSelectedEvent ? `${currentSelectedEvent.title} Completeness` : 'Event Listing Completeness'}: {eComp.score}%
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 800,
-                              padding: '2px 8px',
-                              borderRadius: '12px',
-                              background: eComp.score >= 80 ? '#d1fae5' : '#fef3c7',
-                              color: eComp.score >= 80 ? '#065f46' : '#92400e',
-                            }}
-                          >
-                            {eComp.score >= 80 ? 'Optimized' : 'Action Recommended'}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
-                          {eComp.score >= 80
-                            ? 'Event listing contains full venue details, schedules, and RSVP contact points!'
-                            : `Add remaining details (${eComp.items.filter((i) => !i.done).map((i) => i.label).join(', ')}) to increase ticket RSVPs and visitor attendance.`}
-                        </div>
-                      </div>
-                    </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          openDrawerForEntity({
-                            id: targetEvent.id,
-                            title: targetEvent.title,
-                            type: 'event',
-                            typeLabel: 'Event',
-                            raw: targetEvent,
-                          })
-                        }
-                        style={{
-                          background: '#16a34a',
-                          color: '#ffffff',
-                          border: 'none',
-                          padding: '8px 16px',
-                          borderRadius: '10px',
-                          fontSize: '12.5px',
-                          fontWeight: 800,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          boxShadow: '0 2px 6px rgba(22, 163, 74, 0.25)',
-                        }}
-                      >
-                        <i className="ti ti-edit" style={{ fontSize: '14px' }}></i> Quick Edit Event
-                      </button>
-
-                      <Link
-                        href={`/events/${targetEvent.slug || targetEvent.id}`}
-                        target="_blank"
-                        style={{
-                          background: '#ffffff',
-                          color: '#475569',
-                          border: '1.5px solid #cbd5e1',
-                          padding: '7px 14px',
-                          borderRadius: '10px',
-                          fontSize: '12.5px',
-                          fontWeight: 700,
-                          textDecoration: 'none',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        View Event Page &rarr;
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })()}
 
               {/* Top Two Cards Row: Event Views Trend Bar Chart + Where Attendees Come From */}
               <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '20px' }}>

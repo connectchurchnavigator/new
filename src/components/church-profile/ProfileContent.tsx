@@ -41,7 +41,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
       {(church.about || isEditing) && (
         <div className="sec" style={{ marginBottom: "40px" }}>
           <div className="sec-head" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-            <span className="ic c-purple" style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)", color: "white", padding: "6px", borderRadius: "8px", display: "flex" }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 7.4H22l-6 4.5 2.3 7.1-6.3-4.6L5.7 21 8 14 2 9.4h7.6z" stroke="#fff" strokeWidth="1.8" strokeLinejoin="round"/></svg></span>
+            <span className="ic c-purple" style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)", color: "white", width: "34px", height: "34px", borderRadius: "10px", display: "grid", placeItems: "center", flexShrink: 0 }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 7.4H22l-6 4.5 2.3 7.1-6.3-4.6L5.7 21 8 14 2 9.4h7.6z" stroke="#fff" strokeWidth="1.8" strokeLinejoin="round"/></svg></span>
             <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>About this church</h2>
             {renderEditButton("about")}
           </div>
@@ -59,7 +59,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
       {((church.leaders && church.leaders.length > 0) || church.pastor_name || church.pastorName || isEditing) && (
         <div className="sec" style={{ marginBottom: "40px" }}>
           <div className="sec-head" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-            <span className="ic c-indigo" style={{ background: "linear-gradient(135deg, #6366f1, #818cf8)", color: "white", padding: "6px", borderRadius: "8px", display: "flex" }}>
+            <span className="ic c-indigo" style={{ background: "linear-gradient(135deg, #6366f1, #818cf8)", color: "white", width: "34px", height: "34px", borderRadius: "10px", display: "grid", placeItems: "center", flexShrink: 0 }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="#fff" strokeWidth="1.8"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>
             </span>
             <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Pastor</h2>
@@ -121,7 +121,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
       {((church.ministries && church.ministries.length > 0) || isEditing) && (
         <div className="sec" style={{ marginBottom: "40px" }}>
           <div className="sec-head" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-            <span className="ic c-amber" style={{ background: "linear-gradient(135deg, #f59e0b, #fbbf24)", color: "white", padding: "6px", borderRadius: "8px", display: "flex" }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2a5 5 0 0 0-5 5c0 3 5 8 5 8s5-5 5-8a5 5 0 0 0-5-5zM5 21h14" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+            <span className="ic c-amber" style={{ background: "linear-gradient(135deg, #f59e0b, #fbbf24)", color: "white", width: "34px", height: "34px", borderRadius: "10px", display: "grid", placeItems: "center", flexShrink: 0 }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2a5 5 0 0 0-5 5c0 3 5 8 5 8s5-5 5-8a5 5 0 0 0-5-5zM5 21h14" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
             <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Ministries</h2>
             {renderEditButton("ministries")}
           </div>
@@ -137,10 +137,42 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
         </div>
       )}
 
+      {/* Worship Styles Section — added after Ministries */}
+      {(() => {
+        const worshipStylesList = Array.isArray(church.worship_styles) && church.worship_styles.length > 0
+          ? church.worship_styles
+          : Array.isArray(church.worshipStyles) && church.worshipStyles.length > 0
+          ? church.worshipStyles
+          : typeof church.worship_styles === "string" && church.worship_styles
+          ? church.worship_styles.split(",").map((s: string) => s.trim()).filter(Boolean)
+          : [];
+
+        return ((worshipStylesList.length > 0) || isEditing) && (
+          <div className="sec" style={{ marginBottom: "40px" }}>
+            <div className="sec-head" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+              <span className="ic c-coral" style={{ background: "linear-gradient(135deg, #e11d48, #f43f5e)", color: "white", width: "34px", height: "34px", borderRadius: "10px", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm12 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </span>
+              <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Worship Styles</h2>
+              {renderEditButton("worshipStyles")}
+            </div>
+            {worshipStylesList.length > 0 ? (
+              <div className="tagrow" style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                {worshipStylesList.map((style: string, i: number) => (
+                  <span key={i} style={{ background: "#ffe4e6", padding: "6px 14px", borderRadius: "8px", fontSize: "13.5px", fontWeight: 600, color: "#be123c" }}>{style}</span>
+                ))}
+              </div>
+            ) : (
+              <div style={{ color: "var(--muted)", fontStyle: "italic", fontSize: "15px" }}>No worship styles listed.</div>
+            )}
+          </div>
+        );
+      })()}
+
       {((church.languages && church.languages.length > 0) || isEditing) && (
         <div className="sec" style={{ marginBottom: "40px" }}>
           <div className="sec-head" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-            <span className="ic c-purple" style={{ background: "linear-gradient(135deg, #2563eb, #3b82f6)", color: "white", padding: "6px", borderRadius: "8px", display: "flex" }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M5 8h14M5 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2M5 8v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M9 12h6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+            <span className="ic c-blue" style={{ background: "linear-gradient(135deg, #2563eb, #3b82f6)", color: "white", width: "34px", height: "34px", borderRadius: "10px", display: "grid", placeItems: "center", flexShrink: 0 }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M5 8h14M5 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2M5 8v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M9 12h6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
             <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Languages spoken</h2>
             {renderEditButton("languages")}
           </div>
@@ -159,7 +191,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
       {((church.facilities && church.facilities.length > 0) || isEditing) && (
         <div className="sec" style={{ marginBottom: "40px" }}>
           <div className="sec-head" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-            <span className="ic c-green" style={{ background: "linear-gradient(135deg, #059669, #10b981)", color: "white", padding: "6px", borderRadius: "8px", display: "flex" }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 21V9l9-6 9 6v12M9 21v-6h6v6" stroke="#fff" strokeWidth="1.8" strokeLinejoin="round"/></svg></span>
+            <span className="ic c-green" style={{ background: "linear-gradient(135deg, #059669, #10b981)", color: "white", width: "34px", height: "34px", borderRadius: "10px", display: "grid", placeItems: "center", flexShrink: 0 }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 21V9l9-6 9 6v12M9 21v-6h6v6" stroke="#fff" strokeWidth="1.8" strokeLinejoin="round"/></svg></span>
             <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Facilities</h2>
             {renderEditButton("facilities")}
           </div>
@@ -216,6 +248,26 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
           initialTags={church.ministries || []} 
           onClose={() => setEditingField(null)} 
           onSave={(tags) => { setChurch({ ...church, ministries: tags }); onChurchChange?.({ ...church, ministries: tags }); setEditingField(null); }} 
+        />
+      )}
+
+      {editingField === "worshipStyles" && (
+        <EditTagsModal 
+          title="Edit Worship Styles" 
+          initialTags={
+            Array.isArray(church.worship_styles) && church.worship_styles.length > 0
+              ? church.worship_styles
+              : Array.isArray(church.worshipStyles) && church.worshipStyles.length > 0
+              ? church.worshipStyles
+              : []
+          } 
+          onClose={() => setEditingField(null)} 
+          onSave={(tags) => {
+            const updated = { ...church, worship_styles: tags, worshipStyles: tags };
+            setChurch(updated);
+            onChurchChange?.(updated);
+            setEditingField(null);
+          }} 
         />
       )}
 

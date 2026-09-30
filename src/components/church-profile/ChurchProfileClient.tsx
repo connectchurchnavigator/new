@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import Link from "next/link";
 import StatsBar from "./StatsBar";
 import ClientTabs from "./ClientTabs";
 import OurTeamSection from "./OurTeamSection";
@@ -18,6 +19,7 @@ import ChurchEventsSection from "./ChurchEventsSection";
 interface ChurchProfileClientProps {
   initialChurch: any;
   isEditing: boolean;
+  isActualOwner?: boolean;
   twitterUrl?: string | null;
   tiktokUrl?: string | null;
   telegramUrl?: string | null;
@@ -29,6 +31,7 @@ interface ChurchProfileClientProps {
 export default function ChurchProfileClient({
   initialChurch,
   isEditing,
+  isActualOwner = false,
   twitterUrl,
   tiktokUrl,
   telegramUrl,
@@ -90,14 +93,35 @@ export default function ChurchProfileClient({
 
   return (
     <>
-      {/* Admin save strip — only rendered for owners */}
-      {isEditing && (
-        <AdminEditBar
-          churchName={church.name}
-          churchId={church.id}
-          getChurchState={() => churchRef.current}
-        />
-      )}
+      {/* Top action row */}
+      <div className="wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0' }}>
+        <Link className="back" href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#0f172a', textDecoration: 'none' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          All churches
+        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Undo, Save changes, Exit buttons situated left to Visitor insights */}
+          {isEditing && (
+            <AdminEditBar
+              churchName={church.name}
+              churchId={church.id}
+              getChurchState={() => churchRef.current}
+            />
+          )}
+
+          {isActualOwner && isEditing && (
+            <Link href={`/dashboard?section=visitor-insights&church_id=${church.id}`} style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none' }}>
+              <i className="ti ti-chart-bar"></i> Visitor insights
+            </Link>
+          )}
+
+          {isActualOwner && (
+            <Link id="tour-owner-toggle" href={`/church/${church.slug}${isEditing ? '?owner=false' : '?owner=true'}`} scroll={false} style={{ textDecoration: 'none', background: isEditing ? '#7e22ce' : '#f3e8ff', color: isEditing ? '#fff' : '#7e22ce', border: '1px solid #e9d5ff', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
+              Owner View {isEditing ? 'ON' : 'OFF'}
+            </Link>
+          )}
+        </div>
+      </div>
 
       {/* Live Hero Header */}
       <HeroHeader 

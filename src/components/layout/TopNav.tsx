@@ -1,20 +1,31 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import logoImg from "@/Assets/logo (1).png";
 import { createClient } from "@/lib/supabase-browser";
 import { User } from "@supabase/supabase-js";
 
-export default function TopNav() {
+function TopNavContent() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+
+  // Sync TopNav input with active ?q= search param and reset loading spinner
+  useEffect(() => {
+    setIsSearching(false);
+    if (pathname === "/explore") {
+      const q = searchParams?.get("q") || "";
+      setSearchQuery(q);
+    }
+  }, [pathname, searchParams]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -72,6 +83,17 @@ export default function TopNav() {
   };
 
   const { initial, label } = getUserDisplay();
+
+  const isTeamMember = !!(user?.user_metadata?.is_team_member || user?.user_metadata?.team_role);
+  const isSuperAdmin = !isTeamMember && !!(
+    user?.user_metadata?.role === "super_admin" ||
+    user?.app_metadata?.role === "super_admin" ||
+    (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS || "")
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean)
+      .includes(user?.email?.toLowerCase() || "")
+  );
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -265,25 +287,27 @@ export default function TopNav() {
                       <i className="ti ti-user" style={{ fontSize: "16px", color: "#7c3aed" }}></i>
                       My Profile
                     </Link>
-                    <Link
-                      href="/admin"
-                      onClick={() => setIsDropdownOpen(false)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        padding: "9px 12px",
-                        borderRadius: "10px",
-                        fontSize: "13.5px",
-                        fontWeight: 600,
-                        color: "#7c3aed",
-                        textDecoration: "none",
-                        background: "#faf5ff",
-                      }}
-                    >
-                      <i className="ti ti-shield-lock" style={{ fontSize: "16px", color: "#7c3aed" }}></i>
-                      Super Admin
-                    </Link>
+                    {isSuperAdmin && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setIsDropdownOpen(false)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          padding: "9px 12px",
+                          borderRadius: "10px",
+                          fontSize: "13.5px",
+                          fontWeight: 600,
+                          color: "#7c3aed",
+                          textDecoration: "none",
+                          background: "#faf5ff",
+                        }}
+                      >
+                        <i className="ti ti-shield-lock" style={{ fontSize: "16px", color: "#7c3aed" }}></i>
+                        Super Admin
+                      </Link>
+                    )}
                     <button
                       onClick={handleSignOut}
                       style={{
@@ -355,5 +379,23 @@ export default function TopNav() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TopNav() {
+  return (
+    <Suspense
+      fallback={
+        <div className="topnav" style={{ position: "sticky", top: 0, zIndex: 1000, background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(14px)", borderBottom: "1px solid var(--cn-border, #ececf2)", width: "100%", height: "58px" }}>
+          <div className="topnav-inner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "58px", padding: "0 24px", width: "100%", maxWidth: "1280px", margin: "0 auto" }}>
+            <Link href="/" className="topnav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
+              <Image src={logoImg} alt="ChurchNavigator Logo" width={160} height={38} style={{ objectFit: "contain", width: "auto", height: "34px" }} priority />
+            </Link>
+          </div>
+        </div>
+      }
+    >
+      <TopNavContent />
+    </Suspense>
   );
 }

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useTaxonomies } from "@/hooks/useTaxonomies";
 
 export type SearchCategory = "church" | "pastor" | "event" | "worshipleader";
 
@@ -66,6 +67,7 @@ const CATEGORY_META: Record<SearchCategory, { label: string; plural: string; ico
 
 export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
   const router = useRouter();
+  const taxonomies = useTaxonomies();
   const [internalCategory, setInternalCategory] = useState<SearchCategory | "">("church");
   const [internalKeyword, setInternalKeyword] = useState("");
   const [internalCity, setInternalCity] = useState("");
@@ -814,14 +816,11 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
               }}
             >
               <option value="all">All Denominations</option>
-              <option value="Anglican">Anglican</option>
-              <option value="Baptist">Baptist</option>
-              <option value="Catholic">Catholic</option>
-              <option value="Methodist">Methodist</option>
-              <option value="Non-Denominational">Non-Denominational</option>
-              <option value="Orthodox">Orthodox</option>
-              <option value="Pentecostal">Pentecostal</option>
-              <option value="Presbyterian">Presbyterian</option>
+              {taxonomies.denominations.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
             </select>
           </div>
         </>

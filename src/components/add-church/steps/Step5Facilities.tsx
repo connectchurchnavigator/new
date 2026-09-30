@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useFormContext } from "@/context/FormContext";
+import { useTaxonomies } from "@/hooks/useTaxonomies";
 
 interface Step5FacilitiesProps {
   onNext: () => void;
@@ -8,6 +9,7 @@ interface Step5FacilitiesProps {
 
 export default function Step5Facilities({ onNext, onBack }: Step5FacilitiesProps) {
   const { formData, updateFormData } = useFormContext();
+  const taxonomies = useTaxonomies();
   const [activeChips, setActiveChips] = useState<string[]>(formData.facilities || []);
 
   const toggleChip = (chip: string) => {
@@ -25,27 +27,50 @@ export default function Step5Facilities({ onNext, onBack }: Step5FacilitiesProps
           <div style={{ width: "38px", height: "38px", borderRadius: "11px", background: "linear-gradient(135deg,#22d3ee,#0891b2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <i className="ti ti-accessible" style={{ fontSize: "18px", color: "#fff" }}></i>
           </div>
-          <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>Facilities</div>
+          <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--cn-ink)" }}>Facilities & Amenities</div>
         </div>
         <div style={{ fontSize: "13px", color: "var(--cn-gray)", marginBottom: "22px" }}>
           Help visitors plan their visit — especially families & those with accessibility needs
         </div>
 
+        {/* Dynamic Taxonomy Facilities */}
+        <div style={{ marginBottom: "24px" }}>
+          <div style={{ fontSize: "11.5px", fontWeight: 800, color: "var(--cn-purple-dark)", letterSpacing: "0.05em", marginBottom: "12px", textTransform: "uppercase" }}>
+            <i className="ti ti-building" style={{ fontSize: "14px", marginRight: "6px" }}></i> Featured Platform Amenities
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "10px" }}>
+            {taxonomies.facilities.map((fac) => (
+              <button 
+                key={fac}
+                type="button"
+                className={`fac-chip ${isSelected(fac) ? "on" : ""}`} 
+                onClick={() => toggleChip(fac)}
+                style={{ textAlign: "left", width: "100%", margin: 0 }}
+              >
+                <div className="fac-icon">
+                  <i className={`ti ${isSelected(fac) ? "ti-check" : "ti-sparkles"}`} style={{ fontSize: "14px", color: isSelected(fac) ? "#fff" : "var(--cn-purple)" }}></i>
+                </div>
+                <span>{fac}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-          
           {/* ACCESSIBILITY */}
           <div>
             <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-purple-dark)", letterSpacing: "0.05em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <i className="ti ti-accessible" style={{ fontSize: "14px" }}></i> ACCESSIBILITY
+              <i className="ti ti-accessible" style={{ fontSize: "14px" }}></i> ADDITIONAL ACCESSIBILITY
             </div>
             {[
               { id: "Wheelchair Access", icon: "ti-wheelchair" },
               { id: "Hearing Loop", icon: "ti-ear" },
               { id: "BSL Interpreter", icon: "ti-hand-stop" },
               { id: "Accessible Toilets", icon: "ti-accessible" }
-            ].map(item => (
+            ].filter(i => !taxonomies.facilities.includes(i.id)).map(item => (
               <button 
                 key={item.id}
+                type="button"
                 className={`fac-chip ${isSelected(item.id) ? "on" : ""}`} 
                 onClick={() => toggleChip(item.id)}
               >
@@ -55,63 +80,20 @@ export default function Step5Facilities({ onNext, onBack }: Step5FacilitiesProps
             ))}
           </div>
 
-          {/* PARKING */}
+          {/* SPACES & TECH */}
           <div>
             <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-purple-dark)", letterSpacing: "0.05em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <i className="ti ti-car" style={{ fontSize: "14px" }}></i> PARKING
-            </div>
-            {[
-              { id: "Free Parking", icon: "ti-car" },
-              { id: "On-site Car Park", icon: "ti-building-bank" },
-              { id: "Good Transport Links", icon: "ti-bus" },
-              { id: "Cycle Storage", icon: "ti-bike" }
-            ].map(item => (
-              <button 
-                key={item.id}
-                className={`fac-chip ${isSelected(item.id) ? "on" : ""}`} 
-                onClick={() => toggleChip(item.id)}
-              >
-                <div className="fac-icon"><i className={`ti ${item.icon}`} style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i></div>
-                {item.id}
-              </button>
-            ))}
-          </div>
-
-          {/* FACILITIES */}
-          <div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-purple-dark)", letterSpacing: "0.05em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <i className="ti ti-building" style={{ fontSize: "14px" }}></i> FACILITIES
+              <i className="ti ti-users" style={{ fontSize: "14px" }}></i> SPACES & TECH
             </div>
             {[
               { id: "Free WiFi", icon: "ti-wifi" },
-              { id: "Café / Refreshments", icon: "ti-coffee" },
-              { id: "Baby Changing", icon: "ti-baby-carriage" },
-              { id: "Prayer Room", icon: "ti-pray" }
-            ].map(item => (
-              <button 
-                key={item.id}
-                className={`fac-chip ${isSelected(item.id) ? "on" : ""}`} 
-                onClick={() => toggleChip(item.id)}
-              >
-                <div className="fac-icon"><i className={`ti ${item.icon}`} style={{ fontSize: "14px", color: "var(--cn-purple)" }}></i></div>
-                {item.id}
-              </button>
-            ))}
-          </div>
-
-          {/* SPACES */}
-          <div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--cn-purple-dark)", letterSpacing: "0.05em", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <i className="ti ti-users" style={{ fontSize: "14px" }}></i> SPACES
-            </div>
-            {[
-              { id: "Hall Available", icon: "ti-building-community" },
               { id: "Meeting Rooms", icon: "ti-door" },
               { id: "Outdoor Space", icon: "ti-trees" },
               { id: "Streaming Setup", icon: "ti-broadcast" }
-            ].map(item => (
+            ].filter(i => !taxonomies.facilities.includes(i.id)).map(item => (
               <button 
                 key={item.id}
+                type="button"
                 className={`fac-chip ${isSelected(item.id) ? "on" : ""}`} 
                 onClick={() => toggleChip(item.id)}
               >
@@ -120,7 +102,6 @@ export default function Step5Facilities({ onNext, onBack }: Step5FacilitiesProps
               </button>
             ))}
           </div>
-
         </div>
       </div>
 

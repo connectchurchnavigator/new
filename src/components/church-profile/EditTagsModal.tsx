@@ -53,6 +53,16 @@ const PRESET_OPTIONS: Record<string, { label: string; icon: string }[]> = {
     { label: "Kids Play Area", icon: "🛝" },
     { label: "Air Conditioning", icon: "❄️" },
   ],
+  worshipStyles: [
+    { label: "Contemporary Worship", icon: "🎸" },
+    { label: "Traditional Worship", icon: "⛪" },
+    { label: "Charismatic / Spirit-Filled Worship", icon: "🔥" },
+    { label: "Gospel Worship", icon: "🎶" },
+    { label: "Blended Worship", icon: "🎼" },
+    { label: "Multicultural Worship", icon: "🌍" },
+    { label: "Online / Digital Worship", icon: "💻" },
+    { label: "Reflective / Soaking Worship", icon: "🕊️" },
+  ],
   default: [],
 };
 
@@ -65,7 +75,8 @@ interface EditTagsModalProps {
 
 export default function EditTagsModal({ title, initialTags, onClose, onSave }: EditTagsModalProps) {
   // Figure out which preset list to use
-  const key = title.toLowerCase().includes("ministr") ? "ministries"
+  const key = title.toLowerCase().includes("worship") ? "worshipStyles"
+    : title.toLowerCase().includes("ministr") ? "ministries"
     : title.toLowerCase().includes("lang") ? "languages"
     : title.toLowerCase().includes("facilit") ? "facilities"
     : "default";

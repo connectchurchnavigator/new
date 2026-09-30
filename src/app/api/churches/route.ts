@@ -151,6 +151,7 @@ export async function POST(req: Request) {
         languages: data.languages || [],
         facilities: data.facilities || [],
         ministries: data.ministries || [],
+        worship_styles: data.worshipStyles || data.worship_styles || [],
         status: 'published'
       })
       .select().single();

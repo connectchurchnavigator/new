@@ -6,6 +6,7 @@ import TopNav from "@/components/layout/TopNav";
 import SharedAddressField from "@/components/add-church/steps/SharedAddressField";
 import { ImageUpload } from "@/components/ImageUpload";
 import RichTextEditor from "@/components/RichTextEditor";
+import { useTaxonomies } from "@/hooks/useTaxonomies";
 
 interface HostOption {
   id: string;
@@ -386,6 +387,7 @@ const STEPS = [
 
 function EventsOnboardingContent() {
   const router = useRouter();
+  const taxonomies = useTaxonomies();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
   const editSlug = searchParams.get("slug");
@@ -631,6 +633,20 @@ function EventsOnboardingContent() {
       setToastMsg("✨ Sample ticket tiers, FAQs & banner media loaded for Step 3!");
     }
     setTimeout(() => setToastMsg(""), 4500);
+  };
+
+  const handleClearDraft = () => {
+    if (window.confirm("Are you sure you want to clear your current draft? All entered event details will be reset.")) {
+      setForm(INITIAL_FORM);
+      try {
+        sessionStorage.removeItem("event_form_draft");
+      } catch (e) {}
+      setStep(1);
+      setErrorMsg("");
+      setToastMsg("Draft cleared successfully!");
+      setTimeout(() => setToastMsg(""), 3500);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const handleAddDateSlot = () => {
@@ -977,6 +993,29 @@ function EventsOnboardingContent() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              type="button"
+              onClick={handleClearDraft}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "7px",
+                padding: "8px 16px",
+                borderRadius: "12px",
+                border: "1.5px solid #fca5a5",
+                background: "#fef2f2",
+                color: "#dc2626",
+                fontSize: "13.5px",
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(239, 68, 68, 0.1)",
+                transition: "all 0.2s",
+              }}
+              title="Clear all entered data and reset form draft"
+            >
+              <i className="ti ti-trash" style={{ fontSize: "15px", color: "#dc2626" }}></i>
+              Clear Draft
+            </button>
             <button
               type="button"
               onClick={handleLoadSampleData}
@@ -1600,36 +1639,68 @@ function EventsOnboardingContent() {
                   </div>
 
                   {form.has_other_amenity && (
-                    <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
-                      <input
-                        type="text"
-                        value={form.custom_amenity}
-                        onChange={(e) => update("custom_amenity", e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleAddCustomAmenity();
-                          }
-                        }}
-                        placeholder="Type facility (e.g. Air Conditioning, Hearing Loop) and press Enter..."
-                        style={{
-                          flex: 1,
-                          padding: "12px 14px",
-                          borderRadius: "12px",
-                          border: "1.5px solid #7c3aed",
-                          fontSize: "13.5px",
-                          outline: "none",
-                          background: "#fcfaff"
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddCustomAmenity}
-                        className="btn-primary"
-                        style={{ padding: "0 20px", borderRadius: "12px", fontSize: "13.5px" }}
-                      >
-                        + Add
-                      </button>
+                    <div style={{ marginTop: "12px" }}>
+                      {taxonomies.facilities?.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "10px" }}>
+                          {taxonomies.facilities.filter(f => !(form.custom_amenities || []).includes(f)).map((f) => (
+                            <button
+                              key={f}
+                              type="button"
+                              onClick={() => {
+                                const current = form.custom_amenities || [];
+                                update("custom_amenities", [...current, f]);
+                              }}
+                              style={{
+                                background: "#f8fafc",
+                                border: "1px dashed #cbd5e1",
+                                padding: "4px 10px",
+                                borderRadius: "12px",
+                                fontSize: "11.5px",
+                                color: "#64748b",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                fontWeight: 600
+                              }}
+                            >
+                              <i className="ti ti-plus" style={{ fontSize: "11px", color: "#7c3aed" }}></i>
+                              {f}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <input
+                          type="text"
+                          value={form.custom_amenity}
+                          onChange={(e) => update("custom_amenity", e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddCustomAmenity();
+                            }
+                          }}
+                          placeholder="Type facility (e.g. Air Conditioning, Hearing Loop) and press Enter..."
+                          style={{
+                            flex: 1,
+                            padding: "12px 14px",
+                            borderRadius: "12px",
+                            border: "1.5px solid #7c3aed",
+                            fontSize: "13.5px",
+                            outline: "none",
+                            background: "#fcfaff"
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddCustomAmenity}
+                          className="btn-primary"
+                          style={{ padding: "0 20px", borderRadius: "12px", fontSize: "13.5px" }}
+                        >
+                          + Add
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

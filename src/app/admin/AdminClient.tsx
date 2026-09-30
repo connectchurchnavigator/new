@@ -100,6 +100,14 @@ export default function AdminClient({
   const [isSavingTax, setIsSavingTax] = useState(false);
   const [taxSaveSuccess, setTaxSaveSuccess] = useState(false);
 
+  // Confirmation modal state (Requires typing DELETE in caps)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+  const [deleteConfirmError, setDeleteConfirmError] = useState("");
+  const [pendingDeleteAction, setPendingDeleteAction] = useState<(() => Promise<void> | void) | null>(null);
+  const [deleteActionDescription, setDeleteActionDescription] = useState("");
+
+
   // Load custom taxonomies from server
   useEffect(() => {
     fetch("/api/admin/taxonomies")
@@ -386,13 +394,14 @@ export default function AdminClient({
   const handleAddTaxItem = () => {
     if (!newTaxItem.trim()) return;
     const item = newTaxItem.trim();
-    if (taxonomies[activeTaxCategory].includes(item)) {
+    const currentList = taxonomies[activeTaxCategory] || [];
+    if (currentList.includes(item)) {
       alert("This item already exists in this category.");
       return;
     }
     const updated = {
       ...taxonomies,
-      [activeTaxCategory]: [...taxonomies[activeTaxCategory], item],
+      [activeTaxCategory]: [...currentList, item],
     };
     setTaxonomies(updated);
     setNewTaxItem("");
@@ -401,7 +410,8 @@ export default function AdminClient({
 
   const handleSaveEditTaxItem = (index: number) => {
     if (!editingValue.trim()) return;
-    const updatedList = [...taxonomies[activeTaxCategory]];
+    const currentList = taxonomies[activeTaxCategory] || [];
+    const updatedList = [...currentList];
     updatedList[index] = editingValue.trim();
     const updated = {
       ...taxonomies,
@@ -413,16 +423,56 @@ export default function AdminClient({
     saveTaxonomiesToServer(updated);
   };
 
+  const requestDeleteConfirmation = (description: string, action: () => Promise<void> | void) => {
+    setDeleteActionDescription(description);
+    setPendingDeleteAction(() => action);
+    setDeleteConfirmInput("");
+    setDeleteConfirmError("");
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (deleteConfirmInput.trim() !== "DELETE") {
+      setDeleteConfirmError('Please type "DELETE" exactly in uppercase to confirm.');
+      return;
+    }
+
+    setDeleteConfirmOpen(false);
+    setDeleteConfirmInput("");
+    setDeleteConfirmError("");
+    if (pendingDeleteAction) {
+      await pendingDeleteAction();
+      setPendingDeleteAction(null);
+    }
+  };
+
   const handleDeleteTaxItem = (index: number) => {
-    const item = taxonomies[activeTaxCategory][index];
-    if (!confirm(`Delete "${item}" from ${activeTaxCategory}?`)) return;
-    const updatedList = taxonomies[activeTaxCategory].filter((_, i) => i !== index);
-    const updated = {
-      ...taxonomies,
-      [activeTaxCategory]: updatedList,
-    };
-    setTaxonomies(updated);
-    saveTaxonomiesToServer(updated);
+    const currentList = taxonomies[activeTaxCategory] || [];
+    const item = currentList[index];
+    requestDeleteConfirmation(`Delete "${item}" from ${activeTaxCategory}`, () => {
+      const updatedList = currentList.filter((_, i) => i !== index);
+      const updated = {
+        ...taxonomies,
+        [activeTaxCategory]: updatedList,
+      };
+      setTaxonomies(updated);
+      saveTaxonomiesToServer(updated);
+    });
+  };
+
+
+  const handleClearCategoryTaxonomies = () => {
+    const catName = activeTaxCategory.replace(/([A-Z])/g, " $1");
+    requestDeleteConfirmation(`Delete all existing data in "${catName}" (Category remains intact)`, () => {
+      const updated = {
+        ...taxonomies,
+        [activeTaxCategory]: [],
+      };
+      setTaxonomies(updated);
+      setEditingItemIndex(null);
+      saveTaxonomiesToServer(updated);
+    });
   };
 
   const saveTaxonomiesToServer = async (updated: TaxonomyStore) => {
@@ -1747,12 +1797,17 @@ export default function AdminClient({
               </div>
 
               {[
-                { id: "denominations", label: "Denominations", icon: "ti-cross", count: taxonomies.denominations.length },
-                { id: "worshipStyles", label: "Worship Styles", icon: "ti-music", count: taxonomies.worshipStyles.length },
-                { id: "ministries", label: "Ministries", icon: "ti-heart-handshake", count: taxonomies.ministries.length },
-                { id: "facilities", label: "Facilities", icon: "ti-building", count: taxonomies.facilities.length },
-                { id: "languages", label: "Languages", icon: "ti-world", count: taxonomies.languages.length },
+                { id: "denominations", label: "Denominations", icon: "ti-cross", count: (taxonomies.denominations || []).length },
+                { id: "worshipStyles", label: "Worship Styles", icon: "ti-music", count: (taxonomies.worshipStyles || []).length },
+                { id: "ministries", label: "Ministries", icon: "ti-heart-handshake", count: (taxonomies.ministries || []).length },
+                { id: "facilities", label: "Facilities", icon: "ti-building", count: (taxonomies.facilities || []).length },
+                { id: "languages", label: "Languages", icon: "ti-world", count: (taxonomies.languages || []).length },
+                { id: "ministryExperience", label: "Ministry Experience", icon: "ti-briefcase", count: (taxonomies.ministryExperience || []).length },
+                { id: "skills", label: "Skills", icon: "ti-star", count: (taxonomies.skills || []).length },
+                { id: "rolesInterested", label: "Roles Interested", icon: "ti-id-badge-2", count: (taxonomies.rolesInterested || []).length },
+                { id: "training", label: "Training", icon: "ti-certificate", count: (taxonomies.training || []).length },
               ].map((cat) => (
+
                 <button
                   key={cat.id}
                   onClick={() => {
@@ -1788,7 +1843,7 @@ export default function AdminClient({
             {/* Items Editor Box */}
             <div style={{ background: "#ffffff", borderRadius: "20px", border: "1.5px solid #e2e8f0", padding: "28px" }}>
               
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
                 <div>
                   <h3 style={{ fontSize: "19px", fontWeight: 900, color: "#0f172a", margin: 0, textTransform: "capitalize" }}>
                     {activeTaxCategory.replace(/([A-Z])/g, " $1")}
@@ -1798,11 +1853,36 @@ export default function AdminClient({
                   </p>
                 </div>
 
-                {taxSaveSuccess && (
-                  <span style={{ fontSize: "12.5px", fontWeight: 800, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "4px 12px", borderRadius: "8px" }}>
-                    ✓ Saved to Server
-                  </span>
-                )}
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                  {taxSaveSuccess && (
+                    <span style={{ fontSize: "12.5px", fontWeight: 800, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "6px 12px", borderRadius: "10px" }}>
+                      ✓ Saved to Server
+                    </span>
+                  )}
+
+                  {(taxonomies[activeTaxCategory] || []).length > 0 && (
+                    <button
+                      onClick={handleClearCategoryTaxonomies}
+                      title={`Delete all items inside ${activeTaxCategory.replace(/([A-Z])/g, " $1")}`}
+                      style={{
+                        background: "#fff1f2",
+                        color: "#e11d48",
+                        border: "1.5px solid #fecdd3",
+                        borderRadius: "10px",
+                        padding: "7px 14px",
+                        fontWeight: 700,
+                        fontSize: "12.5px",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      <i className="ti ti-trash"></i> Delete {activeTaxCategory.replace(/([A-Z])/g, " $1")} Data
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Add New Item Input */}
@@ -1846,88 +1926,99 @@ export default function AdminClient({
 
               {/* List of items */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "10px" }}>
-                {taxonomies[activeTaxCategory].map((item, index) => {
-                  const isEditing = editingItemIndex === index;
-
-                  return (
-                    <div
-                      key={index}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "10px 14px",
-                        borderRadius: "12px",
-                        border: "1.5px solid #f1f5f9",
-                        background: isEditing ? "#faf5ff" : "#f8fafc",
-                        gap: "8px",
-                      }}
-                    >
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={editingValue}
-                          onChange={(e) => setEditingValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleSaveEditTaxItem(index);
-                          }}
-                          autoFocus
-                          style={{
-                            flex: 1,
-                            padding: "4px 8px",
-                            borderRadius: "6px",
-                            border: "1.5px solid #c084fc",
-                            fontSize: "13px",
-                            outline: "none",
-                          }}
-                        />
-                      ) : (
-                        <span style={{ fontSize: "13.5px", fontWeight: 700, color: "#1e293b" }}>
-                          {item}
-                        </span>
-                      )}
-
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                        {isEditing ? (
-                          <>
-                            <button
-                              onClick={() => handleSaveEditTaxItem(index)}
-                              style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: "6px", padding: "4px 8px", fontSize: "11px", fontWeight: 800, cursor: "pointer" }}
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() => setEditingItemIndex(null)}
-                              style={{ background: "#f1f5f9", color: "#64748b", border: "none", borderRadius: "6px", padding: "4px 8px", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
-                            >
-                              Cancel
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => {
-                                setEditingItemIndex(index);
-                                setEditingValue(item);
-                              }}
-                              title="Edit Item"
-                              style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", padding: "4px" }}
-                            >
-                              <i className="ti ti-edit" style={{ fontSize: "15px" }}></i>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteTaxItem(index)}
-                              title="Delete Item"
-                              style={{ background: "none", border: "none", color: "#f43f5e", cursor: "pointer", padding: "4px" }}
-                            >
-                              <i className="ti ti-trash" style={{ fontSize: "15px" }}></i>
-                            </button>
-                          </>
-                        )}
-                      </div>
+                {(taxonomies[activeTaxCategory] || []).length === 0 ? (
+                  <div style={{ gridColumn: "1 / -1", padding: "40px 20px", textAlign: "center", background: "#f8fafc", borderRadius: "14px", border: "1.5px dashed #cbd5e1" }}>
+                    <i className="ti ti-folder-off" style={{ fontSize: "28px", color: "#94a3b8", display: "block", marginBottom: "8px" }}></i>
+                    <div style={{ fontSize: "14px", fontWeight: 700, color: "#475569" }}>No {activeTaxCategory.replace(/([A-Z])/g, " $1")} data</div>
+                    <div style={{ fontSize: "12.5px", color: "#94a3b8", marginTop: "4px" }}>
+                      This category is currently empty. Use the input field above to add new items.
                     </div>
-                  );
-                })}
+                  </div>
+                ) : (
+                  (taxonomies[activeTaxCategory] || []).map((item, index) => {
+                    const isEditing = editingItemIndex === index;
+
+
+                    return (
+                      <div
+                        key={index}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "10px 14px",
+                          borderRadius: "12px",
+                          border: "1.5px solid #f1f5f9",
+                          background: isEditing ? "#faf5ff" : "#f8fafc",
+                          gap: "8px",
+                        }}
+                      >
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveEditTaxItem(index);
+                            }}
+                            autoFocus
+                            style={{
+                              flex: 1,
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              border: "1.5px solid #c084fc",
+                              fontSize: "13px",
+                              outline: "none",
+                            }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: "13.5px", fontWeight: 700, color: "#1e293b" }}>
+                            {item}
+                          </span>
+                        )}
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                          {isEditing ? (
+                            <>
+                              <button
+                                onClick={() => handleSaveEditTaxItem(index)}
+                                style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: "6px", padding: "4px 8px", fontSize: "11px", fontWeight: 800, cursor: "pointer" }}
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingItemIndex(null)}
+                                style={{ background: "#f1f5f9", color: "#64748b", border: "none", borderRadius: "6px", padding: "4px 8px", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditingItemIndex(index);
+                                  setEditingValue(item);
+                                }}
+                                title="Edit Item"
+                                style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", padding: "4px" }}
+                              >
+                                <i className="ti ti-edit" style={{ fontSize: "15px" }}></i>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTaxItem(index)}
+                                title="Delete Item"
+                                style={{ background: "none", border: "none", color: "#f43f5e", cursor: "pointer", padding: "4px" }}
+                              >
+                                <i className="ti ti-trash" style={{ fontSize: "15px" }}></i>
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
             </div>
@@ -2130,6 +2221,150 @@ export default function AdminClient({
           }
         }}
       />
+
+      {/* Confirmation Modal - Type DELETE in caps to confirm */}
+      {deleteConfirmOpen && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(15, 23, 42, 0.65)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "20px",
+            border: "1.5px solid #fecdd3",
+            maxWidth: "460px",
+            width: "100%",
+            padding: "28px",
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            animation: "fadeIn 0.2s ease"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+              <div style={{
+                width: "44px",
+                height: "44px",
+                borderRadius: "12px",
+                background: "#fee2e2",
+                color: "#e11d48",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "22px"
+              }}>
+                <i className="ti ti-alert-triangle"></i>
+              </div>
+              <div>
+                <h4 style={{ fontSize: "17px", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                  Confirm Permanent Deletion
+                </h4>
+                <div style={{ fontSize: "12px", color: "#e11d48", fontWeight: 700, marginTop: "2px" }}>
+                  Warning: Cannot be recovered!
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              background: "#fff1f2",
+              border: "1px solid #fecdd3",
+              borderRadius: "12px",
+              padding: "12px 14px",
+              marginBottom: "16px",
+              fontSize: "13px",
+              color: "#9f1239",
+              lineHeight: 1.5
+            }}>
+              <strong>⚠️ Warning:</strong> If you delete this, <strong>we cannot get it back</strong>. This action is permanent and cannot be undone.
+            </div>
+
+            <p style={{ fontSize: "13.5px", color: "#475569", lineHeight: 1.5, margin: "0 0 16px" }}>
+              Target: <strong style={{ color: "#0f172a" }}>{deleteActionDescription}</strong>.
+              <br />
+              To proceed, please type <strong style={{ color: "#e11d48", letterSpacing: "1px" }}>DELETE</strong> in the box below:
+            </p>
+
+            <form onSubmit={handleConfirmDelete}>
+              <div style={{ marginBottom: "16px" }}>
+                <input
+                  type="text"
+                  placeholder='Type "DELETE" to confirm...'
+                  value={deleteConfirmInput}
+                  onChange={(e) => {
+                    setDeleteConfirmInput(e.target.value);
+                    if (deleteConfirmError) setDeleteConfirmError("");
+                  }}
+                  autoFocus
+                  style={{
+                    width: "100%",
+                    padding: "11px 14px",
+                    borderRadius: "12px",
+                    border: deleteConfirmError ? "1.5px solid #ef4444" : "1.5px solid #cbd5e1",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    outline: "none",
+                    letterSpacing: "1px",
+                    boxShadow: "inset 0 1px 2px rgba(0,0,0,0.05)"
+                  }}
+                />
+                {deleteConfirmError && (
+                  <div style={{ color: "#ef4444", fontSize: "12px", marginTop: "6px", fontWeight: 600 }}>
+                    <i className="ti ti-alert-circle"></i> {deleteConfirmError}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteConfirmOpen(false);
+                    setPendingDeleteAction(null);
+                    setDeleteConfirmInput("");
+                    setDeleteConfirmError("");
+                  }}
+                  style={{
+                    padding: "9px 16px",
+                    borderRadius: "10px",
+                    background: "#f1f5f9",
+                    color: "#475569",
+                    fontWeight: 700,
+                    fontSize: "13px",
+                    border: "none",
+                    cursor: "pointer"
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={deleteConfirmInput.trim() !== "DELETE"}
+                  style={{
+                    padding: "9px 18px",
+                    borderRadius: "10px",
+                    background: deleteConfirmInput.trim() === "DELETE" ? "#e11d48" : "#fda4af",
+                    color: "#ffffff",
+                    fontWeight: 800,
+                    fontSize: "13px",
+                    border: "none",
+                    cursor: deleteConfirmInput.trim() === "DELETE" ? "pointer" : "not-allowed",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    transition: "all 0.15s"
+                  }}
+                >
+                  <i className="ti ti-trash"></i> Permanently Delete
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

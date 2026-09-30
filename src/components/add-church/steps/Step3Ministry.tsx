@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useFormContext } from "@/context/FormContext";
+import { useTaxonomies } from "@/hooks/useTaxonomies";
 
 function parseTimeString(v: string) {
   v = v.trim();
@@ -205,6 +206,7 @@ interface Step3MinistryProps {
 
 export default function Step3Ministry({ onNext, onBack }: Step3MinistryProps) {
   const { formData, updateFormData } = useFormContext();
+  const taxonomies = useTaxonomies();
   const [services, setServices] = useState<any[]>(formData.services?.length ? formData.services : [
     { id: 1, day: "Sunday", name: "", from: "", to: "", format: "inperson" }
   ]);
@@ -229,14 +231,15 @@ export default function Step3Ministry({ onNext, onBack }: Step3MinistryProps) {
       return;
     }
 
-    const ALL_EXISTING_CHIPS = [
+    const ALL_EXISTING_CHIPS = Array.from(new Set([
+      ...taxonomies.ministries,
       "Youth Ministry", "Children's Church", "Worship Team", "Ushering", "Technical / Media", 
       "Prayer & Intercession", "Evangelism", "Women's Ministry", "Men's Ministry", "Young Adults", "Marriage & Family",
       "Crèche / Nursery", "Junior Church", "Teen Ministry", "Parent & Toddler", "Seniors Ministry", "Singles Ministry",
       "Food Bank", "Community Café", "Prison Ministry", "Street Ministry",
       "Praise & Worship", "Dance Ministry", "Drama & Theatre", "Choir",
       "Global Missions", "Church Planting", "Evangelism Team", "Local Outreach"
-    ];
+    ]));
 
     const foundStandard = ALL_EXISTING_CHIPS.find(c => c.toLowerCase() === val.toLowerCase());
     
@@ -463,30 +466,21 @@ export default function Step3Ministry({ onNext, onBack }: Step3MinistryProps) {
           </div>
         )}
 
-        <div id="ministry-chips" style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "14px" }}>
-          {[
-            { name: "Youth Ministry", icon: "ti-users" },
-            { name: "Children's Church", icon: "ti-baby-carriage" },
-            { name: "Food Bank", icon: "ti-bread" },
-            { name: "Bible Study", icon: "ti-book" },
-            { name: "Outreach", icon: "ti-heart-handshake" },
-            { name: "Women's Ministry", icon: "ti-woman" },
-            { name: "Men's Ministry", icon: "ti-man" },
-            { name: "Prayer Group", icon: "ti-pray" }
-          ].map(pick => {
-            const isActive = activeChips.includes(pick.name);
+        <div id="ministry-chips" style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "14px" }}>
+          {taxonomies.ministries.map((minName) => {
+            const isActive = activeChips.includes(minName);
             return (
               <div 
-                key={pick.name} 
+                key={minName} 
                 className={`chip ${isActive ? "on" : ""} ${error && activeChips.length === 0 && customMinistriesList.length === 0 ? "error-border" : ""}`} 
-                onClick={() => toggleChip(pick.name)}
+                onClick={() => toggleChip(minName)}
                 style={{ display: "inline-flex", cursor: "pointer", border: error && activeChips.length === 0 && customMinistriesList.length === 0 ? "1.5px solid red" : "" }}
               >
-                <i className={`ti ${pick.icon}`} style={{ fontSize: "12px" }}></i> {pick.name}
+                <i className="ti ti-check" style={{ fontSize: "12px", opacity: isActive ? 1 : 0.4 }}></i> {minName}
               </div>
             );
           })}
-          {customMinistriesList.map(min => {
+          {customMinistriesList.filter(m => !taxonomies.ministries.includes(m)).map(min => {
             const isActive = activeChips.includes(min);
             return (
               <div 
