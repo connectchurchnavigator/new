@@ -16,6 +16,8 @@ function TopNavContent() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const hamburgerBtnRef = useRef<HTMLButtonElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
@@ -47,11 +49,20 @@ function TopNavContent() {
     };
   }, []);
 
-  // Close dropdown when clicking outside
+  // Close dropdown or mobile menu when clicking outside
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
         setIsDropdownOpen(false);
+      }
+      if (
+        mobileMenuRef.current && 
+        !mobileMenuRef.current.contains(target) &&
+        hamburgerBtnRef.current &&
+        !hamburgerBtnRef.current.contains(target)
+      ) {
+        setIsMobileMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleOutsideClick);
@@ -381,16 +392,17 @@ function TopNavContent() {
 
           {/* Mobile Hamburger Toggle Button */}
           <button
+            ref={hamburgerBtnRef}
             type="button"
             className="topnav-hamburger-btn"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Toggle menu"
             style={{
-              width: "38px",
-              height: "38px",
+              width: "40px",
+              height: "40px",
               borderRadius: "10px",
               background: isMobileMenuOpen ? "#f5f3ff" : "#f8fafc",
-              border: isMobileMenuOpen ? "1.5px solid #7c3aed" : "1px solid #e2e8f0",
+              border: isMobileMenuOpen ? "1.5px solid #7c3aed" : "1.5px solid #e2e8f0",
               color: isMobileMenuOpen ? "#7c3aed" : "#1e293b",
               display: "none",
               alignItems: "center",
@@ -399,7 +411,7 @@ function TopNavContent() {
               transition: "all 0.2s"
             }}
           >
-            <i className={isMobileMenuOpen ? "ti ti-x" : "ti ti-menu-2"} style={{ fontSize: "20px" }}></i>
+            <i className={isMobileMenuOpen ? "ti ti-x" : "ti ti-menu-2"} style={{ fontSize: "21px" }}></i>
           </button>
         </div>
       </div>
@@ -407,15 +419,17 @@ function TopNavContent() {
       {/* Mobile Menu Drawer / Dropdown */}
       {isMobileMenuOpen && (
         <div 
+          ref={mobileMenuRef}
           className="topnav-mobile-drawer"
           style={{
             background: "#ffffff",
-            borderBottom: "2px solid #f1f5f9",
+            borderBottom: "2px solid #e2e8f0",
             boxShadow: "0 18px 30px -10px rgba(0,0,0,0.12)",
             padding: "16px 18px 22px",
             display: "flex",
             flexDirection: "column",
-            gap: "14px"
+            gap: "14px",
+            animation: "fadeInDown 0.2s ease"
           }}
         >
           {/* Mobile Search Input */}
@@ -434,7 +448,7 @@ function TopNavContent() {
               border: "1.5px solid #e2e8f0"
             }}
           >
-            <i className="ti ti-search" style={{ fontSize: "16px", color: "#94a3b8" }}></i>
+            <i className="ti ti-search" style={{ fontSize: "16px", color: "#7c3aed" }}></i>
             <input 
               className="clean-input"
               placeholder="Search churches, cities, ministries..." 
@@ -449,52 +463,128 @@ function TopNavContent() {
                 color: "#0f172a"
               }}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", padding: 0 }}
+              >
+                <i className="ti ti-x" style={{ fontSize: "15px" }}></i>
+              </button>
+            )}
           </form>
 
-          {/* Links & CTA */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <Link
-              href="/explore"
-              onClick={() => setIsMobileMenuOpen(false)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                padding: "11px 14px",
-                borderRadius: "12px",
-                fontSize: "14.5px",
-                fontWeight: 700,
-                color: "#1e293b",
-                textDecoration: "none",
-                background: "#f8fafc"
-              }}
-            >
-              <i className="ti ti-compass" style={{ fontSize: "19px", color: "#7c3aed" }}></i>
-              Explore Churches & Ministries
-            </Link>
-
-            <Link
-              href="/add-listing"
-              onClick={() => setIsMobileMenuOpen(false)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                padding: "12px 14px",
-                borderRadius: "12px",
-                fontSize: "14px",
-                fontWeight: 700,
-                color: "#ffffff",
-                textDecoration: "none",
-                background: "linear-gradient(135deg, #7c3aed, #9333ea)",
-                boxShadow: "0 4px 14px rgba(124, 58, 237, 0.28)"
-              }}
-            >
-              <i className="ti ti-plus" style={{ fontSize: "16px" }}></i>
-              Add Listing
-            </Link>
+          {/* Quick Explore Section */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 800, color: "#94a3b8", letterSpacing: "0.06em", textTransform: "uppercase", padding: "0 4px" }}>
+              Explore Directory
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              <Link
+                href="/explore"
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "9px",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
+                  fontSize: "13.5px",
+                  fontWeight: 700,
+                  color: "#1e293b",
+                  textDecoration: "none",
+                  background: "#f8fafc",
+                  border: "1px solid #f1f5f9"
+                }}
+              >
+                <i className="ti ti-building-church" style={{ fontSize: "17px", color: "#7c3aed" }}></i>
+                Churches
+              </Link>
+              <Link
+                href="/explore?type=pastors"
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "9px",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
+                  fontSize: "13.5px",
+                  fontWeight: 700,
+                  color: "#1e293b",
+                  textDecoration: "none",
+                  background: "#f8fafc",
+                  border: "1px solid #f1f5f9"
+                }}
+              >
+                <i className="ti ti-user" style={{ fontSize: "17px", color: "#0284c7" }}></i>
+                Pastors
+              </Link>
+              <Link
+                href="/explore?type=worship_leaders"
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "9px",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
+                  fontSize: "13.5px",
+                  fontWeight: 700,
+                  color: "#1e293b",
+                  textDecoration: "none",
+                  background: "#f8fafc",
+                  border: "1px solid #f1f5f9"
+                }}
+              >
+                <i className="ti ti-microphone" style={{ fontSize: "17px", color: "#e11d48" }}></i>
+                Worship
+              </Link>
+              <Link
+                href="/explore?type=events"
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "9px",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
+                  fontSize: "13.5px",
+                  fontWeight: 700,
+                  color: "#1e293b",
+                  textDecoration: "none",
+                  background: "#f8fafc",
+                  border: "1px solid #f1f5f9"
+                }}
+              >
+                <i className="ti ti-calendar-event" style={{ fontSize: "17px", color: "#16a34a" }}></i>
+                Events
+              </Link>
+            </div>
           </div>
+
+          {/* Primary CTA */}
+          <Link
+            href="/add-listing"
+            onClick={() => setIsMobileMenuOpen(false)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              padding: "12px 14px",
+              borderRadius: "12px",
+              fontSize: "14px",
+              fontWeight: 700,
+              color: "#ffffff",
+              textDecoration: "none",
+              background: "linear-gradient(135deg, #7c3aed, #9333ea)",
+              boxShadow: "0 4px 14px rgba(124, 58, 237, 0.28)"
+            }}
+          >
+            <i className="ti ti-plus" style={{ fontSize: "16px" }}></i>
+            Add Listing
+          </Link>
 
           {/* Mobile User Profile Section */}
           <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "12px", display: "flex", flexDirection: "column", gap: "4px" }}>
