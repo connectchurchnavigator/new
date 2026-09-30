@@ -14,6 +14,7 @@ function TopNavContent() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
@@ -21,6 +22,7 @@ function TopNavContent() {
   // Sync TopNav input with active ?q= search param and reset loading spinner
   useEffect(() => {
     setIsSearching(false);
+    setIsMobileMenuOpen(false);
     if (pathname === "/explore") {
       const q = searchParams?.get("q") || "";
       setSearchQuery(q);
@@ -163,8 +165,8 @@ function TopNavContent() {
             <span>+ Add Listing</span>
           </button>
 
-          {/* User Account / Sign In Dropdown */}
-          <div ref={dropdownRef} style={{ position: "relative" }}>
+          {/* Desktop User Account / Sign In Dropdown */}
+          <div ref={dropdownRef} className="topnav-user-desktop" style={{ position: "relative" }}>
             {user ? (
               // SIGNED IN: User Initial / Avatar Pill
               <button
@@ -376,8 +378,277 @@ function TopNavContent() {
               </div>
             )}
           </div>
+
+          {/* Mobile Hamburger Toggle Button */}
+          <button
+            type="button"
+            className="topnav-hamburger-btn"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle menu"
+            style={{
+              width: "38px",
+              height: "38px",
+              borderRadius: "10px",
+              background: isMobileMenuOpen ? "#f5f3ff" : "#f8fafc",
+              border: isMobileMenuOpen ? "1.5px solid #7c3aed" : "1px solid #e2e8f0",
+              color: isMobileMenuOpen ? "#7c3aed" : "#1e293b",
+              display: "none",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            <i className={isMobileMenuOpen ? "ti ti-x" : "ti ti-menu-2"} style={{ fontSize: "20px" }}></i>
+          </button>
         </div>
       </div>
+
+      {/* Mobile Menu Drawer / Dropdown */}
+      {isMobileMenuOpen && (
+        <div 
+          className="topnav-mobile-drawer"
+          style={{
+            background: "#ffffff",
+            borderBottom: "2px solid #f1f5f9",
+            boxShadow: "0 18px 30px -10px rgba(0,0,0,0.12)",
+            padding: "16px 18px 22px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "14px"
+          }}
+        >
+          {/* Mobile Search Input */}
+          <form 
+            onSubmit={(e) => {
+              handleSearch(e);
+              setIsMobileMenuOpen(false);
+            }}
+            style={{
+              background: "#f8fafc",
+              borderRadius: "14px",
+              padding: "10px 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              border: "1.5px solid #e2e8f0"
+            }}
+          >
+            <i className="ti ti-search" style={{ fontSize: "16px", color: "#94a3b8" }}></i>
+            <input 
+              className="clean-input"
+              placeholder="Search churches, cities, ministries..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                border: "none",
+                background: "transparent",
+                outline: "none",
+                fontSize: "14px",
+                width: "100%",
+                color: "#0f172a"
+              }}
+            />
+          </form>
+
+          {/* Links & CTA */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <Link
+              href="/explore"
+              onClick={() => setIsMobileMenuOpen(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                padding: "11px 14px",
+                borderRadius: "12px",
+                fontSize: "14.5px",
+                fontWeight: 700,
+                color: "#1e293b",
+                textDecoration: "none",
+                background: "#f8fafc"
+              }}
+            >
+              <i className="ti ti-compass" style={{ fontSize: "19px", color: "#7c3aed" }}></i>
+              Explore Churches & Ministries
+            </Link>
+
+            <Link
+              href="/add-listing"
+              onClick={() => setIsMobileMenuOpen(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                padding: "12px 14px",
+                borderRadius: "12px",
+                fontSize: "14px",
+                fontWeight: 700,
+                color: "#ffffff",
+                textDecoration: "none",
+                background: "linear-gradient(135deg, #7c3aed, #9333ea)",
+                boxShadow: "0 4px 14px rgba(124, 58, 237, 0.28)"
+              }}
+            >
+              <i className="ti ti-plus" style={{ fontSize: "16px" }}></i>
+              Add Listing
+            </Link>
+          </div>
+
+          {/* Mobile User Profile Section */}
+          <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "12px", display: "flex", flexDirection: "column", gap: "4px" }}>
+            {user ? (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "6px 8px 10px" }}>
+                  <div style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+                    color: "#fff",
+                    fontWeight: 800,
+                    fontSize: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}>
+                    {initial}
+                  </div>
+                  <div style={{ overflow: "hidden" }}>
+                    <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#0f172a" }}>{label}</div>
+                    {user.email && <div style={{ fontSize: "11.5px", color: "#64748b", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{user.email}</div>}
+                  </div>
+                </div>
+
+                <Link
+                  href="/dashboard"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "10px 12px",
+                    borderRadius: "10px",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: "#334155",
+                    textDecoration: "none"
+                  }}
+                >
+                  <i className="ti ti-layout-dashboard" style={{ fontSize: "17px", color: "#7c3aed" }}></i>
+                  Dashboard
+                </Link>
+
+                <Link
+                  href="/dashboard?tab=my-profile"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "10px 12px",
+                    borderRadius: "10px",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: "#334155",
+                    textDecoration: "none"
+                  }}
+                >
+                  <i className="ti ti-user" style={{ fontSize: "17px", color: "#7c3aed" }}></i>
+                  My Profile
+                </Link>
+
+                {isSuperAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      padding: "10px 12px",
+                      borderRadius: "10px",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      color: "#7c3aed",
+                      textDecoration: "none",
+                      background: "#faf5ff"
+                    }}
+                  >
+                    <i className="ti ti-shield-lock" style={{ fontSize: "17px", color: "#7c3aed" }}></i>
+                    Super Admin
+                  </Link>
+                )}
+
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleSignOut();
+                  }}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "10px 12px",
+                    borderRadius: "10px",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: "#ef4444",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    textAlign: "left"
+                  }}
+                >
+                  <i className="ti ti-logout" style={{ fontSize: "17px" }}></i>
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                <Link
+                  href="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  style={{
+                    flex: 1,
+                    textAlign: "center",
+                    padding: "10px",
+                    borderRadius: "10px",
+                    fontSize: "13.5px",
+                    fontWeight: 700,
+                    color: "#7c3aed",
+                    textDecoration: "none",
+                    background: "#f5f3ff",
+                    border: "1.5px solid #d8b4fe"
+                  }}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  style={{
+                    flex: 1,
+                    textAlign: "center",
+                    padding: "10px",
+                    borderRadius: "10px",
+                    fontSize: "13.5px",
+                    fontWeight: 700,
+                    color: "#334155",
+                    textDecoration: "none",
+                    background: "#f1f5f9"
+                  }}
+                >
+                  Register
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
