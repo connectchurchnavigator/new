@@ -37,6 +37,9 @@ export default function AdminClient({
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"overview" | "churches" | "pastors" | "worship_leaders" | "events" | "taxonomies" | "users">("overview");
 
+  // Mobile sidebar toggle state
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
   // Bulk upload modal state
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
@@ -611,37 +614,154 @@ export default function AdminClient({
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f8fafc", fontFamily: "inherit" }}>
+      <style>{`
+        .admin-mobile-menu-btn {
+          display: none;
+        }
+        .admin-mobile-backdrop {
+          display: none;
+        }
+
+        @media (max-width: 1024px) {
+          .admin-sidebar-aside {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: 0 !important;
+            width: 280px !important;
+            max-width: 82vw !important;
+            height: 100vh !important;
+            z-index: 99999 !important;
+            box-shadow: 10px 0 35px rgba(0, 0, 0, 0.45) !important;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            transform: translateX(-100%) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            background: #0f172a !important;
+          }
+
+          .admin-sidebar-aside.mobile-open {
+            transform: translateX(0) !important;
+          }
+
+          .admin-mobile-backdrop {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            z-index: 99998;
+            backdrop-filter: blur(4px);
+          }
+
+          .admin-mobile-menu-btn {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            color: #0f172a;
+            font-size: 20px;
+            cursor: pointer;
+            margin-right: 10px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+          }
+
+          .admin-main-content {
+            padding: 20px 16px 48px !important;
+            width: 100% !important;
+          }
+
+          .admin-top-title-bar {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 16px !important;
+            margin-bottom: 24px !important;
+          }
+
+          .admin-top-title-bar h1 {
+            font-size: 22px !important;
+          }
+
+          /* Ensure data tables scroll horizontally rather than blowing out viewport */
+          .admin-table-container, table {
+            display: block !important;
+            width: 100% !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+          }
+        }
+      `}</style>
+
+      {/* Mobile Drawer Backdrop */}
+      {isMobileNavOpen && (
+        <div
+          className="admin-mobile-backdrop"
+          onClick={() => setIsMobileNavOpen(false)}
+        />
+      )}
+
       {/* ── SIDEBAR ──────────────────────────────────────────────────────────── */}
-      <aside style={{
-        width: "260px",
-        background: "#0f172a",
-        color: "#ffffff",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        borderRight: "1px solid #1e293b",
-        padding: "24px 16px",
-        position: "sticky",
-        top: 0,
-        height: "100vh",
-        flexShrink: 0,
-      }}>
+      <aside
+        className={`admin-sidebar-aside ${isMobileNavOpen ? "mobile-open" : ""}`}
+        style={{
+          width: "260px",
+          background: "#0f172a",
+          color: "#ffffff",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          borderRight: "1px solid #1e293b",
+          padding: "24px 16px",
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          flexShrink: 0,
+        }}
+      >
         <div>
-          {/* Brand */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "0 10px 24px", borderBottom: "1px solid #1e293b" }}>
-            <div style={{ width: "34px", height: "34px", borderRadius: "10px", background: "linear-gradient(135deg, #f43f5e, #7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>
-              ✝
+          {/* Brand & Mobile Close Button */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 10px 24px", borderBottom: "1px solid #1e293b" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ width: "34px", height: "34px", borderRadius: "10px", background: "linear-gradient(135deg, #f43f5e, #7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>
+                ✝
+              </div>
+              <div>
+                <div style={{ fontSize: "15px", fontWeight: 900, color: "#fff", letterSpacing: "-0.02em" }}>ChurchNavigator</div>
+                <span style={{ fontSize: "11px", color: "#f43f5e", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Super Admin</span>
+              </div>
             </div>
-            <div>
-              <div style={{ fontSize: "15px", fontWeight: 900, color: "#fff", letterSpacing: "-0.02em" }}>ChurchNavigator</div>
-              <span style={{ fontSize: "11px", color: "#f43f5e", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Super Admin</span>
-            </div>
+
+            {/* Mobile close button */}
+            <button
+              type="button"
+              className="admin-mobile-menu-btn"
+              onClick={() => setIsMobileNavOpen(false)}
+              style={{
+                width: "32px",
+                height: "32px",
+                fontSize: "18px",
+                background: "#1e293b",
+                border: "none",
+                color: "#cbd5e1",
+                margin: 0,
+              }}
+              aria-label="Close navigation"
+            >
+              <i className="ti ti-x" />
+            </button>
           </div>
 
           {/* Navigation Links */}
-          <nav style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "6px" }}>
+          <nav style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "6px", overflowY: "auto" }}>
             <button
-              onClick={() => setActiveTab("overview")}
+              onClick={() => {
+                setActiveTab("overview");
+                setIsMobileNavOpen(false);
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -663,7 +783,10 @@ export default function AdminClient({
             </button>
 
             <button
-              onClick={() => setActiveTab("churches")}
+              onClick={() => {
+                setActiveTab("churches");
+                setIsMobileNavOpen(false);
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -687,7 +810,10 @@ export default function AdminClient({
             </button>
 
             <button
-              onClick={() => setActiveTab("pastors")}
+              onClick={() => {
+                setActiveTab("pastors");
+                setIsMobileNavOpen(false);
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -711,7 +837,10 @@ export default function AdminClient({
             </button>
 
             <button
-              onClick={() => setActiveTab("worship_leaders")}
+              onClick={() => {
+                setActiveTab("worship_leaders");
+                setIsMobileNavOpen(false);
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -735,7 +864,10 @@ export default function AdminClient({
             </button>
 
             <button
-              onClick={() => setActiveTab("events")}
+              onClick={() => {
+                setActiveTab("events");
+                setIsMobileNavOpen(false);
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -759,7 +891,10 @@ export default function AdminClient({
             </button>
 
             <button
-              onClick={() => setActiveTab("taxonomies")}
+              onClick={() => {
+                setActiveTab("taxonomies");
+                setIsMobileNavOpen(false);
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -780,7 +915,10 @@ export default function AdminClient({
             </button>
 
             <button
-              onClick={() => setActiveTab("users")}
+              onClick={() => {
+                setActiveTab("users");
+                setIsMobileNavOpen(false);
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -828,22 +966,33 @@ export default function AdminClient({
 
 
       {/* ── MAIN CONTENT ────────────────────────────────────────────────────── */}
-      <main style={{ flex: 1, padding: "36px 40px", overflowY: "auto" }}>
+      <main className="admin-main-content" style={{ flex: 1, padding: "36px 40px", overflowY: "auto", minWidth: 0 }}>
         
         {/* Top Title Bar */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
-          <div>
-            <h1 style={{ fontSize: "28px", fontWeight: 900, color: "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>
-              {activeTab === "overview" && "Super Admin Command Center"}
-              {activeTab === "churches" && "Churches Directory & Verification"}
-              {activeTab === "pastors" && "Pastors & Ministers Directory"}
-              {activeTab === "events" && "Events & Gatherings Moderation"}
-              {activeTab === "taxonomies" && "Taxonomies & Category Manager"}
-              {activeTab === "users" && "Registered Users & Accounts"}
-            </h1>
-            <p style={{ fontSize: "14px", color: "#64748b", margin: "4px 0 0" }}>
-              Manage verified listings, categories, and platform content in one place.
-            </p>
+        <div className="admin-top-title-bar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <button
+              type="button"
+              className="admin-mobile-menu-btn"
+              onClick={() => setIsMobileNavOpen(true)}
+              aria-label="Open navigation menu"
+            >
+              <i className="ti ti-menu-2" />
+            </button>
+            <div>
+              <h1 style={{ fontSize: "28px", fontWeight: 900, color: "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>
+                {activeTab === "overview" && "Super Admin Command Center"}
+                {activeTab === "churches" && "Churches Directory & Verification"}
+                {activeTab === "pastors" && "Pastors & Ministers Directory"}
+                {activeTab === "worship_leaders" && "Worship Leaders Moderation"}
+                {activeTab === "events" && "Events & Gatherings Moderation"}
+                {activeTab === "taxonomies" && "Taxonomies & Category Manager"}
+                {activeTab === "users" && "Registered Users & Accounts"}
+              </h1>
+              <p style={{ fontSize: "14px", color: "#64748b", margin: "4px 0 0" }}>
+                Manage verified listings, categories, and platform content in one place.
+              </p>
+            </div>
           </div>
 
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>

@@ -542,6 +542,22 @@ export default function ExploreClient({
   const [maxDistance, setMaxDistance] = useState<number>(30); // in kilometers
   const [isLocating, setIsLocating] = useState(false);
 
+  // Mobile / Tablet View Mode ('list' or 'map') & Filter Drawer State
+  const [mobileViewMode, setMobileViewMode] = useState<"list" | "map">("list");
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
+        setShowSortMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
   // Extract distinct filter values with counts (sorted Alphabetically A-Z)
   const denominations = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -1735,6 +1751,181 @@ export default function ExploreClient({
           background: #a855f7;
           color: #ffffff;
         }
+
+        /* Mobile & Tablet Explore View Modes */
+        .tab-text-mobile {
+          display: none;
+        }
+        .tab-text-desktop {
+          display: inline;
+        }
+        .explore-mobile-floating-toggle {
+          display: none;
+        }
+        .explore-mobile-filter-bar {
+          display: none;
+        }
+        .explore-mobile-filter-close {
+          display: none;
+        }
+        .explore-filter-backdrop {
+          display: none;
+        }
+        .explore-mobile-filter-footer {
+          display: none;
+        }
+
+        @media (max-width: 1024px) {
+          /* 2x2 Segmented Grid on Mobile & Tablet */
+          .explore-tabs-scroll-container {
+            width: 100% !important;
+            max-width: 440px !important;
+            padding: 5px !important;
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 6px !important;
+            border-radius: 16px !important;
+            box-sizing: border-box !important;
+          }
+          .explore-tab {
+            padding: 10px 14px !important;
+            font-size: 13.5px !important;
+            font-weight: 700 !important;
+            gap: 8px !important;
+            justify-content: center !important;
+            border-radius: 12px !important;
+            white-space: nowrap !important;
+          }
+          .explore-tab i {
+            font-size: 16px !important;
+          }
+          .explore-tab .tab-text-desktop {
+            display: inline !important;
+          }
+          .explore-tab .tab-text-mobile {
+            display: none !important;
+          }
+
+          /* Mobile filter sub-bar */
+          .explore-mobile-filter-bar {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 10px !important;
+            padding: 8px 16px !important;
+            background: #ffffff !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            z-index: 40 !important;
+          }
+
+          /* Left Filter Column: Off-canvas drawer on mobile/tablet */
+          .explore-filter-column {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: 0 !important;
+            width: 320px !important;
+            max-width: 85vw !important;
+            z-index: 99999 !important;
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.25) !important;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            transform: translateX(-100%) !important;
+          }
+          .explore-filter-column.open {
+            transform: translateX(0) !important;
+          }
+          .explore-filter-backdrop {
+            display: block !important;
+            position: fixed !important;
+            inset: 0 !important;
+            background: rgba(15, 23, 42, 0.5) !important;
+            z-index: 99998 !important;
+            backdrop-filter: blur(3px) !important;
+          }
+          .explore-mobile-filter-close {
+            display: flex !important;
+          }
+          .explore-mobile-filter-footer {
+            display: flex !important;
+            flex-shrink: 0 !important;
+            position: sticky !important;
+            bottom: 0 !important;
+            background: #ffffff !important;
+            padding: 14px 18px !important;
+            border-top: 1px solid #e2e8f0 !important;
+            box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.08) !important;
+            z-index: 10 !important;
+          }
+
+          /* List Column: Take full width on mobile/tablet */
+          .explore-list-column {
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            border-right: none !important;
+            height: 100% !important;
+          }
+
+          /* Grid inside list column adjustments for mobile */
+          .explore-church-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          /* Floating View Mode Switcher Button (List <-> Map) */
+          .explore-mobile-floating-toggle {
+            display: flex !important;
+            position: fixed !important;
+            bottom: 24px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            z-index: 1000 !important;
+            background: #0f172a !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            border-radius: 30px !important;
+            padding: 10px 22px !important;
+            font-size: 13.5px !important;
+            font-weight: 800 !important;
+            box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.4) !important;
+            cursor: pointer !important;
+            align-items: center !important;
+            gap: 8px !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            backdrop-filter: blur(8px) !important;
+          }
+          .explore-mobile-floating-toggle:active {
+            transform: translateX(-50%) scale(0.95) !important;
+          }
+
+          /* Map Column on mobile/tablet */
+          .explore-map-column {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 25 !important;
+          }
+
+          /* Visibility toggles based on mobileViewMode */
+          .explore-split-container.view-list .explore-map-column {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            z-index: -1 !important;
+          }
+          .explore-split-container.view-map .explore-list-column {
+            display: none !important;
+          }
+          .explore-split-container.view-map .explore-map-column {
+            opacity: 1 !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
+            z-index: 25 !important;
+          }
+        }
       `}</style>
       <TopNav />
 
@@ -1746,10 +1937,10 @@ export default function ExploreClient({
         alignItems: "center",
         justifyContent: "center",
         gap: "12px",
-        padding: "10px 24px",
+        padding: "10px 16px",
         zIndex: 50,
       }}>
-        <div style={{
+        <div className="explore-tabs-scroll-container" style={{
           background: "#f1f5f9",
           padding: "4px",
           borderRadius: "24px",
@@ -1760,53 +1951,171 @@ export default function ExploreClient({
             onClick={() => handleTabChange("churches")}
             className={`explore-tab ${exploreType === "churches" ? "active" : ""}`}
           >
-            <i className="ti ti-building-church" style={{ fontSize: "16px" }}></i> Churches
+            <i className="ti ti-building-church" style={{ fontSize: "16px" }}></i>
+            <span>Churches</span>
           </button>
           <button
             onClick={() => handleTabChange("pastors")}
             className={`explore-tab ${exploreType === "pastors" ? "active" : ""}`}
           >
-            <i className="ti ti-user" style={{ fontSize: "16px" }}></i> Pastors
+            <i className="ti ti-user" style={{ fontSize: "16px" }}></i>
+            <span>Pastors</span>
           </button>
           <button
             onClick={() => handleTabChange("worship_leaders")}
             className={`explore-tab ${exploreType === "worship_leaders" ? "active" : ""}`}
           >
-            <i className="ti ti-microphone-2" style={{ fontSize: "16px" }}></i> Worship Leaders
+            <i className="ti ti-microphone-2" style={{ fontSize: "16px" }}></i>
+            <span className="tab-text-desktop">Worship Leaders</span>
+            <span className="tab-text-mobile">Worship</span>
           </button>
           <button
             onClick={() => handleTabChange("events")}
             className={`explore-tab ${exploreType === "events" ? "active" : ""}`}
           >
-            <i className="ti ti-calendar-event" style={{ fontSize: "16px" }}></i> Events
+            <i className="ti ti-calendar-event" style={{ fontSize: "16px" }}></i>
+            <span>Events</span>
           </button>
         </div>
       </div>
 
+      {/* Mobile/Tablet Quick Filter Sub-bar */}
+      <div className="explore-mobile-filter-bar">
+        <button
+          type="button"
+          onClick={() => setShowMobileFilters(true)}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "7px",
+            background: hasActiveFilters ? "#f3e8ff" : "#f8fafc",
+            color: hasActiveFilters ? "#7c3aed" : "#1e293b",
+            border: `1.5px solid ${hasActiveFilters ? "#7c3aed" : "#e2e8f0"}`,
+            borderRadius: "20px",
+            padding: "7px 14px",
+            fontSize: "13px",
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          <i className="ti ti-adjustments-horizontal" style={{ fontSize: "15px" }} />
+          <span>Filters</span>
+          {hasActiveFilters && (
+            <span
+              style={{
+                width: "7px",
+                height: "7px",
+                borderRadius: "50%",
+                background: "#7c3aed",
+              }}
+            />
+          )}
+        </button>
+
+        {/* Total counts badge on mobile */}
+        <div style={{ fontSize: "12px", fontWeight: 700, color: "#64748b" }}>
+          {exploreType === "churches"
+            ? `${filteredChurches.length} Churches`
+            : exploreType === "pastors"
+            ? `${filteredPastors.length} Pastors`
+            : exploreType === "events"
+            ? `${filteredEvents.length} Events`
+            : `${filteredWorshipLeaders.length} Leaders`}
+        </div>
+
+        {/* Direct Near Me quick toggle on mobile */}
+        <button
+          type="button"
+          onClick={() => {
+            if (userLocation) {
+              setUserLocation(null);
+              if (sortBy === "nearby") setSortBy("latest");
+            } else {
+              handleUseMyLocation();
+            }
+          }}
+          disabled={isLocating}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "5px",
+            background: userLocation ? "#f3e8ff" : "#f8fafc",
+            color: userLocation ? "#7c3aed" : "#475569",
+            border: `1px solid ${userLocation ? "#7c3aed" : "#e2e8f0"}`,
+            borderRadius: "20px",
+            padding: "6px 12px",
+            fontSize: "12px",
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          <i className={isLocating ? "ti ti-loader-2" : "ti ti-current-location"} style={{ animation: isLocating ? "spin 1s linear infinite" : "none" }} />
+          <span>{userLocation ? "Near Me ✓" : "Near Me"}</span>
+        </button>
+      </div>
+
+      {/* Mobile Filter Drawer Backdrop */}
+      {showMobileFilters && (
+        <div
+          className="explore-filter-backdrop"
+          onClick={() => setShowMobileFilters(false)}
+        />
+      )}
+
       {/* Main Explore Split Screen */}
-      <div style={{ display: "flex", flex: 1, position: "relative", overflow: "hidden" }}>
+      <div
+        className={`explore-split-container ${
+          mobileViewMode === "map" && (exploreType === "churches" || exploreType === "events")
+            ? "view-map"
+            : "view-list"
+        }`}
+        style={{ display: "flex", flex: 1, position: "relative", overflow: "hidden" }}
+      >
         
-        {/* FILTERS COLUMN (Left) */}
-        <div style={{
-          width: "250px",
-          minWidth: "250px",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          borderRight: "1px solid #e2e8f0",
-          background: "#fff",
-          zIndex: 10,
-          overflowY: "auto",
-        }}>
-          {/* Filters Header */}
-          <div style={{ padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9" }}>
-            <h2 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: 0 }}>Filters</h2>
+        {/* FILTERS COLUMN (Left / Off-canvas drawer on mobile & tablet) */}
+        <div
+          className={`explore-filter-column ${showMobileFilters ? "open" : ""}`}
+          style={{
+            width: "250px",
+            minWidth: "250px",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            borderRight: "1px solid #e2e8f0",
+            background: "#fff",
+            zIndex: 10,
+          }}
+        >
+          {/* Filters Header (Pinned) */}
+          <div style={{ padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <button
+                type="button"
+                className="explore-mobile-filter-close"
+                onClick={() => setShowMobileFilters(false)}
+                style={{
+                  background: "#f1f5f9",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: "28px",
+                  height: "28px",
+                  cursor: "pointer",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#475569",
+                }}
+              >
+                <i className="ti ti-x" style={{ fontSize: "16px" }} />
+              </button>
+              <h2 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: 0 }}>Filters</h2>
+            </div>
             <button onClick={clearAllFilters} style={{ fontSize: "11px", fontWeight: 700, color: "#7c3aed", background: "none", border: "none", cursor: "pointer", letterSpacing: "0.05em", opacity: hasActiveFilters ? 1 : 0.5 }}>
               RESET
             </button>
           </div>
           
-          <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "24px" }}>
+          {/* Filter Body (Scrollable) */}
+          <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "24px", flex: 1, overflowY: "auto" }}>
               {/* Search */}
               <div style={{ position: "relative" }}>
                 {isTypingSearch ? (
@@ -2282,38 +2591,175 @@ export default function ExploreClient({
                 </div>
               )}
 
-              {/* Sort By Dropdown (Universal) */}
+              {/* Sort By Dropdown (Universal Custom Dropdown) */}
               <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
-                <div style={{ position: "relative", width: "100%" }}>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    style={{ width: "100%", appearance: "none", background: "transparent", border: "none", fontSize: "14px", fontWeight: 600, color: "#334155", cursor: "pointer", outline: "none", padding: "8px 24px 8px 8px", marginLeft: "-8px", borderRadius: "8px" }}
+                <div style={{ fontSize: "10px", textTransform: "uppercase", fontWeight: 800, color: "#94a3b8", letterSpacing: "0.05em", marginBottom: "8px" }}>
+                  Sort Order
+                </div>
+                <div ref={sortMenuRef} style={{ position: "relative", width: "100%" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowSortMenu(!showSortMenu)}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "8px",
+                      background: "#f8fafc",
+                      border: showSortMenu ? "1.5px solid #7c3aed" : "1.5px solid #e2e8f0",
+                      borderRadius: "10px",
+                      padding: "9px 12px",
+                      fontSize: "13.5px",
+                      fontWeight: 600,
+                      color: "#1e293b",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      transition: "all 0.15s ease",
+                    }}
                   >
-                    <option value="latest">{exploreType === "events" ? "Sort By: Event Date (Soonest)" : "Sort By: Latest"}</option>
-                    <option value="oldest">Sort By: Oldest</option>
-                    <option value="nearby">Sort By: Nearby</option>
-                    <option value="name_asc">Sort By: Name A-Z</option>
-                    <option value="name_desc">Sort By: Name Z-A</option>
-                  </select>
-                  <i className="ti ti-chevron-down" style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#94a3b8", fontSize: "16px" }}></i>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {sortBy === "latest"
+                        ? (exploreType === "events" ? "Event Date (Soonest)" : "Latest Added")
+                        : sortBy === "oldest"
+                        ? "Oldest"
+                        : sortBy === "nearby"
+                        ? "Nearby First"
+                        : sortBy === "name_asc"
+                        ? "Name A to Z"
+                        : "Name Z to A"}
+                    </span>
+                    <i
+                      className="ti ti-chevron-down"
+                      style={{
+                        fontSize: "14px",
+                        color: "#64748b",
+                        transition: "transform 0.2s",
+                        transform: showSortMenu ? "rotate(180deg)" : "rotate(0deg)",
+                      }}
+                    />
+                  </button>
+
+                  {/* Custom Floating Sort Dropdown Menu */}
+                  {showSortMenu && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "calc(100% + 4px)",
+                        left: 0,
+                        right: 0,
+                        background: "#ffffff",
+                        borderRadius: "12px",
+                        border: "1.5px solid #e2e8f0",
+                        boxShadow: "0 14px 28px -6px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0,0,0,0.02)",
+                        zIndex: 9999,
+                        padding: "5px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "2px",
+                        animation: "fadeIn 0.15s ease-out",
+                      }}
+                    >
+                      {[
+                        { value: "latest", label: exploreType === "events" ? "Event Date (Soonest)" : "Latest Added" },
+                        { value: "oldest", label: "Oldest" },
+                        { value: "nearby", label: "Nearby First" },
+                        { value: "name_asc", label: "Name A to Z" },
+                        { value: "name_desc", label: "Name Z to A" },
+                      ].map((item) => {
+                        const isSelected = sortBy === item.value;
+                        return (
+                          <button
+                            key={item.value}
+                            type="button"
+                            onClick={() => {
+                              setSortBy(item.value as any);
+                              setShowSortMenu(false);
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              padding: "8px 12px",
+                              borderRadius: "8px",
+                              border: "none",
+                              background: isSelected ? "#f3e8ff" : "transparent",
+                              color: isSelected ? "#7c3aed" : "#334155",
+                              fontSize: "13px",
+                              fontWeight: isSelected ? 800 : 600,
+                              cursor: "pointer",
+                              textAlign: "left",
+                              transition: "all 0.12s",
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isSelected) e.currentTarget.style.background = "#f8fafc";
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelected) e.currentTarget.style.background = "transparent";
+                            }}
+                          >
+                            <span>{item.label}</span>
+                            {isSelected && <i className="ti ti-check" style={{ fontSize: "14px", color: "#7c3aed" }} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
+          </div>
+
+          {/* Sticky Mobile Search / Apply Button */}
+          <div className="explore-mobile-filter-footer">
+            <button
+              type="button"
+              onClick={() => setShowMobileFilters(false)}
+              style={{
+                width: "100%",
+                background: "linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "14px",
+                padding: "13px 20px",
+                fontSize: "14.5px",
+                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                cursor: "pointer",
+                boxShadow: "0 6px 18px rgba(124, 58, 237, 0.35)",
+              }}
+            >
+              <i className="ti ti-search" style={{ fontSize: "16px" }} />
+              <span>
+                Search ({exploreType === "churches"
+                  ? `${filteredChurches.length} Results`
+                  : exploreType === "pastors"
+                  ? `${filteredPastors.length} Results`
+                  : exploreType === "events"
+                  ? `${filteredEvents.length} Results`
+                  : `${filteredWorshipLeaders.length} Results`})
+              </span>
+            </button>
           </div>
         </div>
 
         {/* LIST COLUMN (Middle / Full if no map) */}
-        <div style={{
-          width: (exploreType === "pastors" || exploreType === "worship_leaders") ? "100%" : "590px",
-          minWidth: (exploreType === "pastors" || exploreType === "worship_leaders") ? "0" : "590px",
-          maxWidth: (exploreType === "pastors" || exploreType === "worship_leaders") ? "none" : "590px",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          borderRight: "1px solid #e2e8f0",
-          background: "#fff",
-          zIndex: 10,
-        }}>
+        <div
+          className="explore-list-column"
+          style={{
+            width: (exploreType === "pastors" || exploreType === "worship_leaders") ? "100%" : "590px",
+            minWidth: (exploreType === "pastors" || exploreType === "worship_leaders") ? "0" : "590px",
+            maxWidth: (exploreType === "pastors" || exploreType === "worship_leaders") ? "none" : "590px",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            borderRight: "1px solid #e2e8f0",
+            background: "#fff",
+            zIndex: 10,
+          }}
+        >
            {/* List Header */}
            <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9" }}>
              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -2419,11 +2865,14 @@ export default function ExploreClient({
                   )}
                 </div>
               ) : (
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                  gap: "12px",
-                }}>
+                <div
+                  className="explore-church-grid"
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                    gap: "12px",
+                  }}
+                >
                   {filteredChurches.map((church) => {
                     const isSelected = church.id === selectedChurchId;
                     const coverImage = church.cover_url ? church.cover_url.split("|||")[0] : null;
@@ -2628,15 +3077,18 @@ export default function ExploreClient({
 
         {/* RIGHT COLUMN: Interactive Leaflet Map (for Churches and Events) */}
         {(exploreType === "churches" || exploreType === "events") && (
-          <div style={{
-            flex: 1,
-            minWidth: 0,
-            height: "100%",
-            minHeight: "100%",
-            position: "relative",
-            background: "#f1f5f9",
-            overflow: "hidden"
-          }}>
+          <div
+            className="explore-map-column"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: "100%",
+              minHeight: "100%",
+              position: "relative",
+              background: "#f1f5f9",
+              overflow: "hidden"
+            }}
+          >
             <ChurchMap
               churches={activeItemsForMap}
               selectedChurchId={selectedChurchId}
@@ -2644,11 +3096,34 @@ export default function ExploreClient({
               onSelectChurch={(c) => setSelectedChurchId(c.id)}
               userLocation={userLocation}
               maxDistance={maxDistance}
+              isVisible={mobileViewMode === "map"}
             />
           </div>
         )}
 
       </div>
+
+      {/* Mobile & Tablet Floating View Mode Switcher Button (List <-> Map) */}
+      {(exploreType === "churches" || exploreType === "events") && (
+        <button
+          type="button"
+          className="explore-mobile-floating-toggle"
+          onClick={() => setMobileViewMode(mobileViewMode === "list" ? "map" : "list")}
+          aria-label={mobileViewMode === "list" ? "Switch to Map view" : "Switch to List view"}
+        >
+          {mobileViewMode === "list" ? (
+            <>
+              <i className="ti ti-map" style={{ fontSize: "16px", color: "#a855f7" }} />
+              <span>Map</span>
+            </>
+          ) : (
+            <>
+              <i className="ti ti-list" style={{ fontSize: "16px", color: "#a855f7" }} />
+              <span>List</span>
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 }

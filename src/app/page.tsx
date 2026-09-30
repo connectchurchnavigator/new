@@ -109,6 +109,8 @@ export default async function Home() {
         padding: "90px 24px 110px",
         textAlign: "center",
         zIndex: 20,
+        overflowX: "clip",
+        overflowY: "visible",
       }}>
         {/* Background Hero Image */}
         <div style={{ position: "absolute", inset: 0, zIndex: 0, overflow: "hidden" }}>

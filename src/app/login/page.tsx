@@ -12,7 +12,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const supabase = createClient();
 
-  const nextUrl = searchParams.get("next") || "/dashboard";
+  const nextUrl = searchParams.get("next") || "/explore";
 
   const [activeTab, setActiveTab] = useState<"signin" | "register">("signin");
   const [showPassword, setShowPassword] = useState(false);
@@ -79,7 +79,7 @@ function LoginForm() {
         });
 
         if (signInData?.session || signUpData?.session) {
-          window.location.href = searchParams.get("next") || "/dashboard";
+          window.location.href = searchParams.get("next") || "/explore";
         } else {
           setInfoMsg("📩 Confirmation email sent! Please check your inbox and click the activation link to complete registration.");
           setActiveTab("signin");

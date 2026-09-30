@@ -119,9 +119,42 @@ function TopNavContent() {
 
   return (
     <div className="topnav" style={{ position: "sticky", top: 0, zIndex: 1000, background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(14px)", borderBottom: "1px solid var(--cn-border, #ececf2)", width: "100%", padding: 0 }}>
-      <div className="topnav-inner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "58px", padding: "0 24px", width: "100%", maxWidth: "1280px", margin: "0 auto" }}>
+      <style>{`
+        .topnav-logo img {
+          height: 42px !important;
+          width: auto !important;
+        }
+        @media (max-width: 768px) {
+          .topnav-search-desktop { display: none !important; }
+          .topnav-explore-link { display: none !important; }
+          .topnav-add-btn { display: none !important; }
+          .topnav-user-desktop { display: none !important; }
+          .topnav-hamburger-btn { display: flex !important; }
+          .topnav-logo img {
+            height: 36px !important;
+            width: auto !important;
+          }
+          .topnav-mobile-drawer {
+            position: absolute !important;
+            top: calc(100% + 8px) !important;
+            right: 16px !important;
+            width: 270px !important;
+            max-width: calc(100vw - 32px) !important;
+            border-radius: 18px !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+            padding: 12px !important;
+            background: #ffffff !important;
+          }
+        }
+        @media (min-width: 769px) {
+          .topnav-hamburger-btn { display: none !important; }
+          .topnav-mobile-drawer { display: none !important; }
+        }
+      `}</style>
+      <div className="topnav-inner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "64px", padding: "0 24px", width: "100%", maxWidth: "1280px", margin: "0 auto" }}>
         <Link href="/" className="topnav-logo" style={{ display: "flex", alignItems: "center", textDecoration: "none", flexShrink: 0 }}>
-          <Image src={logoImg} alt="ChurchNavigator Logo" width={160} height={38} style={{ objectFit: "contain", width: "auto", height: "34px" }} priority />
+          <Image src={logoImg} alt="ChurchNavigator Logo" width={200} height={48} style={{ objectFit: "contain", width: "auto", height: "42px" }} priority />
         </Link>
 
         <div className="topnav-actions" style={{ display: "flex", alignItems: "center", gap: "16px", flexShrink: 0 }}>
@@ -398,196 +431,120 @@ function TopNavContent() {
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Toggle menu"
             style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "10px",
-              background: isMobileMenuOpen ? "#f5f3ff" : "#f8fafc",
-              border: isMobileMenuOpen ? "1.5px solid #7c3aed" : "1.5px solid #e2e8f0",
+              width: "36px",
+              height: "36px",
+              background: "transparent",
+              border: "none",
+              outline: "none",
               color: isMobileMenuOpen ? "#7c3aed" : "#1e293b",
-              display: "none",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              transition: "all 0.2s"
+              padding: 0,
+              transition: "color 0.15s ease"
             }}
           >
-            <i className={isMobileMenuOpen ? "ti ti-x" : "ti ti-menu-2"} style={{ fontSize: "21px" }}></i>
+            <i className={isMobileMenuOpen ? "ti ti-x" : "ti ti-menu-2"} style={{ fontSize: "27px", strokeWidth: "2" }}></i>
           </button>
         </div>
       </div>
 
-      {/* Mobile Menu Drawer / Dropdown */}
+      {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
         <div 
           ref={mobileMenuRef}
           className="topnav-mobile-drawer"
           style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            right: "16px",
+            width: "250px",
+            maxWidth: "calc(100vw - 32px)",
             background: "#ffffff",
-            borderBottom: "2px solid #e2e8f0",
-            boxShadow: "0 18px 30px -10px rgba(0,0,0,0.12)",
-            padding: "16px 18px 22px",
+            borderRadius: "18px",
+            border: "1px solid #e2e8f0",
+            boxShadow: "0 20px 40px -10px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.04)",
+            padding: "10px",
             display: "flex",
             flexDirection: "column",
-            gap: "14px",
-            animation: "fadeInDown 0.2s ease"
+            gap: "8px",
+            zIndex: 99999,
+            animation: "fadeInDown 0.18s ease-out",
           }}
         >
-          {/* Mobile Search Input */}
-          <form 
-            onSubmit={(e) => {
-              handleSearch(e);
-              setIsMobileMenuOpen(false);
-            }}
-            style={{
-              background: "#f8fafc",
-              borderRadius: "14px",
-              padding: "10px 14px",
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              border: "1.5px solid #e2e8f0"
-            }}
-          >
-            <i className="ti ti-search" style={{ fontSize: "16px", color: "#7c3aed" }}></i>
-            <input 
-              className="clean-input"
-              placeholder="Search churches, cities, ministries..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+          {/* Mobile Menu Links: Home, Explore, Add Listing */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <Link
+              href="/"
+              onClick={() => setIsMobileMenuOpen(false)}
               style={{
-                border: "none",
-                background: "transparent",
-                outline: "none",
-                fontSize: "14px",
-                width: "100%",
-                color: "#0f172a"
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 14px",
+                borderRadius: "12px",
+                fontSize: "14.5px",
+                fontWeight: 700,
+                color: "#1e293b",
+                textDecoration: "none",
+                transition: "background 0.15s ease",
               }}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", padding: 0 }}
-              >
-                <i className="ti ti-x" style={{ fontSize: "15px" }}></i>
-              </button>
-            )}
-          </form>
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <i className="ti ti-home" style={{ fontSize: "18px", color: "#7c3aed" }}></i>
+              Home
+            </Link>
 
-          {/* Quick Explore Section */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <div style={{ fontSize: "11px", fontWeight: 800, color: "#94a3b8", letterSpacing: "0.06em", textTransform: "uppercase", padding: "0 4px" }}>
-              Explore Directory
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-              <Link
-                href="/explore"
-                onClick={() => setIsMobileMenuOpen(false)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "9px",
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  fontSize: "13.5px",
-                  fontWeight: 700,
-                  color: "#1e293b",
-                  textDecoration: "none",
-                  background: "#f8fafc",
-                  border: "1px solid #f1f5f9"
-                }}
-              >
-                <i className="ti ti-building-church" style={{ fontSize: "17px", color: "#7c3aed" }}></i>
-                Churches
-              </Link>
-              <Link
-                href="/explore?type=pastors"
-                onClick={() => setIsMobileMenuOpen(false)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "9px",
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  fontSize: "13.5px",
-                  fontWeight: 700,
-                  color: "#1e293b",
-                  textDecoration: "none",
-                  background: "#f8fafc",
-                  border: "1px solid #f1f5f9"
-                }}
-              >
-                <i className="ti ti-user" style={{ fontSize: "17px", color: "#0284c7" }}></i>
-                Pastors
-              </Link>
-              <Link
-                href="/explore?type=worship_leaders"
-                onClick={() => setIsMobileMenuOpen(false)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "9px",
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  fontSize: "13.5px",
-                  fontWeight: 700,
-                  color: "#1e293b",
-                  textDecoration: "none",
-                  background: "#f8fafc",
-                  border: "1px solid #f1f5f9"
-                }}
-              >
-                <i className="ti ti-microphone" style={{ fontSize: "17px", color: "#e11d48" }}></i>
-                Worship
-              </Link>
-              <Link
-                href="/explore?type=events"
-                onClick={() => setIsMobileMenuOpen(false)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "9px",
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  fontSize: "13.5px",
-                  fontWeight: 700,
-                  color: "#1e293b",
-                  textDecoration: "none",
-                  background: "#f8fafc",
-                  border: "1px solid #f1f5f9"
-                }}
-              >
-                <i className="ti ti-calendar-event" style={{ fontSize: "17px", color: "#16a34a" }}></i>
-                Events
-              </Link>
-            </div>
+            <Link
+              href="/explore"
+              onClick={() => setIsMobileMenuOpen(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 14px",
+                borderRadius: "12px",
+                fontSize: "14.5px",
+                fontWeight: 700,
+                color: "#1e293b",
+                textDecoration: "none",
+                transition: "background 0.15s ease",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <i className="ti ti-compass" style={{ fontSize: "18px", color: "#7c3aed" }}></i>
+              Explore
+            </Link>
+
+            <Link
+              href="/add-listing"
+              onClick={() => setIsMobileMenuOpen(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                padding: "11px 16px",
+                borderRadius: "12px",
+                fontSize: "14px",
+                fontWeight: 700,
+                color: "#ffffff",
+                textDecoration: "none",
+                background: "linear-gradient(135deg, #7c3aed, #9333ea)",
+                boxShadow: "0 4px 14px rgba(124, 58, 237, 0.28)",
+                marginTop: "4px",
+                marginBottom: "4px",
+              }}
+            >
+              <i className="ti ti-plus" style={{ fontSize: "16px" }}></i>
+              Add Listing
+            </Link>
           </div>
 
-          {/* Primary CTA */}
-          <Link
-            href="/add-listing"
-            onClick={() => setIsMobileMenuOpen(false)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              padding: "12px 14px",
-              borderRadius: "12px",
-              fontSize: "14px",
-              fontWeight: 700,
-              color: "#ffffff",
-              textDecoration: "none",
-              background: "linear-gradient(135deg, #7c3aed, #9333ea)",
-              boxShadow: "0 4px 14px rgba(124, 58, 237, 0.28)"
-            }}
-          >
-            <i className="ti ti-plus" style={{ fontSize: "16px" }}></i>
-            Add Listing
-          </Link>
-
           {/* Mobile User Profile Section */}
-          <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "12px", display: "flex", flexDirection: "column", gap: "4px" }}>
+          <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
             {user ? (
               <>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "6px 8px 10px" }}>

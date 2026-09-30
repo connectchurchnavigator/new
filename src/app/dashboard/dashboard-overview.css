@@ -764,3 +764,141 @@
 .d2-status-pill.draft { background: #fef2f2; color: #dc2626; }
 .d2-status-pill.new { background: #eff6ff; color: #2563eb; }
 .d2-status-pill.read { background: #f1f5f9; color: #64748b; }
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* ── RESPONSIVE MOBILE & TABLET STYLES FOR CHURCH NAVIGATOR DASHBOARD */
+/* ══════════════════════════════════════════════════════════════════ */
+
+.dashboard-mobile-menu-btn {
+  display: none;
+}
+
+.dashboard-mobile-backdrop {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  /* Turn desktop sidebar into an off-canvas slide-out drawer */
+  .dashboard-sidebar-aside {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 280px !important;
+    max-width: 82vw !important;
+    height: 100vh !important;
+    z-index: 99999 !important;
+    box-shadow: 10px 0 35px rgba(0, 0, 0, 0.25) !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transform: translateX(-100%) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: #ffffff !important;
+  }
+
+  .dashboard-sidebar-aside.mobile-open {
+    transform: translateX(0) !important;
+  }
+
+  /* Backdrop for mobile drawer */
+  .dashboard-mobile-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 99998;
+    backdrop-filter: blur(3px);
+  }
+
+  /* Header hamburger button on mobile */
+  .dashboard-mobile-menu-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #1e293b;
+    font-size: 20px;
+    cursor: pointer;
+    margin-right: 6px;
+    transition: all 0.15s ease;
+  }
+
+  .dashboard-mobile-menu-btn:hover {
+    background: #e2e8f0;
+  }
+
+  /* Dashboard Header on Mobile */
+  .dashboard-main-header {
+    height: 60px !important;
+    padding: 0 16px !important;
+  }
+
+  .dashboard-main-header h1 {
+    font-size: 17px !important;
+  }
+
+  /* Main content container on mobile */
+  .dashboard-content-body {
+    padding: 16px 14px 40px !important;
+    width: 100% !important;
+  }
+
+  /* AI intelligence cards: stack vertically on mobile */
+  .d2-ai-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Stat KPI tiles: 2 columns on tablet/mobile */
+  .d2-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .d2-stat-tile {
+    padding: 14px !important;
+  }
+
+  .d2-stat-val {
+    font-size: 22px !important;
+  }
+
+  /* Funnel: responsive grid */
+  .d2-funnel {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .d2-funnel-step {
+    padding: 10px !important;
+  }
+
+  .d2-funnel-val {
+    font-size: 18px !important;
+  }
+
+  /* Users & Team section grid: stack vertically on mobile */
+  .dashboard-users-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .d2-card {
+    padding: 16px !important;
+  }
+}
+
+@media (max-width: 540px) {
+  .d2-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .d2-funnel {
+    grid-template-columns: 1fr !important;
+  }
+}
+

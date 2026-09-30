@@ -81,6 +81,9 @@ export default function DashboardClient({
     }
   }, [initialSection, isTeamMember, teamRole]);
 
+  // Mobile navigation drawer toggle
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
   // User menu dropdown state in header
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -1770,10 +1773,19 @@ export default function DashboardClient({
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', fontFamily: 'inherit', color: '#1e293b' }}>
       
+      {/* Mobile Drawer Backdrop */}
+      {isMobileNavOpen && (
+        <div
+          className="dashboard-mobile-backdrop"
+          onClick={() => setIsMobileNavOpen(false)}
+        />
+      )}
+
       {/* ───────────────────────────────────────────────────────────── */}
       {/* ── LEFT SIDEBAR (EXACT CLEAN SAAS DESIGN LIKE SCREENSHOT) ── */}
       {/* ───────────────────────────────────────────────────────────── */}
       <aside
+        className={`dashboard-sidebar-aside ${isMobileNavOpen ? 'mobile-open' : ''}`}
         style={{
           width: '240px',
           minWidth: '240px',
@@ -1790,35 +1802,45 @@ export default function DashboardClient({
       >
 
 
-        {/* ── LOGO (Redirect to Homepage) ───────────────────────────── */}
-        <Link
-          href="/"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            textDecoration: 'none',
-            padding: '4px 8px 18px',
-            marginBottom: '10px',
-            borderBottom: '1px solid #f1f5f9',
-          }}
-          title="Return to Home"
-        >
-          <Image
-            src={logoImg}
-            alt="ChurchNavigator Logo"
-            width={165}
-            height={38}
-            style={{ objectFit: 'contain' }}
-            priority
-          />
-        </Link>
+        {/* ── LOGO & Mobile Close Button ───────────────────────────── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px 18px', marginBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
+          <Link
+            href="/"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              textDecoration: 'none',
+            }}
+            title="Return to Home"
+          >
+            <Image
+              src={logoImg}
+              alt="ChurchNavigator Logo"
+              width={165}
+              height={38}
+              style={{ objectFit: 'contain' }}
+              priority
+            />
+          </Link>
+
+          {/* Close button inside mobile drawer */}
+          <button
+            type="button"
+            className="dashboard-mobile-menu-btn"
+            onClick={() => setIsMobileNavOpen(false)}
+            style={{ width: '32px', height: '32px', fontSize: '18px', margin: 0 }}
+            aria-label="Close menu"
+          >
+            <i className="ti ti-x" />
+          </button>
+        </div>
 
         {/* ── MAIN SECTIONS NAVIGATION (User Requested Order) ──────── */}
         <div style={{ fontSize: '10.5px', fontWeight: 800, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.08em', padding: '0 10px', marginBottom: '8px' }}>
           Menu
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px', overflowY: 'auto' }}>
           {[
             { id: 'overview', label: 'Overview', icon: 'ti-layout-dashboard', unread: null, allowed: true },
             { id: 'visitor-insights', label: 'Visitor Insights', icon: 'ti-chart-dots', unread: null, allowed: !isTeamMember || teamRole === 'events_and_church_edit' },
@@ -1834,7 +1856,10 @@ export default function DashboardClient({
             return (
               <button
                 key={item.id}
-                onClick={() => setSection(item.id as NavSection)}
+                onClick={() => {
+                  setSection(item.id as NavSection);
+                  setIsMobileNavOpen(false);
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1886,6 +1911,7 @@ export default function DashboardClient({
         
         {/* Top Header Bar (Clean header with Section Title & Timeframe Selector) */}
         <header
+          className="dashboard-main-header"
           style={{
             height: '68px',
             background: '#ffffff',
@@ -1899,8 +1925,16 @@ export default function DashboardClient({
             zIndex: 30,
           }}
         >
-          {/* Left Title */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {/* Left Title with Hamburger Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              className="dashboard-mobile-menu-btn"
+              onClick={() => setIsMobileNavOpen(true)}
+              aria-label="Open navigation menu"
+            >
+              <i className="ti ti-menu-2" />
+            </button>
             <h1 style={{ fontSize: '20px', fontWeight: 900, color: '#0f172a', margin: 0 }}>
               {section === 'overview'
                 ? 'Overview'
@@ -2191,7 +2225,7 @@ export default function DashboardClient({
         </header>
 
         {/* ── BODY VIEW ROUTER ─────────────────────────────────────── */}
-        <div style={{ padding: '24px 32px', maxWidth: '100%', width: '100%', boxSizing: 'border-box' }}>
+        <div className="dashboard-content-body" style={{ padding: '24px 32px', maxWidth: '100%', width: '100%', boxSizing: 'border-box' }}>
           
           {/* ═════════════════════════════════════════════════════════ */}
           {/* ── OVERVIEW SECTION (COPIED FROM DASHBOARD2) ───────────── */}
@@ -2855,46 +2889,15 @@ export default function DashboardClient({
                             })()}
                           </div>
 
-                          {/* Right Controls: Timestamp + Modern Split Button with Status Dropdown */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {/* Right Controls: Timestamp + Status Dropdown Button */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: '12px', color: '#94a3b8' }}>
                               {new Date(enq.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </span>
 
-                            {/* Split-Button & Status Dropdown Container */}
+                            {/* Status Dropdown Container */}
                             <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-                              {/* Primary Reply Button (Left) */}
-                              <a
-                                href={`mailto:${enq.sender_email}?subject=Regarding your enquiry on ChurchNavigator for ${encodeURIComponent(enq.entityName)}`}
-                                onClick={() => handleUpdateStatus(enq.id, 'responded')}
-                                title="Reply via default Email client"
-                                style={{
-                                  background: 'linear-gradient(135deg, #e11d48 0%, #f43f5e 100%)',
-                                  color: '#ffffff',
-                                  padding: '7px 13px',
-                                  borderTopLeftRadius: '9px',
-                                  borderBottomLeftRadius: '9px',
-                                  fontSize: '12.5px',
-                                  fontWeight: 800,
-                                  textDecoration: 'none',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                  boxShadow: '0 2px 6px rgba(225, 29, 72, 0.2)',
-                                  transition: 'all 0.15s ease',
-                                  opacity: updatingId === enq.id ? 0.75 : 1,
-                                  pointerEvents: updatingId === enq.id ? 'none' : 'auto',
-                                }}
-                              >
-                                {updatingId === enq.id ? (
-                                  <i className="ti ti-loader-2" style={{ fontSize: '14px', animation: 'spin 0.8s linear infinite' }}></i>
-                                ) : (
-                                  <i className="ti ti-mail-forward" style={{ fontSize: '14px' }}></i>
-                                )}
-                                Reply
-                              </a>
-
-                              {/* Dropdown Toggle Chevron (Right) */}
+                              {/* Status Dropdown Button */}
                               <button
                                 type="button"
                                 disabled={updatingId === enq.id}
@@ -2903,34 +2906,37 @@ export default function DashboardClient({
                                 }
                                 title="Change enquiry status"
                                 style={{
-                                  background: '#be123c',
-                                  color: '#ffffff',
-                                  border: 'none',
-                                  borderLeft: '1px solid rgba(255,255,255,0.25)',
-                                  padding: '7px 9px',
-                                  borderTopRightRadius: '9px',
-                                  borderBottomRightRadius: '9px',
+                                  background: '#f8fafc',
+                                  color: '#334155',
+                                  border: '1.5px solid #cbd5e1',
+                                  padding: '6px 12px',
+                                  borderRadius: '9px',
                                   fontSize: '12.5px',
+                                  fontWeight: 700,
                                   cursor: updatingId === enq.id ? 'not-allowed' : 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  justifyContent: 'center',
-                                  boxShadow: '0 2px 6px rgba(225, 29, 72, 0.2)',
+                                  gap: '6px',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                                   opacity: updatingId === enq.id ? 0.75 : 1,
+                                  transition: 'all 0.15s ease',
                                 }}
                               >
                                 {updatingId === enq.id ? (
                                   <i className="ti ti-loader-2" style={{ fontSize: '13px', animation: 'spin 0.8s linear infinite' }} />
                                 ) : (
-                                  <i
-                                    className="ti ti-chevron-down"
-                                    style={{
-                                      fontSize: '13px',
-                                      transform: activeStatusDropdownId === enq.id ? 'rotate(180deg)' : 'none',
-                                      transition: 'transform 0.2s ease',
-                                    }}
-                                  />
+                                  <i className="ti ti-adjustments-horizontal" style={{ fontSize: '13px', color: '#7c3aed' }} />
                                 )}
+                                <span>Status</span>
+                                <i
+                                  className="ti ti-chevron-down"
+                                  style={{
+                                    fontSize: '13px',
+                                    color: '#64748b',
+                                    transform: activeStatusDropdownId === enq.id ? 'rotate(180deg)' : 'none',
+                                    transition: 'transform 0.2s ease',
+                                  }}
+                                />
                               </button>
 
                               {/* Interactive Dropdown Menu */}
@@ -5499,7 +5505,7 @@ export default function DashboardClient({
               )}
 
               {/* Grid: Add User Form + Roles Guide */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px' }}>
+              <div className="dashboard-users-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px' }}>
                 
                 {/* 1. Add User Card */}
                 <div style={{ background: '#ffffff', borderRadius: '20px', padding: '28px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>

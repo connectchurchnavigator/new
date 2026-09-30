@@ -212,218 +212,168 @@ export default function EventClientView({ slug }: EventClientViewProps) {
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#f7f7fb", color: "#0f0f1a", minHeight: "100vh", WebkitFontSmoothing: "antialiased" }}>
       <TopNav />
 
-      {/* HERO COVER BANNER */}
-      <div style={{
-        position: "relative",
-        minHeight: "420px",
-        color: "#fff",
-        background: eventData.cover_url ? `url(${eventData.cover_url}) center/cover no-repeat` : "linear-gradient(135deg, #7c3aed 0%, #f43f5e 100%)",
-        overflow: "hidden"
-      }}>
-        {/* Colorful Gradient Overlay & Dark Shade */}
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 40%), linear-gradient(135deg, rgba(91,33,182,0.85), rgba(190,24,93,0.85))" }}></div>
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(8,6,20,0.88) 0%, rgba(8,6,20,0.2) 100%)" }}></div>
-
-        <div style={{ maxWidth: "1080px", margin: "0 auto", padding: "30px 22px 26px", position: "relative", zIndex: 2, minHeight: "420px", display: "flex", flexDirection: "column" }}>
-          
-          {/* Back to Events & Owner Edit Access */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "20px" }}>
-            <Link href="/events" style={{ fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.85)", display: "flex", alignItems: "center", gap: "6px" }}>
-              <i className="ti ti-arrow-left"></i> Events / Conferences
-            </Link>
-
-            {isOwner && (
-                <Link href={`/onboarding/events?id=${eventData.id}`}
-              style={{
-                fontSize: "12.5px",
-                fontWeight: 700,
-                color: "#fff",
-                background: "rgba(255, 255, 255, 0.2)",
-                backdropFilter: "blur(8px)",
-                border: "1px solid rgba(255, 255, 255, 0.35)",
-                padding: "6px 14px",
-                borderRadius: "20px",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                textDecoration: "none",
-                transition: "all 0.2s"
-              }}
-            >
-              <i className="ti ti-edit" style={{ fontSize: "15px", color: "#fbbf24" }}></i> Owner Edit Access
-            </Link>
-          )}
-          </div>
-
-          <div style={{ marginTop: "auto" }}>
-            {/* Event Type Badge */}
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", fontSize: "12px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", padding: "6px 13px", borderRadius: "20px", marginBottom: "14px" }}>
-              <i className="ti ti-flame" style={{ color: "#fbbf24" }}></i> {eventData.custom_type || eventData.type || "Conference"}
-            </div>
-
-            {/* Event Name */}
-            <h1 style={{ fontSize: "40px", fontWeight: 900, letterSpacing: "-0.025em", lineHeight: 1.08, maxWidth: "760px", textShadow: "0 2px 16px rgba(0,0,0,0.35)", marginBottom: "16px" }}>
-              {eventData.title}
-            </h1>
-
-            {/* Event Meta Details Row: Date, Time, Location, Address, Host */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "18px", fontSize: "14px", fontWeight: 600, color: "rgba(255,255,255,0.9)", marginBottom: "24px" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                <i className="ti ti-calendar-event" style={{ color: "#f43f5e", fontSize: "16px" }}></i> {formattedDate}
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                <i className="ti ti-clock" style={{ color: "#f43f5e", fontSize: "16px" }}></i> {formattedTime}
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                <i className="ti ti-map-pin" style={{ color: "#f43f5e", fontSize: "16px" }}></i> {eventData.venue_name || eventData.city || "Venue Location"}
-                {eventData.address ? ` (${eventData.address})` : ""}
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                <i className="ti ti-building-church" style={{ color: "#f43f5e", fontSize: "16px" }}></i> Hosted by <Link href={hostLink} style={{ color: "#fff", fontWeight: 700, textDecoration: "underline" }}>{hostName}</Link>
-              </span>
-            </div>
-
-            {/* Countdown Bottom Row */}
-            <div style={{ display: "flex", alignItems: "flex-end", gap: "18px", flexWrap: "wrap", marginBottom: "20px" }}>
-              <div>
-                <div style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.06em", opacity: 0.8, marginBottom: "7px" }}>STARTS IN</div>
-                <div style={{ display: "flex", gap: "9px" }}>
-                  <div style={{ background: "rgba(255,255,255,0.14)", backdropFilter: "blur(6px)", borderRadius: "12px", padding: "9px 14px", textAlign: "center", minWidth: "62px" }}>
-                    <div style={{ fontSize: "23px", fontWeight: 800, lineHeight: 1 }}>{timeLeft.days}</div>
-                    <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.8, marginTop: "3px" }}>DAYS</div>
-                  </div>
-                  <div style={{ background: "rgba(255,255,255,0.14)", backdropFilter: "blur(6px)", borderRadius: "12px", padding: "9px 14px", textAlign: "center", minWidth: "62px" }}>
-                    <div style={{ fontSize: "23px", fontWeight: 800, lineHeight: 1 }}>{timeLeft.hours}</div>
-                    <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.8, marginTop: "3px" }}>HOURS</div>
-                  </div>
-                  <div style={{ background: "rgba(255,255,255,0.14)", backdropFilter: "blur(6px)", borderRadius: "12px", padding: "9px 14px", textAlign: "center", minWidth: "62px" }}>
-                    <div style={{ fontSize: "23px", fontWeight: 800, lineHeight: 1 }}>{timeLeft.mins}</div>
-                    <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.8, marginTop: "3px" }}>MINS</div>
-                  </div>
-                  <div style={{ background: "rgba(255,255,255,0.14)", backdropFilter: "blur(6px)", borderRadius: "12px", padding: "9px 14px", textAlign: "center", minWidth: "62px" }}>
-                    <div style={{ fontSize: "23px", fontWeight: 800, lineHeight: 1 }}>{timeLeft.secs}</div>
-                    <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.8, marginTop: "3px" }}>SECS</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Hero Action Buttons */}
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={handleAddToCalendar}
-                style={{ display: "inline-flex", alignItems: "center", gap: "7px", fontSize: "13.5px", fontWeight: 700, padding: "11px 18px", borderRadius: "12px", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)", cursor: "pointer", transition: "all 0.2s" }}
-              >
-                <i className="ti ti-calendar-plus" style={{ fontSize: "16px" }}></i> Add to calendar
-              </button>
-
-              {eventData.livestream_url && (
-                <a
-                  href={eventData.livestream_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ display: "inline-flex", alignItems: "center", gap: "7px", fontSize: "13.5px", fontWeight: 700, padding: "11px 18px", borderRadius: "12px", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)", textDecoration: "none", transition: "all 0.2s" }}
-                >
-                  <i className="ti ti-brand-youtube" style={{ fontSize: "16px", color: "#ef4444" }}></i> Watch livestream
-                </a>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setShowQRModal(true)}
-                style={{ display: "inline-flex", alignItems: "center", gap: "7px", fontSize: "13.5px", fontWeight: 700, padding: "11px 18px", borderRadius: "12px", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)", cursor: "pointer", transition: "all 0.2s" }}
-              >
-                <i className="ti ti-qrcode" style={{ fontSize: "16px" }}></i> Get QR
-              </button>
+      {/* HERO SECTION - OPTION 1 MODERN OVERLAPPING CARD */}
+      <div style={{ maxWidth: "1080px", margin: "0 auto", padding: "16px 20px 0" }}>
+        <div className="event-header-card">
+          {/* Top Cover Banner */}
+          <div className="event-cover-banner" style={{
+            background: eventData.cover_url ? `url(${eventData.cover_url}) center/cover no-repeat` : "linear-gradient(135deg, #4c1d95 0%, #be185d 100%)",
+          }}>
+            <div className="event-cover-overlay" />
+            
+            {/* Top Navigation Row on Cover */}
+            <div style={{ position: "relative", zIndex: 5, padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Link href="/events" style={{ fontSize: "13px", fontWeight: 700, color: "#fff", background: "rgba(15, 23, 42, 0.45)", backdropFilter: "blur(8px)", padding: "7px 14px", borderRadius: "20px", display: "inline-flex", alignItems: "center", gap: "6px", textDecoration: "none", border: "1px solid rgba(255,255,255,0.2)" }}>
+                <i className="ti ti-arrow-left"></i> Events / Conferences
+              </Link>
 
               {isOwner && (
                 <Link
                   href={`/onboarding/events?id=${eventData.id}`}
-                  style={{ display: "inline-flex", alignItems: "center", gap: "7px", fontSize: "13.5px", fontWeight: 700, padding: "11px 18px", borderRadius: "12px", background: "rgba(255,255,255,0.25)", backdropFilter: "blur(6px)", color: "#fff", border: "1px solid rgba(255,255,255,0.4)", textDecoration: "none", transition: "all 0.2s" }}
+                  style={{
+                    fontSize: "12.5px",
+                    fontWeight: 700,
+                    color: "#fff",
+                    background: "rgba(15, 23, 42, 0.5)",
+                    backdropFilter: "blur(8px)",
+                    border: "1px solid rgba(255, 255, 255, 0.25)",
+                    padding: "7px 14px",
+                    borderRadius: "20px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    textDecoration: "none"
+                  }}
                 >
-                  <i className="ti ti-edit" style={{ fontSize: "16px", color: "#fbbf24" }}></i> Edit Event
+                  <i className="ti ti-edit" style={{ fontSize: "15px", color: "#fbbf24" }}></i> Owner Edit Access
                 </Link>
               )}
+            </div>
+          </div>
+
+          {/* Overlapping Info Body */}
+          <div className="event-profile-body">
+            <div className="event-profile-top-row">
+              {/* Event Calendar Date Badge (Overlapping) */}
+              <div className="event-avatar-badge">
+                <div className="event-date-month">{startDateObj.toLocaleDateString("en-GB", { month: "short" }).toUpperCase()}</div>
+                <div className="event-date-day">{startDateObj.getDate()}</div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="event-actions-row">
+                <button
+                  type="button"
+                  onClick={handleAddToCalendar}
+                  className="event-btn-primary"
+                >
+                  <i className="ti ti-calendar-plus" style={{ fontSize: "17px" }}></i>
+                  <span>Add to Calendar</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="event-btn-secondary"
+                >
+                  <i className={`ti ti-${copied ? "check" : "share"}`} style={{ fontSize: "16px", color: copied ? "#10b981" : "#7c3aed" }}></i>
+                  <span>{copied ? "Copied" : "Share"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowQRModal(true)}
+                  className="event-btn-secondary"
+                >
+                  <i className="ti ti-qrcode" style={{ fontSize: "16px" }}></i>
+                  <span>QR</span>
+                </button>
+
+                {isOwner && (
+                  <Link
+                    href={`/onboarding/events?id=${eventData.id}`}
+                    className="event-btn-edit"
+                  >
+                    <i className="ti ti-edit" style={{ fontSize: "15px" }}></i>
+                    <span>Edit</span>
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            {/* Event Title & Metadata */}
+            <div className="event-identity">
+              <div className="event-type-row">
+                <span className="event-type-pill">
+                  <i className="ti ti-flame" style={{ color: "#f59e0b" }}></i>
+                  <span>{eventData.custom_type || eventData.type || "Conference"}</span>
+                </span>
+                {eventData.mode && (
+                  <span className="event-meta-pill">
+                    <i className="ti ti-broadcast"></i>
+                    <span>{eventData.mode}</span>
+                  </span>
+                )}
+              </div>
+
+              <h1 className="event-title-name">
+                {eventData.title}
+              </h1>
+
+              {/* Inline Metadata Chips */}
+              <div className="event-meta-row">
+                <span className="event-meta-pill event-meta-accent">
+                  <i className="ti ti-calendar-event"></i>
+                  <span>{formattedDate}</span>
+                </span>
+                <span className="event-meta-pill">
+                  <i className="ti ti-clock"></i>
+                  <span>{formattedTime}</span>
+                </span>
+                <span className="event-meta-pill">
+                  <i className="ti ti-map-pin"></i>
+                  <span>{eventData.venue_name || eventData.city || "Venue Location"}{eventData.address ? ` (${eventData.address})` : ""}</span>
+                </span>
+                <span className="event-meta-pill">
+                  <i className="ti ti-building-church"></i>
+                  <span>Hosted by <Link href={hostLink} style={{ color: "#7c3aed", fontWeight: 700, textDecoration: "none" }}>{hostName}</Link></span>
+                </span>
+              </div>
+            </div>
+
+            {/* Event Countdown Strip */}
+            <div className="event-countdown-strip">
+              <div className="event-countdown-label">
+                <i className="ti ti-hourglass-empty" style={{ fontSize: "16px", color: "#7c3aed" }}></i>
+                <span>STARTS IN</span>
+              </div>
+              <div className="event-countdown-blocks">
+                <div className="event-countdown-tile">
+                  <div className="event-countdown-num">{timeLeft.days}</div>
+                  <div className="event-countdown-unit">DAYS</div>
+                </div>
+                <div className="event-countdown-tile">
+                  <div className="event-countdown-num">{timeLeft.hours}</div>
+                  <div className="event-countdown-unit">HOURS</div>
+                </div>
+                <div className="event-countdown-tile">
+                  <div className="event-countdown-num">{timeLeft.mins}</div>
+                  <div className="event-countdown-unit">MINS</div>
+                </div>
+                <div className="event-countdown-tile">
+                  <div className="event-countdown-num">{timeLeft.secs}</div>
+                  <div className="event-countdown-unit">SECS</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* QR CODE MODAL POPUP */}
-      {showQRModal && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(15, 15, 26, 0.75)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div style={{ background: "#fff", borderRadius: "24px", padding: "32px", maxWidth: "380px", width: "100%", textAlign: "center", position: "relative", boxShadow: "0 20px 40px rgba(0,0,0,0.3)" }}>
-            <button
-              onClick={() => setShowQRModal(false)}
-              style={{ position: "absolute", top: "16px", right: "16px", background: "#f1f5f9", border: "none", width: "32px", height: "32px", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}
-            >
-              <i className="ti ti-x" style={{ fontSize: "18px" }}></i>
-            </button>
-            <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f0f1a", marginBottom: "4px" }}>Event QR Code</div>
-            <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "20px" }}>Scan to open this event page instantly</div>
-            
-            <div style={{ padding: "16px", background: "#f8fafc", borderRadius: "16px", border: "1.5px solid #e2e8f0", display: "inline-block", marginBottom: "20px" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(currentUrl)}`}
-                alt="Event QR Code"
-                style={{ width: "200px", height: "200px", display: "block" }}
-              />
-            </div>
-            
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button
-                type="button"
-                onClick={handleDownloadQR}
-                style={{
-                  flex: 1,
-                  padding: "12px",
-                  borderRadius: "12px",
-                  background: "linear-gradient(135deg, #e11d48, #7c3aed)",
-                  color: "#fff",
-                  border: "none",
-                  fontWeight: 700,
-                  fontSize: "13.5px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  boxShadow: "0 4px 12px rgba(225, 29, 72, 0.25)"
-                }}
-              >
-                <i className="ti ti-download" style={{ fontSize: "16px" }}></i> Download
-              </button>
 
-              <button
-                type="button"
-                onClick={handleShare}
-                style={{
-                  flex: 1,
-                  padding: "12px",
-                  borderRadius: "12px",
-                  background: "#f1f5f9",
-                  border: "1.5px solid #cbd5e1",
-                  color: "#0f0f1a",
-                  fontWeight: 700,
-                  fontSize: "13.5px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px"
-                }}
-              >
-                <i className={`ti ti-${copied ? "check" : "share"}`} style={{ fontSize: "16px", color: copied ? "#10b981" : "#7c3aed" }}></i> {copied ? "Copied!" : "Share"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MAIN CONTENT GRID */}
-      <div style={{ maxWidth: "1080px", margin: "30px auto", padding: "0 22px", display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: "26px" }}>
+      <div className="event-main-grid" style={{ maxWidth: "1080px", margin: "30px auto", padding: "0 20px" }}>
         
         {/* LEFT COLUMN: Details, Schedule, Speakers, FAQs */}
         <div>
@@ -1071,26 +1021,55 @@ export default function EventClientView({ slug }: EventClientViewProps) {
               />
             </div>
 
-            <button
-              onClick={handleShare}
-              style={{
-                width: "100%",
-                padding: "10px 16px",
-                borderRadius: "12px",
-                background: "#7c3aed",
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: "13.5px",
-                border: "none",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px"
-              }}
-            >
-              <i className="ti ti-share" style={{ fontSize: "15px" }}></i> {copied ? "Link Copied!" : "Share Link"}
-            </button>
+            <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+              <button
+                onClick={handleShare}
+                style={{
+                  flex: 1,
+                  padding: "11px 14px",
+                  borderRadius: "12px",
+                  background: copied ? "#10b981" : "#7c3aed",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: "13.5px",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "7px",
+                  transition: "background 0.2s ease"
+                }}
+              >
+                <i className={copied ? "ti ti-check" : "ti ti-share"} style={{ fontSize: "16px" }}></i>
+                <span>{copied ? "Link Copied!" : "Share Link"}</span>
+              </button>
+
+              <button
+                onClick={handleDownloadQR}
+                style={{
+                  flex: 1,
+                  padding: "11px 14px",
+                  borderRadius: "12px",
+                  background: "#f1f5f9",
+                  color: "#0f172a",
+                  fontWeight: 700,
+                  fontSize: "13.5px",
+                  border: "1px solid #e2e8f0",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "7px",
+                  transition: "background 0.2s ease"
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+              >
+                <i className="ti ti-download" style={{ fontSize: "16px", color: "#64748b" }}></i>
+                <span>Download QR</span>
+              </button>
+            </div>
           </div>
         </div>,
         document.body
@@ -1355,6 +1334,346 @@ export default function EventClientView({ slug }: EventClientViewProps) {
         </div>,
         document.body
       )}
+
+      {/* EMBEDDED STYLES FOR OPTION 1 EVENT HEADER & MOBILE RESPONSIVENESS */}
+      <style jsx global>{`
+        .event-header-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 24px;
+          overflow: hidden;
+          box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.08), 0 2px 6px -2px rgba(15, 23, 42, 0.04);
+        }
+
+        .event-cover-banner {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 21 / 8;
+          min-height: 220px;
+          max-height: 320px;
+          overflow: hidden;
+        }
+
+        .event-cover-overlay {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, rgba(15, 23, 42, 0.1) 0%, rgba(15, 23, 42, 0.35) 100%);
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .event-profile-body {
+          position: relative;
+          padding: 0 32px 28px 32px;
+          background: #ffffff;
+        }
+
+        .event-profile-top-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          margin-top: -56px;
+          position: relative;
+          z-index: 10;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+
+        .event-avatar-badge {
+          width: 108px;
+          height: 108px;
+          border-radius: 24px;
+          border: 4px solid #ffffff;
+          overflow: hidden;
+          background: linear-gradient(135deg, #7c3aed 0%, #f43f5e 100%);
+          box-shadow: 0 14px 28px -8px rgba(15, 23, 42, 0.25);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          color: #ffffff;
+          flex-shrink: 0;
+        }
+
+        .event-date-month {
+          font-size: 13px;
+          font-weight: 800;
+          letter-spacing: 0.12em;
+          opacity: 0.9;
+        }
+
+        .event-date-day {
+          font-size: 40px;
+          font-weight: 900;
+          line-height: 1;
+          margin-top: 2px;
+        }
+
+        .event-actions-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding-bottom: 6px;
+          flex-wrap: wrap;
+        }
+
+        .event-btn-primary {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+          color: #ffffff;
+          padding: 11px 22px;
+          border-radius: 30px;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+          box-shadow: 0 6px 18px -4px rgba(124, 58, 237, 0.45);
+          border: none;
+          transition: all 0.2s ease;
+        }
+
+        .event-btn-primary:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 22px -4px rgba(124, 58, 237, 0.6);
+        }
+
+        .event-btn-secondary {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          color: #0f172a;
+          padding: 10px 18px;
+          border-radius: 30px;
+          font-size: 13.5px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .event-btn-secondary:hover {
+          background: #f1f5f9;
+        }
+
+        .event-btn-edit {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: #fef3c7;
+          border: 1px solid #fde68a;
+          color: #92400e;
+          padding: 10px 18px;
+          border-radius: 30px;
+          font-size: 13.5px;
+          font-weight: 700;
+          text-decoration: none;
+          cursor: pointer;
+        }
+
+        .event-identity {
+          margin-top: 18px;
+        }
+
+        .event-type-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 10px;
+          flex-wrap: wrap;
+        }
+
+        .event-type-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: #fffbeb;
+          color: #b45309;
+          border: 1px solid #fde68a;
+          padding: 4px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
+        .event-title-name {
+          color: #0f172a;
+          font-size: 32px;
+          font-weight: 900;
+          line-height: 1.2;
+          margin: 0 0 14px 0;
+          letter-spacing: -0.025em;
+        }
+
+        .event-meta-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .event-meta-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: #f8fafc;
+          color: #475569;
+          border: 1px solid #e2e8f0;
+          padding: 6px 14px;
+          border-radius: 24px;
+          font-size: 13px;
+          font-weight: 600;
+        }
+
+        .event-meta-accent {
+          background: #f5f3ff;
+          color: #7c3aed;
+          border-color: #ddd6fe;
+        }
+
+        .event-countdown-strip {
+          margin-top: 22px;
+          padding-top: 18px;
+          border-top: 1px solid #f1f5f9;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 14px;
+        }
+
+        .event-countdown-label {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          color: #64748b;
+        }
+
+        .event-countdown-blocks {
+          display: flex;
+          gap: 8px;
+        }
+
+        .event-countdown-tile {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 8px 14px;
+          text-align: center;
+          min-width: 58px;
+        }
+
+        .event-countdown-num {
+          font-size: 20px;
+          font-weight: 900;
+          line-height: 1;
+          color: #0f172a;
+        }
+
+        .event-countdown-unit {
+          font-size: 9.5px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: #64748b;
+          margin-top: 2px;
+        }
+
+        .event-main-grid {
+          display: grid;
+          grid-template-columns: 1.6fr 1fr;
+          gap: 26px;
+        }
+
+        @media (max-width: 860px) {
+          .event-main-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .event-cover-banner {
+            aspect-ratio: 16 / 9;
+            min-height: 170px;
+            max-height: 240px;
+          }
+
+          .event-profile-body {
+            padding: 0 18px 20px 18px;
+          }
+
+          .event-avatar-badge {
+            width: 86px;
+            height: 86px;
+            border-radius: 20px;
+          }
+
+          .event-date-month {
+            font-size: 11px;
+          }
+
+          .event-date-day {
+            font-size: 32px;
+          }
+
+          .event-profile-top-row {
+            margin-top: -42px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 14px;
+          }
+
+          .event-actions-row {
+            width: 100%;
+            display: flex;
+            gap: 8px;
+          }
+
+          .event-actions-row .event-btn-primary {
+            flex: 1;
+            justify-content: center;
+            font-size: 13.5px;
+            padding: 10px 14px;
+          }
+
+          .event-title-name {
+            font-size: 24px;
+          }
+
+          .event-meta-pill {
+            font-size: 12px;
+            padding: 5px 12px;
+          }
+
+          .event-countdown-strip {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+          }
+
+          .event-countdown-blocks {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+          }
+
+          .event-countdown-tile {
+            min-width: unset;
+            padding: 8px 4px;
+          }
+
+          .event-countdown-num {
+            font-size: 18px;
+          }
+        }
+      `}</style>
 
     </div>
   );

@@ -79,6 +79,7 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showCatMenu, setShowCatMenu] = useState(false);
+  const [showDenomMenu, setShowDenomMenu] = useState(false);
 
   // Location suggestions state
   const [locationSuggestions, setLocationSuggestions] = useState<Array<{ name: string; detail?: string }>>([]);
@@ -88,6 +89,7 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const locationContainerRef = useRef<HTMLDivElement>(null);
   const catMenuRef = useRef<HTMLDivElement>(null);
+  const denomMenuRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const selectedCategory = (props.category !== undefined && props.category !== "") ? props.category : (internalCategory || "church");
@@ -214,6 +216,9 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
       if (catMenuRef.current && !catMenuRef.current.contains(e.target as Node)) {
         setShowCatMenu(false);
       }
+      if (denomMenuRef.current && !denomMenuRef.current.contains(e.target as Node)) {
+        setShowDenomMenu(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -269,6 +274,7 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
   return (
     <form
       onSubmit={handleSearch}
+      className="hero-search-form"
       style={{
         background: "#ffffff",
         padding: "8px 12px",
@@ -280,15 +286,70 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
         width: "100%",
         maxWidth: "960px",
         margin: "0 auto",
-        flexWrap: "nowrap",
         border: "1px solid rgba(255,255,255,0.2)",
         position: "relative",
+        zIndex: 100,
       }}
     >
+      <style>{`
+        @media (max-width: 768px) {
+          .hero-search-form {
+            flex-direction: column !important;
+            padding: 14px !important;
+            border-radius: 18px !important;
+            gap: 10px !important;
+            box-sizing: border-box !important;
+            max-width: 100% !important;
+          }
+          .hero-search-divider {
+            display: none !important;
+          }
+          .hero-search-field {
+            width: 100% !important;
+            min-width: 0 !important;
+            flex: none !important;
+            background: #f8fafc !important;
+            border-radius: 12px !important;
+            padding: 10px 14px !important;
+            border: 1px solid #f1f5f9 !important;
+            box-sizing: border-box !important;
+            position: relative !important;
+            z-index: 10 !important;
+          }
+          .hero-search-field:focus-within {
+            z-index: 60 !important;
+          }
+          .hero-search-cat-wrapper {
+            width: 100% !important;
+            position: relative !important;
+            z-index: 20 !important;
+          }
+          .hero-search-cat-btn {
+            width: 100% !important;
+            justifyContent: space-between !important;
+          }
+          .hero-search-denom-menu {
+            width: 100% !important;
+            left: 0 !important;
+            right: 0 !important;
+            max-width: 100% !important;
+          }
+          .hero-search-btn {
+            width: 100% !important;
+            justify-content: center !important;
+            padding: 13px !important;
+            margin-left: 0 !important;
+            border-radius: 12px !important;
+            position: relative !important;
+            z-index: 1 !important;
+          }
+        }
+      `}</style>
       {/* Category Pill with Dropdown Trigger */}
-      <div ref={catMenuRef} style={{ position: "relative", flexShrink: 0 }}>
+      <div ref={catMenuRef} className="hero-search-cat-wrapper" style={{ position: "relative", flexShrink: 0 }}>
         <button
           type="button"
+          className="hero-search-cat-btn"
           onClick={() => setShowCatMenu((prev) => !prev)}
           style={{
             display: "inline-flex",
@@ -375,11 +436,12 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
         )}
       </div>
 
-      <div style={{ width: "1px", height: "30px", background: "#e2e8f0", flexShrink: 0 }} />
+      <div className="hero-search-divider" style={{ width: "1px", height: "30px", background: "#e2e8f0", flexShrink: 0 }} />
 
       {/* Field 1: Name Input with Autocomplete Dropdown */}
       <div
         ref={searchContainerRef}
+        className="hero-search-field"
         style={{
           flex: "1 1 210px",
           display: "flex",
@@ -426,8 +488,8 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
               position: "absolute",
               top: "calc(100% + 14px)",
               left: 0,
-              minWidth: "340px",
-              width: "max(100%, 360px)",
+              right: 0,
+              maxWidth: "100%",
               background: "#ffffff",
               borderRadius: "16px",
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(15, 23, 42, 0.12)",
@@ -630,11 +692,12 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
         )}
       </div>
 
-      <div style={{ width: "1px", height: "30px", background: "#e2e8f0", flexShrink: 0 }} className="hidden sm:block" />
+      <div className="hero-search-divider" style={{ width: "1px", height: "30px", background: "#e2e8f0", flexShrink: 0 }} />
 
       {/* Field 2: Location / Postcode Input with Auto-complete Dropdown */}
       <div
         ref={locationContainerRef}
+        className="hero-search-field"
         style={{
           flex: "1 1 170px",
           minWidth: "140px",
@@ -681,8 +744,8 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
               position: "absolute",
               top: "calc(100% + 14px)",
               left: 0,
-              minWidth: "260px",
-              width: "max(100%, 280px)",
+              right: 0,
+              maxWidth: "100%",
               background: "#ffffff",
               borderRadius: "16px",
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(15, 23, 42, 0.12)",
@@ -798,30 +861,148 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
       {/* Field 3: Denomination Select (EXCLUDED for Event only) */}
       {selectedCategory !== "event" && (
         <>
-          <div style={{ width: "1px", height: "30px", background: "#e2e8f0", flexShrink: 0 }} className="hidden sm:block" />
-          <div style={{ flex: "0 1 160px", minWidth: "130px", padding: "6px 8px" }}>
-            <select
-              value={denomination}
-              onChange={(e) => setDenomination(e.target.value)}
+          <div className="hero-search-divider" style={{ width: "1px", height: "30px", background: "#e2e8f0", flexShrink: 0 }} />
+          <div
+            ref={denomMenuRef}
+            className="hero-search-field"
+            style={{
+              flex: "0 1 165px",
+              minWidth: "140px",
+              padding: "6px 8px",
+              position: "relative",
+              zIndex: showDenomMenu ? 70 : undefined,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowDenomMenu(!showDenomMenu)}
               style={{
-                border: "none",
-                outline: "none",
-                width: "100%",
-                fontSize: "13.5px",
-                fontWeight: 600,
-                color: "#334155",
-                padding: 0,
                 background: "transparent",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "6px",
+                width: "100%",
+                padding: "4px 0",
                 cursor: "pointer",
+                textAlign: "left",
               }}
             >
-              <option value="all">All Denominations</option>
-              {taxonomies.denominations.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
+                <i className="ti ti-building-church" style={{ fontSize: "15px", color: "#64748b", flexShrink: 0 }} />
+                <span
+                  style={{
+                    fontSize: "13.5px",
+                    fontWeight: 600,
+                    color: denomination === "all" ? "#64748b" : "#1e293b",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {denomination === "all" ? "All Denominations" : denomination}
+                </span>
+              </div>
+              <i
+                className={`ti ti-chevron-${showDenomMenu ? "up" : "down"}`}
+                style={{ fontSize: "14px", color: "#94a3b8", flexShrink: 0 }}
+              />
+            </button>
+
+            {/* Custom Denomination Dropdown Menu */}
+            {showDenomMenu && (
+              <div
+                className="hero-search-denom-menu"
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  left: 0,
+                  width: "240px",
+                  maxWidth: "calc(100vw - 32px)",
+                  background: "#ffffff",
+                  borderRadius: "16px",
+                  boxShadow: "0 20px 40px -8px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.06)",
+                  zIndex: 99999,
+                  padding: "6px",
+                  display: "flex",
+                  flexDirection: "column",
+                  maxHeight: "260px",
+                  overflowY: "auto",
+                  animation: "fadeIn 0.15s ease-out",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDenomination("all");
+                    setShowDenomMenu(false);
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "9px 12px",
+                    borderRadius: "10px",
+                    border: "none",
+                    background: denomination === "all" ? "#f1f5f9" : "transparent",
+                    color: denomination === "all" ? "#0f172a" : "#334155",
+                    fontSize: "13.5px",
+                    fontWeight: denomination === "all" ? 800 : 600,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "all 0.12s",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (denomination !== "all") e.currentTarget.style.background = "#f8fafc";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (denomination !== "all") e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  <span>All Denominations</span>
+                  {denomination === "all" && <i className="ti ti-check" style={{ fontSize: "14px", color: "#e11d48" }} />}
+                </button>
+
+                {taxonomies.denominations.map((d) => {
+                  const isSelected = denomination === d;
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => {
+                        setDenomination(d);
+                        setShowDenomMenu(false);
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "9px 12px",
+                        borderRadius: "10px",
+                        border: "none",
+                        background: isSelected ? "#f1f5f9" : "transparent",
+                        color: isSelected ? "#0f172a" : "#334155",
+                        fontSize: "13.5px",
+                        fontWeight: isSelected ? 800 : 600,
+                        cursor: "pointer",
+                        textAlign: "left",
+                        transition: "all 0.12s",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) e.currentTarget.style.background = "#f8fafc";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) e.currentTarget.style.background = "transparent";
+                      }}
+                    >
+                      <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d}</span>
+                      {isSelected && <i className="ti ti-check" style={{ fontSize: "14px", color: "#e11d48" }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </>
       )}
@@ -829,6 +1010,7 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
       {/* Action Button: Renamed to "Search", strictly 1-line flex-shrink: 0 */}
       <button
         type="submit"
+        className="hero-search-btn"
         disabled={isSearching}
         style={{
           background: "linear-gradient(135deg, #e11d48 0%, #7c3aed 100%)",

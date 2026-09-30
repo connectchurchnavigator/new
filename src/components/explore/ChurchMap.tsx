@@ -12,6 +12,7 @@ interface ChurchMapProps {
   zoom?: number;
   userLocation?: { lat: number; lng: number } | null;
   maxDistance?: number;
+  isVisible?: boolean;
 }
 
 export default function ChurchMap({
@@ -23,6 +24,7 @@ export default function ChurchMap({
   zoom = 12,
   userLocation,
   maxDistance,
+  isVisible = true,
 }: ChurchMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -242,6 +244,43 @@ export default function ChurchMap({
       }
     };
   }, [churches, userLocation, maxDistance, center, zoom]);
+
+  // When container size changes or visibility changes (e.g. mobile list -> map tab switch), invalidateSize
+  useEffect(() => {
+    if (!isVisible) return;
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Call invalidateSize on next frames
+    const timer1 = setTimeout(() => {
+      map.invalidateSize();
+    }, 50);
+    const timer2 = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [isVisible]);
+
+  // Setup ResizeObserver on map container to continuously adapt when switching view modes
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    if (typeof ResizeObserver === "undefined") return;
+
+    const ro = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    });
+
+    ro.observe(mapContainerRef.current);
+    return () => {
+      ro.disconnect();
+    };
+  }, []);
 
   // Center on marker when selected
   useEffect(() => {

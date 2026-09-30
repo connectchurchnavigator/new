@@ -295,76 +295,92 @@ export default async function PastorProfilePage(props: {
           </div>
         </div>
 
-        <div className="wrap" style={{ paddingTop: '14px' }}>
-          <div className="hero" id="hero" style={{ borderRadius: '24px', position: 'relative', overflow: 'hidden', minHeight: '460px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '40px' }}>
+        <div className="wrap" style={{ paddingTop: '16px' }}>
+          <div className="pastor-header-card">
+            {/* Top Cover Banner */}
+            <div className="pastor-cover-banner">
+              <HeroCarousel coverUrls={coverUrls} />
+              <div className="pastor-cover-overlay" />
+            </div>
 
-            <HeroCarousel coverUrls={coverUrls} />
+            {/* Overlapping Profile Info Container */}
+            <div className="pastor-profile-body">
+              <div className="pastor-profile-top-row">
+                {/* Overlapping Avatar */}
+                <div className="pastor-avatar-wrapper">
+                  {pastor.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={pastor.avatar_url} alt={pastor.full_name} className="pastor-avatar-img" />
+                  ) : (
+                    <div className="pastor-avatar-fallback">
+                      {pastor.initials}
+                    </div>
+                  )}
+                </div>
 
-            <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ width: '84px', height: '84px', borderRadius: '22px', border: '3px solid rgba(255,255,255,0.85)', overflow: 'hidden', background: 'linear-gradient(135deg, #f43f5e 0%, #7c3aed 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 800, boxShadow: '0 10px 30px -12px rgba(0,0,0,0.6)', flexShrink: 0 }}>
-                {pastor.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={pastor.avatar_url} alt={pastor.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover', flexShrink: 0 }} />
-                ) : (
-                  pastor.initials
-                )}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                <h1 style={{ color: '#fff', fontSize: '56px', fontWeight: 800, margin: 0, letterSpacing: '-0.03em', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
-                  {pastor.full_name}
-                </h1>
-                {pastor.is_verified && (
-                  <span title="Verified Minister" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', padding: '6px 14px', borderRadius: '30px', fontSize: '13px', fontWeight: 800, boxShadow: '0 4px 15px rgba(16, 185, 129, 0.45)', border: '1.5px solid rgba(255,255,255,0.4)', backdropFilter: 'blur(8px)' }}>
-                    <i className="ti ti-rosette-discount-check-filled" style={{ fontSize: '17px', color: '#fff' }}></i> Verified Minister
-                  </span>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                {pastor.is_verified && (
-                  <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#34d399', backdropFilter: 'blur(12px)', border: '1px solid rgba(16, 185, 129, 0.4)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <i className="ti ti-check"></i> Platform Verified
-                  </span>
-                )}
-                {pastor.title && (
-                  <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <i className="ti ti-sparkles"></i> {pastor.title}
-                  </span>
-                )}
-                {(pastor.city || pastor.country) && (
-                  <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <i className="ti ti-map-pin"></i> {cleanPublicLocation(pastor.city, pastor.country)}
-                  </span>
-                )}
-                {pastor.years_in_ministry && (
-                  <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {pastor.years_in_ministry}+ Years Ministry
-                  </span>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '14px', flexWrap: 'wrap', gap: '16px' }}>
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                {/* Primary Actions (Right aligned on desktop, full width on mobile) */}
+                <div className="pastor-actions-row">
                   <EnquiryForm
                     pastorSlug={pastor.slug}
                     pastorFirstName={firstName}
                     trigger={
-                      <button style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#a855f7', color: '#fff', padding: '12px 24px', borderRadius: '30px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 15px rgba(168, 85, 247, 0.4)' }}>
-                        <i className="ti ti-send" style={{ fontSize: '18px' }}></i> Send enquiry
+                      <button className="pastor-btn-primary">
+                        <i className="ti ti-mail" style={{ fontSize: '17px' }}></i>
+                        <span>Send enquiry</span>
                       </button>
                     }
                   />
-                  {pastor.youtube_url && (
-                    <a href={pastor.youtube_url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#ef4444', color: '#fff', textDecoration: 'none', padding: '12px 24px', borderRadius: '30px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)' }}>
-                      <i className="ti ti-brand-youtube" style={{ fontSize: '18px' }}></i> YouTube
-                    </a>
-                  )}
-                  <ShareButton title={pastor.full_name} />
+                  <div className="pastor-btn-secondary-wrapper">
+                    <ShareButton title={pastor.full_name} />
+                  </div>
                   {isOwner && (
-                    <Link href={`/onboarding/pastor?edit=${pastor.slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#fbbf24', color: '#000', border: 'none', padding: '12px 24px', borderRadius: '30px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 15px rgba(251, 191, 36, 0.4)', textDecoration: 'none' }}>
-                      <i className="ti ti-pencil" style={{ fontSize: '18px' }}></i> Edit profile
+                    <Link href={`/onboarding/pastor?edit=${pastor.slug}`} className="pastor-btn-edit">
+                      <i className="ti ti-pencil" style={{ fontSize: '16px' }}></i>
+                      <span>Edit profile</span>
                     </Link>
+                  )}
+                </div>
+              </div>
+
+              {/* Title & Metadata */}
+              <div className="pastor-identity">
+                <div className="pastor-name-row">
+                  <h1 className="pastor-title-name">
+                    {pastor.full_name}
+                  </h1>
+                  {pastor.is_verified && (
+                    <span className="pastor-verified-pill" title="Verified Minister">
+                      <i className="ti ti-rosette-discount-check-filled" style={{ fontSize: '15px' }}></i>
+                      <span>Verified Minister</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Chips / Metadata Row */}
+                <div className="pastor-meta-row">
+                  {pastor.title && (
+                    <span className="pastor-meta-pill pastor-meta-accent">
+                      <i className="ti ti-sparkles"></i>
+                      <span>{pastor.title}</span>
+                    </span>
+                  )}
+                  {(pastor.city || pastor.country) && (
+                    <span className="pastor-meta-pill">
+                      <i className="ti ti-map-pin"></i>
+                      <span>{cleanPublicLocation(pastor.city, pastor.country)}</span>
+                    </span>
+                  )}
+                  {pastor.years_in_ministry && (
+                    <span className="pastor-meta-pill">
+                      <i className="ti ti-history"></i>
+                      <span>{pastor.years_in_ministry}+ Years Ministry</span>
+                    </span>
+                  )}
+                  {pastor.is_verified && (
+                    <span className="pastor-meta-pill pastor-meta-verified">
+                      <i className="ti ti-shield-check"></i>
+                      <span>Platform Verified</span>
+                    </span>
                   )}
                 </div>
               </div>

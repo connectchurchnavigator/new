@@ -32,7 +32,7 @@ export default function HeroCarousel({ coverUrls }: { coverUrls: string[] }) {
             left: 0,
             width: '100%',
             height: '100%',
-            backgroundImage: `linear-gradient(to top, rgba(30, 27, 36, 1) 0%, rgba(30, 27, 36, 0.4) 50%, rgba(30, 27, 36, 0.1) 100%), url(${img})`,
+            backgroundImage: `linear-gradient(to top, rgba(15, 23, 42, 0.45) 0%, rgba(15, 23, 42, 0.15) 60%, rgba(15, 23, 42, 0.05) 100%), url(${img})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             opacity: i === currentIndex ? 1 : 0,
