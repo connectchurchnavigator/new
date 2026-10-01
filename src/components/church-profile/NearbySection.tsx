@@ -22,7 +22,7 @@ export default function NearbySection({ churches }: NearbySectionProps) {
     <div className="wrap nearby" style={{ marginTop: '40px', marginBottom: '60px' }}>
       <div className="nearby-head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
         <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-          Churches nearby
+          Churches Nearby
         </h2>
         <Link href="/" style={{ color: '#7c3aed', fontWeight: 700, fontSize: '14px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
           View all →
@@ -68,7 +68,7 @@ export default function NearbySection({ churches }: NearbySectionProps) {
                 }}
               >
                 {/* Card Cover Image Header */}
-                <div style={{ height: '170px', position: 'relative', background: `url(${coverImg}) center/cover` }}>
+                <div style={{ height: '170px', position: 'relative', background: `url(${coverImg}) top center / cover` }}>
                   {/* Top Denomination Badge */}
                   {denomination && (
                     <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(15, 23, 42, 0.65)', color: '#fff', backdropFilter: 'blur(8px)', padding: '5px 12px', borderRadius: '20px', fontSize: '11.5px', fontWeight: 700 }}>

@@ -143,6 +143,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── 5. Replace leaders ─────────────────────────────────────
+    if (Array.isArray(body.leaders)) {
+      await sb.from('leaders').delete().eq('church_id', churchId);
+      if (body.leaders.length > 0) {
+        const leaderRows = body.leaders.map((l: any, i: number) => ({
+          church_id:     churchId,
+          name:          l.name,
+          role:          l.role || null,
+          bio:           l.bio || null,
+          photo_url:     l.photo_url || l.photoUrl || l.photo || null,
+          is_lead:       l.is_lead ?? (i === 0),
+          display_order: l.display_order ?? i,
+        }));
+        const { error: lError } = await sb.from('leaders').insert(leaderRows);
+        if (lError) throw lError;
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error('updateChurchProfile error:', err);

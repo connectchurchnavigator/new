@@ -12,6 +12,7 @@ export default function StepBarWL({ currentStep, onStepClick }: StepBarWLProps) 
     { id: 1, icon: "ti-user", title: "Basics" },
     { id: 2, icon: "ti-heart-handshake", title: "Ministry" },
     { id: 3, icon: "ti-phone", title: "Contact & Media" },
+    { id: 4, icon: "ti-rosette-discount-check", title: "Review" },
   ];
 
   return (
@@ -45,7 +46,7 @@ export default function StepBarWL({ currentStep, onStepClick }: StepBarWLProps) 
             
             {/* Connector line between steps */}
             {index < stepsData.length - 1 && (
-              <div style={{ width: "140px", display: "flex", alignItems: "center", height: "46px", marginTop: "0" }}>
+              <div style={{ width: "100px", display: "flex", alignItems: "center", height: "46px", marginTop: "0" }}>
                 <div className={`step-connector ${currentStep > step.id ? "done" : ""}`} style={{ width: "100%", height: "2px" }}></div>
               </div>
             )}

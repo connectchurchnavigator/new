@@ -238,12 +238,17 @@ export async function POST(req: Request) {
     // 6. Insert Pastor / Leadership if provided
     const pastorName = data.pastorName || data.pastor_name;
     const pastorPhoto = data.pastorPhoto || data.pastor_photo;
-    const pastorBio = data.pastorBio || data.pastor_bio;
+    let pastorBio = data.pastorBio || data.pastor_bio;
+    const pastorLink = data.pastorLink || data.pastor_link;
 
     if (pastorName) {
       let pPhotoUrl = null;
       if (pastorPhoto) {
         pPhotoUrl = await uploadBase64(pastorPhoto, 'pastor');
+      }
+      if (pastorLink) {
+        const linkTag = `\n\n<!--PASTOR_LINK:${pastorLink}-->`;
+        pastorBio = pastorBio ? `${pastorBio}${linkTag}` : `<!--PASTOR_LINK:${pastorLink}-->`;
       }
       await sb.from('leaders').insert({
         church_id: church.id,

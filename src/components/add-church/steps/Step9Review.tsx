@@ -225,6 +225,42 @@ export default function Step9Review() {
                 </SectionWrap>
               )}
 
+              {/* PASTOR / LEADERSHIP */}
+              {(formData.pastorName || formData.pastor_name || formData.pastorBio || formData.pastor_bio || formData.pastorLink || formData.pastor_link) && (
+                <SectionWrap>
+                  <SectionHeader icon="ti-user-check" title="Pastor / Leadership" />
+                  <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
+                    {(formData.pastorPhoto || formData.pastor_photo) ? (
+                      <img
+                        src={formData.pastorPhoto || formData.pastor_photo}
+                        alt="Pastor"
+                        style={{ width: "48px", height: "48px", borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid #7c3aed" }}
+                      />
+                    ) : (
+                      <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", flexShrink: 0 }}>
+                        <i className="ti ti-user" style={{ fontSize: "20px" }} />
+                      </div>
+                    )}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: "14px", color: "var(--cn-ink)" }}>
+                        {formData.pastorName || formData.pastor_name || "Pastor"}
+                      </div>
+                      {(formData.pastorLink || formData.pastor_link) && (
+                        <div style={{ fontSize: "12px", color: "var(--cn-purple)", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
+                          <i className="ti ti-link" style={{ fontSize: "13px" }} />
+                          <span style={{ wordBreak: "break-all" }}>{formData.pastorLink || formData.pastor_link}</span>
+                        </div>
+                      )}
+                      {(formData.pastorBio || formData.pastor_bio) && (
+                        <div style={{ fontSize: "12.5px", color: "var(--cn-gray)", marginTop: "6px", lineHeight: 1.5 }}>
+                          {formData.pastorBio || formData.pastor_bio}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </SectionWrap>
+              )}
+
               {/* ABOUT */}
               {formData.description && (
                 <SectionWrap>

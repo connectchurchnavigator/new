@@ -34,6 +34,7 @@ export default function AdminEditBar({ churchName, churchId, getChurchState }: A
           services: church.church_services ?? [],
           branches: church.branches ?? [],
           teams: church.church_teams ?? [],
+          leaders: church.leaders ?? [],
         }),
       });
       const json = await res.json();

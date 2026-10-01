@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import TopNav from "@/components/layout/TopNav";
 import Link from "next/link";
+import ShareButton from "@/components/church-profile/ShareButton";
 import { createClient } from "@/lib/supabase-browser";
 
 interface EventClientViewProps {
@@ -212,159 +213,280 @@ export default function EventClientView({ slug }: EventClientViewProps) {
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#f7f7fb", color: "#0f0f1a", minHeight: "100vh", WebkitFontSmoothing: "antialiased" }}>
       <TopNav />
 
-      {/* HERO SECTION - OPTION 1 MODERN OVERLAPPING CARD */}
-      <div style={{ maxWidth: "1080px", margin: "0 auto", padding: "16px 20px 0" }}>
-        <div className="event-header-card">
-          {/* Top Cover Banner */}
-          <div className="event-cover-banner" style={{
-            background: eventData.cover_url ? `url(${eventData.cover_url}) center/cover no-repeat` : "linear-gradient(135deg, #4c1d95 0%, #be185d 100%)",
-          }}>
-            <div className="event-cover-overlay" />
-            
-            {/* Top Navigation Row on Cover */}
-            <div style={{ position: "relative", zIndex: 5, padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <Link href="/events" style={{ fontSize: "13px", fontWeight: 700, color: "#fff", background: "rgba(15, 23, 42, 0.45)", backdropFilter: "blur(8px)", padding: "7px 14px", borderRadius: "20px", display: "inline-flex", alignItems: "center", gap: "6px", textDecoration: "none", border: "1px solid rgba(255,255,255,0.2)" }}>
-                <i className="ti ti-arrow-left"></i> Events / Conferences
-              </Link>
+      {/* HERO SECTION - UNIFIED FULL-BLEED CHURCH HERO */}
+      <div className="wrap" id="tour-hero-banner" style={{ paddingTop: "14px" }}>
+        <div
+          className="hero"
+          id="hero"
+          style={{
+            borderRadius: "24px",
+            position: "relative",
+            overflow: "hidden",
+            minHeight: "460px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+            padding: "40px",
+            background: eventData.cover_url
+              ? `linear-gradient(to top, rgba(15, 23, 42, 0.7) 0%, rgba(15, 23, 42, 0.25) 60%, rgba(15, 23, 42, 0.15) 100%), url(${eventData.cover_url}) center/cover no-repeat`
+              : "linear-gradient(135deg, #4c1d95 0%, #be185d 100%)",
+          }}
+        >
+          <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Event Calendar Date Avatar Inside Hero */}
+            <div
+              style={{
+                width: "80px",
+                height: "80px",
+                borderRadius: "20px",
+                border: "3px solid #fff",
+                background: "linear-gradient(135deg, #7c3aed 0%, #f43f5e 100%)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                boxShadow: "0 8px 20px rgba(0,0,0,0.3)",
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.12em", opacity: 0.9 }}>
+                {startDateObj.toLocaleDateString("en-GB", { month: "short" }).toUpperCase()}
+              </div>
+              <div style={{ fontSize: "30px", fontWeight: 900, lineHeight: 1, marginTop: "2px" }}>
+                {startDateObj.getDate()}
+              </div>
+            </div>
 
-              {isOwner && (
-                <Link
-                  href={`/onboarding/events?id=${eventData.id}`}
+            {/* Title & Category Row */}
+            <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
+              <h1
+                style={{
+                  color: "#fff",
+                  fontSize: "clamp(28px, 5vw, 56px)",
+                  fontWeight: 800,
+                  margin: 0,
+                  letterSpacing: "-0.03em",
+                  textShadow: "0 2px 10px rgba(0,0,0,0.5)",
+                  wordBreak: "break-word",
+                  lineHeight: 1.15,
+                }}
+              >
+                {eventData.title}
+              </h1>
+              {eventData.custom_type || eventData.type ? (
+                <span
                   style={{
-                    fontSize: "12.5px",
-                    fontWeight: 700,
-                    color: "#fff",
-                    background: "rgba(15, 23, 42, 0.5)",
-                    backdropFilter: "blur(8px)",
-                    border: "1px solid rgba(255, 255, 255, 0.25)",
-                    padding: "7px 14px",
-                    borderRadius: "20px",
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "6px",
-                    textDecoration: "none"
+                    background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                    color: "#fff",
+                    padding: "6px 14px",
+                    borderRadius: "30px",
+                    fontSize: "13px",
+                    fontWeight: 800,
+                    boxShadow: "0 4px 15px rgba(245, 158, 11, 0.45)",
+                    border: "1.5px solid rgba(255,255,255,0.4)",
+                    backdropFilter: "blur(8px)",
                   }}
                 >
-                  <i className="ti ti-edit" style={{ fontSize: "15px", color: "#fbbf24" }}></i> Owner Edit Access
-                </Link>
+                  <i className="ti ti-flame" style={{ fontSize: "16px", color: "#fff" }}></i>
+                  {eventData.custom_type || eventData.type || "Conference"}
+                </span>
+              ) : null}
+            </div>
+
+            {/* Metadata Pills */}
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <span
+                style={{
+                  background: "rgba(255,255,255,0.15)",
+                  color: "#fff",
+                  backdropFilter: "blur(12px)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  padding: "6px 14px",
+                  borderRadius: "30px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <i className="ti ti-calendar-event"></i> {formattedDate}
+              </span>
+              <span
+                style={{
+                  background: "rgba(255,255,255,0.15)",
+                  color: "#fff",
+                  backdropFilter: "blur(12px)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  padding: "6px 14px",
+                  borderRadius: "30px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <i className="ti ti-clock"></i> {formattedTime}
+              </span>
+              {(eventData.venue_name || eventData.city) && (
+                <span
+                  style={{
+                    background: "rgba(255,255,255,0.15)",
+                    color: "#fff",
+                    backdropFilter: "blur(12px)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    padding: "6px 14px",
+                    borderRadius: "30px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <i className="ti ti-map-pin"></i> {eventData.venue_name || eventData.city}
+                </span>
+              )}
+              {eventData.mode && (
+                <span
+                  style={{
+                    background: "rgba(255,255,255,0.15)",
+                    color: "#fff",
+                    backdropFilter: "blur(12px)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    padding: "6px 14px",
+                    borderRadius: "30px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <i className="ti ti-broadcast"></i> {eventData.mode}
+                </span>
               )}
             </div>
-          </div>
 
-          {/* Overlapping Info Body */}
-          <div className="event-profile-body">
-            <div className="event-profile-top-row">
-              {/* Event Calendar Date Badge (Overlapping) */}
-              <div className="event-avatar-badge">
-                <div className="event-date-month">{startDateObj.toLocaleDateString("en-GB", { month: "short" }).toUpperCase()}</div>
-                <div className="event-date-day">{startDateObj.getDate()}</div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="event-actions-row">
+            {/* Action Buttons Row */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-end",
+                marginTop: "14px",
+                flexWrap: "wrap",
+                gap: "16px",
+              }}
+            >
+              <div id="tour-hero-info" style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                {/* Button 1: Solid Vibrant Pill */}
                 <button
                   type="button"
                   onClick={handleAddToCalendar}
-                  className="event-btn-primary"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    background: "#7c3aed",
+                    color: "#fff",
+                    padding: "12px 24px",
+                    borderRadius: "30px",
+                    fontSize: "14px",
+                    fontWeight: 800,
+                    border: "none",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 15px rgba(124, 58, 237, 0.4)",
+                  }}
                 >
-                  <i className="ti ti-calendar-plus" style={{ fontSize: "17px" }}></i>
+                  <i className="ti ti-calendar-plus" style={{ fontSize: "18px" }}></i>
                   <span>Add to Calendar</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={handleShare}
-                  className="event-btn-secondary"
-                >
-                  <i className={`ti ti-${copied ? "check" : "share"}`} style={{ fontSize: "16px", color: copied ? "#10b981" : "#7c3aed" }}></i>
-                  <span>{copied ? "Copied" : "Share"}</span>
-                </button>
+                {/* Button 2: Translucent Glass Pill */}
+                <ShareButton title={eventData.title} />
 
+                {/* QR Code Glass Pill */}
                 <button
                   type="button"
                   onClick={() => setShowQRModal(true)}
-                  className="event-btn-secondary"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    background: "rgba(255,255,255,0.15)",
+                    color: "#fff",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backdropFilter: "blur(12px)",
+                    padding: "12px 24px",
+                    borderRadius: "30px",
+                    fontSize: "14px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
                 >
-                  <i className="ti ti-qrcode" style={{ fontSize: "16px" }}></i>
+                  <i className="ti ti-qrcode" style={{ fontSize: "18px" }}></i>
                   <span>QR</span>
                 </button>
 
+                {/* Button 3: Owner Edit Access (if owner) */}
                 {isOwner && (
                   <Link
                     href={`/onboarding/events?id=${eventData.id}`}
-                    className="event-btn-edit"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      background: "#fbbf24",
+                      color: "#000",
+                      border: "none",
+                      padding: "12px 24px",
+                      borderRadius: "30px",
+                      fontSize: "14px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      boxShadow: "0 4px 15px rgba(251, 191, 36, 0.4)",
+                      textDecoration: "none",
+                    }}
                   >
-                    <i className="ti ti-edit" style={{ fontSize: "15px" }}></i>
-                    <span>Edit</span>
+                    <i className="ti ti-pencil" style={{ fontSize: "18px" }}></i>
+                    <span>Edit event</span>
                   </Link>
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Event Title & Metadata */}
-            <div className="event-identity">
-              <div className="event-type-row">
-                <span className="event-type-pill">
-                  <i className="ti ti-flame" style={{ color: "#f59e0b" }}></i>
-                  <span>{eventData.custom_type || eventData.type || "Conference"}</span>
-                </span>
-                {eventData.mode && (
-                  <span className="event-meta-pill">
-                    <i className="ti ti-broadcast"></i>
-                    <span>{eventData.mode}</span>
-                  </span>
-                )}
-              </div>
-
-              <h1 className="event-title-name">
-                {eventData.title}
-              </h1>
-
-              {/* Inline Metadata Chips */}
-              <div className="event-meta-row">
-                <span className="event-meta-pill event-meta-accent">
-                  <i className="ti ti-calendar-event"></i>
-                  <span>{formattedDate}</span>
-                </span>
-                <span className="event-meta-pill">
-                  <i className="ti ti-clock"></i>
-                  <span>{formattedTime}</span>
-                </span>
-                <span className="event-meta-pill">
-                  <i className="ti ti-map-pin"></i>
-                  <span>{eventData.venue_name || eventData.city || "Venue Location"}{eventData.address ? ` (${eventData.address})` : ""}</span>
-                </span>
-                <span className="event-meta-pill">
-                  <i className="ti ti-building-church"></i>
-                  <span>Hosted by <Link href={hostLink} style={{ color: "#7c3aed", fontWeight: 700, textDecoration: "none" }}>{hostName}</Link></span>
-                </span>
-              </div>
+      {/* Event Countdown Strip */}
+      <div className="wrap" style={{ marginTop: "16px" }}>
+        <div className="event-countdown-strip" style={{ background: "#fff", borderRadius: "18px", border: "1px solid #e2e8f0", padding: "16px 24px" }}>
+          <div className="event-countdown-label">
+            <i className="ti ti-hourglass-empty" style={{ fontSize: "16px", color: "#7c3aed" }}></i>
+            <span>STARTS IN</span>
+          </div>
+          <div className="event-countdown-blocks">
+            <div className="event-countdown-tile">
+              <div className="event-countdown-num">{timeLeft.days}</div>
+              <div className="event-countdown-unit">DAYS</div>
             </div>
-
-            {/* Event Countdown Strip */}
-            <div className="event-countdown-strip">
-              <div className="event-countdown-label">
-                <i className="ti ti-hourglass-empty" style={{ fontSize: "16px", color: "#7c3aed" }}></i>
-                <span>STARTS IN</span>
-              </div>
-              <div className="event-countdown-blocks">
-                <div className="event-countdown-tile">
-                  <div className="event-countdown-num">{timeLeft.days}</div>
-                  <div className="event-countdown-unit">DAYS</div>
-                </div>
-                <div className="event-countdown-tile">
-                  <div className="event-countdown-num">{timeLeft.hours}</div>
-                  <div className="event-countdown-unit">HOURS</div>
-                </div>
-                <div className="event-countdown-tile">
-                  <div className="event-countdown-num">{timeLeft.mins}</div>
-                  <div className="event-countdown-unit">MINS</div>
-                </div>
-                <div className="event-countdown-tile">
-                  <div className="event-countdown-num">{timeLeft.secs}</div>
-                  <div className="event-countdown-unit">SECS</div>
-                </div>
-              </div>
+            <div className="event-countdown-tile">
+              <div className="event-countdown-num">{timeLeft.hours}</div>
+              <div className="event-countdown-unit">HOURS</div>
+            </div>
+            <div className="event-countdown-tile">
+              <div className="event-countdown-num">{timeLeft.mins}</div>
+              <div className="event-countdown-unit">MINS</div>
+            </div>
+            <div className="event-countdown-tile">
+              <div className="event-countdown-num">{timeLeft.secs}</div>
+              <div className="event-countdown-unit">SECS</div>
             </div>
           </div>
         </div>

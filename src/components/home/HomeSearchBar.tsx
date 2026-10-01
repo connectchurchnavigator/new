@@ -572,7 +572,7 @@ export default function HomeSearchBar(props: HomeSearchBarProps = {}) {
                         <img
                           src={item.thumb_url}
                           alt={item.name}
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }}
                         />
                       ) : (
                         <i className={catMeta.icon} style={{ fontSize: "19px", color: catMeta.color }}></i>

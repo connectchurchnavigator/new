@@ -382,7 +382,8 @@ function EventTimeInput({ value, onChange, placeholder }: EventTimeInputProps) {
 const STEPS = [
   { id: 1, label: "Basics & Host", icon: "ti-info-circle" },
   { id: 2, label: "Date, Schedule & Speakers", icon: "ti-calendar-event" },
-  { id: 3, label: "Ticket Pricing, FAQs & Media", icon: "ti-ticket" }
+  { id: 3, label: "Ticket Pricing, FAQs & Media", icon: "ti-ticket" },
+  { id: 4, label: "Review & Publish", icon: "ti-rosette-discount-check" }
 ];
 
 function EventsOnboardingContent() {
@@ -553,87 +554,7 @@ function EventsOnboardingContent() {
   const [errorMsg, setErrorMsg] = useState("");
   const [toastMsg, setToastMsg] = useState("");
 
-  const handleLoadSampleData = () => {
-    if (step === 1) {
-      const defaultHost = hostOptions.length > 0 ? hostOptions[0] : null;
-      setForm(prev => ({
-        ...prev,
-        title: "National Kingdom Life Conference 2025",
-        type: "Conference",
-        custom_type: "",
-        mode: "Offline",
-        description: "A 3-day transformative gathering uniting church leaders, worship teams, and believers from across the nation for deep spiritual revival, apostolic teaching, and kingdom networking.",
-        venue_name: "ExCeL London Convention Centre",
-        address: "Royal Victoria Dock, 1 Western Gateway, London, E16 1XL",
-        city: "London",
-        postcode: "E16 1XL",
-        latitude: 51.5074,
-        longitude: 0.0264,
-        capacity: "2500",
-        has_free_parking: true,
-        near_metro_station: true,
-        near_bus_station: true,
-        step_free_access: true,
-        creche_available: true,
-        has_other_amenity: true,
-        custom_amenities: ["Translation headsets", "Prayer & ministry room", "Christian bookstore & cafe"],
-        ...(defaultHost ? {
-          host_type: defaultHost.type,
-          host_id: defaultHost.id
-        } : {
-          host_type: "individual",
-          custom_host_name: "Kingdom Life Ministries UK"
-        })
-      }));
-      if (defaultHost) setSelectedHostName(defaultHost.name);
-      setErrorMsg("");
-      setToastMsg("✨ Sample event basics, venue details & facilities loaded for Step 1!");
-    } else if (step === 2) {
-      setForm(prev => ({
-        ...prev,
-        dates: [
-          { date: "2025-11-14", starts_time: "09:30 AM", ends_time: "09:00 PM" },
-          { date: "2025-11-15", starts_time: "09:30 AM", ends_time: "09:00 PM" },
-          { date: "2025-11-16", starts_time: "02:00 PM", ends_time: "07:30 PM" }
-        ],
-        sessions: [
-          { day_number: 1, session_date: "2025-11-14", time_label: "09:30 AM", title: "Morning Worship & Keynote Opening", description: "Opening worship encounter followed by the apostolic keynote address.", speaker_name: "Bishop David Evans" },
-          { day_number: 1, session_date: "2025-11-14", time_label: "11:30 AM", title: "Kingdom Leadership Workshop", description: "Practical breakout masterclass for church planters, department heads, and leaders.", speaker_name: "Pastor Sarah Jenkins" },
-          { day_number: 2, session_date: "2025-11-15", time_label: "10:00 AM", title: "Next-Gen Youth & Revival Seminar", description: "Interactive session on raising and discipling the emerging generation.", speaker_name: "Minister Michael Cole" },
-          { day_number: 2, session_date: "2025-11-15", time_label: "06:30 PM", title: "Evening Miracle & Prophetic Service", description: "Powerful evening service dedicated to intercession, healing, and prophetic release.", speaker_name: "Dr. Emmanuel Adeyemi" },
-          { day_number: 3, session_date: "2025-11-16", time_label: "03:00 PM", title: "Grand Impartation & Commissioning", description: "Final commissioning service with apostolic anointing and global outreach sending.", speaker_name: "Bishop David Evans" }
-        ],
-        speakers: [
-          { name: "Bishop David Evans", photo_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80", designation: "General Overseer", affiliation: "Grace International Fellowship" },
-          { name: "Pastor Sarah Jenkins", photo_url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80", designation: "Senior Pastor", affiliation: "Hope City Church London" },
-          { name: "Dr. Emmanuel Adeyemi", photo_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&q=80", designation: "Apostolic Leader", affiliation: "Kingsway Christian Centre" }
-        ]
-      }));
-      setErrorMsg("");
-      setToastMsg("✨ Sample 3-day dates, timetable sessions & guest speakers loaded for Step 2!");
-    } else if (step === 3) {
-      setForm(prev => ({
-        ...prev,
-        tickets: [
-          { name: "General Admission (RSVP)", description: "Full 3-day access to all main plenary sessions & worship", price: "Free", capacity: "1800", booking_url: "https://tickets.kingdomlife2025.org/free" },
-          { name: "VIP Delegate Pass", description: "Priority front-row seating, delegates lunch & networking pack", price: "45", capacity: "300", booking_url: "https://tickets.kingdomlife2025.org/vip" }
-        ],
-        faqs: [
-          { question: "Is registration mandatory for free admission?", answer: "Yes, please reserve your Free RSVP ticket in advance so venue security can manage room capacity." },
-          { question: "Is there parking available on-site?", answer: "Yes, attendees can use the paid and complimentary parking bays at ExCeL London East car park." },
-          { question: "Are children and families welcome?", answer: "Children are warmly welcomed! Supervised creche and children's church ministry will run alongside daytime sessions." }
-        ],
-        cover_url: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=1200&q=80",
-        gallery_urls: [
-          "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&q=80",
-          "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80"
-        ]
-      }));
-      setErrorMsg("");
-      setToastMsg("✨ Sample ticket tiers, FAQs & banner media loaded for Step 3!");
-    }
-    setTimeout(() => setToastMsg(""), 4500);
-  };
+
 
   const handleClearDraft = () => {
     if (window.confirm("Are you sure you want to clear your current draft? All entered event details will be reset.")) {
@@ -924,7 +845,11 @@ function EventsOnboardingContent() {
         try {
           sessionStorage.removeItem("event_form_draft");
         } catch (e) {}
-        router.push(`/events/${data.slug}?id=${data.event_id}`);
+        if (form.id) {
+          router.push(`/events/${data.slug}?id=${data.event_id}`);
+        } else {
+          router.push(`/onboarding/events/success?slug=${data.slug}&id=${data.event_id}&name=${encodeURIComponent(form.title || 'Event')}`);
+        }
       } else {
         throw new Error(data.error || "Failed to publish event.");
       }
@@ -988,8 +913,12 @@ function EventsOnboardingContent() {
               <i className="ti ti-calendar-event" style={{ fontSize: "18px", color: "#fff" }}></i>
             </div>
             <div>
-              <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--cn-ink)" }}>Add Event Profile</div>
-              <div style={{ fontSize: "12.5px", color: "var(--cn-gray)" }}>Step {step} of {STEPS.length} — Conferences, summits, services & retreats</div>
+              <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--cn-ink)" }}>
+                {form.id ? "Edit Event Profile" : "Add Event Profile"}
+              </div>
+              <div style={{ fontSize: "12.5px", color: "var(--cn-gray)" }}>
+                {step === 4 ? "Review & Publish" : `Step ${step} of 4 — Conferences, summits, services & retreats`}
+              </div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -1015,29 +944,6 @@ function EventsOnboardingContent() {
             >
               <i className="ti ti-trash" style={{ fontSize: "15px", color: "#dc2626" }}></i>
               Clear Draft
-            </button>
-            <button
-              type="button"
-              onClick={handleLoadSampleData}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "7px",
-                padding: "8px 16px",
-                borderRadius: "12px",
-                border: "1.5px solid #a855f7",
-                background: "linear-gradient(135deg, #f5f3ff, #faf5ff)",
-                color: "#7e22ce",
-                fontSize: "13.5px",
-                fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(168, 85, 247, 0.15)",
-                transition: "all 0.2s",
-              }}
-              title={`Pre-fill Step ${step} with sample event details`}
-            >
-              <i className="ti ti-sparkles" style={{ fontSize: "16px", color: "#9333ea" }}></i>
-              Load Sample Data
             </button>
             <button className="btn-secondary" onClick={() => router.push("/add-listing")}>
               <i className="ti ti-x" style={{ fontSize: "14px" }}></i> Exit
@@ -1108,31 +1014,10 @@ function EventsOnboardingContent() {
         {/* STEP 1: BASICS & HOST */}
         {step === 1 && (
           <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: "20px", padding: "32px", boxShadow: "0 10px 30px rgba(15,23,42,0.03)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
+            <div style={{ marginBottom: "20px" }}>
               <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>
                 1. Event Basics & Host Information
               </div>
-              <button
-                type="button"
-                onClick={handleLoadSampleData}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "6px 14px",
-                  borderRadius: "10px",
-                  border: "1.5px solid #d8b4fe",
-                  background: "#faf5ff",
-                  color: "#7e22ce",
-                  fontSize: "12.5px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  transition: "all 0.15s"
-                }}
-              >
-                <i className="ti ti-sparkles" style={{ fontSize: "14px", color: "#9333ea" }}></i>
-                Load Sample Data
-              </button>
             </div>
 
             {/* 1. Event Name */}
@@ -1749,31 +1634,10 @@ function EventsOnboardingContent() {
         {/* STEP 2: DATE, SCHEDULE & SPEAKERS */}
         {step === 2 && (
           <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: "20px", padding: "32px", boxShadow: "0 10px 30px rgba(15,23,42,0.03)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
+            <div style={{ marginBottom: "20px" }}>
               <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>
                 2. Date, Schedule Timetable & Speakers
               </div>
-              <button
-                type="button"
-                onClick={handleLoadSampleData}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "6px 14px",
-                  borderRadius: "10px",
-                  border: "1.5px solid #d8b4fe",
-                  background: "#faf5ff",
-                  color: "#7e22ce",
-                  fontSize: "12.5px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  transition: "all 0.15s"
-                }}
-              >
-                <i className="ti ti-sparkles" style={{ fontSize: "14px", color: "#9333ea" }}></i>
-                Load Sample Data
-              </button>
             </div>
 
             {/* MULTIPLE EVENT DATES & TIMES (+ ADD DATE BUTTON) */}
@@ -2247,31 +2111,10 @@ function EventsOnboardingContent() {
         {/* STEP 3: FAQS, TICKETS & MEDIA */}
         {step === 3 && (
           <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: "20px", padding: "32px", boxShadow: "0 10px 30px rgba(15,23,42,0.03)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
+            <div style={{ marginBottom: "20px" }}>
               <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>
                 3. Ticket Pricing Tiers, FAQs & Media
               </div>
-              <button
-                type="button"
-                onClick={handleLoadSampleData}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "6px 14px",
-                  borderRadius: "10px",
-                  border: "1.5px solid #d8b4fe",
-                  background: "#faf5ff",
-                  color: "#7e22ce",
-                  fontSize: "12.5px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  transition: "all 0.15s"
-                }}
-              >
-                <i className="ti ti-sparkles" style={{ fontSize: "14px", color: "#9333ea" }}></i>
-                Load Sample Data
-              </button>
             </div>
 
             {/* TICKETS TABLE (Type | Price | # Seats | Link) */}
@@ -2463,8 +2306,7 @@ function EventsOnboardingContent() {
                 ← Back
               </button>
               <button
-                onClick={handlePublish}
-                disabled={publishing}
+                onClick={() => setStep(4)}
                 className="btn-primary"
                 style={{
                   flex: 1,
@@ -2476,21 +2318,258 @@ function EventsOnboardingContent() {
                   border: "none",
                   color: "#fff",
                   boxShadow: "0 4px 14px rgba(225, 29, 72, 0.3)",
-                  cursor: publishing ? "not-allowed" : "pointer"
+                  cursor: "pointer"
                 }}
               >
-                {publishing ? (
-                  <>
-                    <i className="ti ti-loader-2" style={{ animation: "spin 1s linear infinite", marginRight: "8px" }}></i>
-                    {form.id ? "Saving Changes..." : "Publishing Event..."}
-                  </>
-                ) : (
-                  <>
-                    <i className={form.id ? "ti ti-check" : "ti ti-rocket"} style={{ marginRight: "8px" }}></i>
-                    {form.id ? "Save Changes" : "Publish Event Live"}
-                  </>
-                )}
+                Review & Publish Event →
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4: REVIEW & PROFILE COMPLETION */}
+        {step === 4 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "24px", animation: "slideUp 0.35s ease" }}>
+            <div style={{ textAlign: "center", marginBottom: "12px" }}>
+              <div style={{ fontSize: "28px", fontWeight: 800, color: "var(--cn-ink)", marginBottom: "6px" }}>
+                Review Your Event Listing
+              </div>
+              <div style={{ fontSize: "14px", color: "var(--cn-gray)" }}>
+                Here is how your event will appear to attendees on ChurchNavigator — verify all details before publishing
+              </div>
+            </div>
+
+            {/* Review Grid: Live Preview Card on Left (1.4fr) + Profile Strength on Right (1fr) */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px", alignItems: "start" }}>
+              {/* Left Column: Live Event Preview Card */}
+              <div className="scard" style={{ padding: 0, overflow: "hidden", border: "1.5px solid #e2e8f0", borderRadius: "20px", background: "#fff", boxShadow: "0 10px 30px rgba(0,0,0,0.06)" }}>
+                {/* Event Cover Banner */}
+                <div style={{ height: "180px", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "linear-gradient(135deg, #e11d48, #f59e0b, #7c3aed)" }}>
+                  {form.cover_url ? (
+                    <img
+                      src={form.cover_url}
+                      alt="Event Cover"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", color: "rgba(255,255,255,0.85)" }}>
+                      <i className="ti ti-photo" style={{ fontSize: "36px" }}></i>
+                      <span style={{ fontSize: "12px", fontWeight: 700 }}>Event Promotional Banner</span>
+                    </div>
+                  )}
+                  {form.type && (
+                    <div style={{ position: "absolute", top: "14px", left: "14px", background: "rgba(15,23,42,0.8)", backdropFilter: "blur(4px)", color: "#fff", padding: "4px 12px", borderRadius: "20px", fontSize: "11.5px", fontWeight: 700, display: "flex", alignItems: "center", gap: "5px" }}>
+                      <i className="ti ti-sparkles" style={{ color: "#fbbf24", fontSize: "12px" }}></i>
+                      {form.type === "Others" && form.custom_type ? form.custom_type : form.type}
+                    </div>
+                  )}
+                  {form.mode && (
+                    <div style={{ position: "absolute", top: "14px", right: "14px", background: "#fff", color: "#e11d48", padding: "4px 12px", borderRadius: "20px", fontSize: "11.5px", fontWeight: 700 }}>
+                      {form.mode}
+                    </div>
+                  )}
+                </div>
+
+                {/* Event Details Content */}
+                <div style={{ padding: "22px" }}>
+                  <div style={{ fontSize: "22px", fontWeight: 800, color: "var(--cn-ink)", marginBottom: "8px", lineHeight: 1.3 }}>
+                    {form.title || "Your Event Title"}
+                  </div>
+
+                  {/* Host info badge */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#6d28d9", background: "#f5f3ff", padding: "5px 12px", borderRadius: "10px", width: "fit-content", marginBottom: "16px", fontWeight: 600 }}>
+                    <i className="ti ti-building-church"></i>
+                    <span>Hosted by: {selectedHostName || form.custom_host_name || "Kingdom Host"}</span>
+                  </div>
+
+                  {/* Key Quick Facts Grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", padding: "14px", background: "#f8fafc", borderRadius: "14px", border: "1px solid #e2e8f0", marginBottom: "18px" }}>
+                    <div>
+                      <div style={{ fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Primary Date</div>
+                      <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#0f172a", marginTop: "2px" }}>
+                        {form.dates[0]?.date || "Date not set"}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Time Slot</div>
+                      <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#0f172a", marginTop: "2px" }}>
+                        {form.dates[0]?.starts_time || "10:00 AM"} – {form.dates[0]?.ends_time || "1:00 PM"}
+                      </div>
+                    </div>
+                    {form.mode !== "Online" && (
+                      <div style={{ gridColumn: "span 2" }}>
+                        <div style={{ fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Location / Venue</div>
+                        <div style={{ fontSize: "13px", color: "#334155", marginTop: "2px", display: "flex", alignItems: "center", gap: "5px" }}>
+                          <i className="ti ti-map-pin" style={{ color: "#e11d48", fontSize: "14px" }}></i>
+                          <span>{form.venue_name ? `${form.venue_name}, ` : ""}{form.address || form.city || "Venue location"}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tickets preview */}
+                  <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "14px", marginBottom: "14px" }}>
+                    <div style={{ fontSize: "11px", fontWeight: 800, color: "#e11d48", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "8px" }}>
+                      Ticket Tiers ({form.tickets.length})
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                      {form.tickets.map((t, idx) => (
+                        <span key={idx} style={{ fontSize: "12px", fontWeight: 600, color: "#be123c", background: "#fff1f2", border: "1px solid #ffe4e6", padding: "4px 10px", borderRadius: "14px" }}>
+                          {t.name} ({t.price === "0" || t.price.toLowerCase() === "free" ? "Free" : `£${t.price}`})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Speakers preview */}
+                  {form.speakers.length > 0 && (
+                    <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "14px", marginBottom: "14px" }}>
+                      <div style={{ fontSize: "11px", fontWeight: 800, color: "#7c3aed", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "8px" }}>
+                        Speakers & Ministers ({form.speakers.length})
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                        {form.speakers.map((sp, idx) => (
+                          <span key={idx} style={{ fontSize: "12px", fontWeight: 600, color: "#5b21b6", background: "#faf5ff", border: "1px solid #ede9fe", padding: "4px 10px", borderRadius: "14px" }}>
+                            {sp.name || `Speaker ${idx + 1}`}{sp.affiliation ? ` (${sp.affiliation})` : ""}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Description preview */}
+                  {form.description && (
+                    <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "14px" }}>
+                      <div style={{ fontSize: "11px", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "6px" }}>
+                        About Event
+                      </div>
+                      <div
+                        style={{ fontSize: "13px", color: "#475569", lineHeight: 1.6 }}
+                        dangerouslySetInnerHTML={{ __html: form.description }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column: Profile Strength & Readiness Checklist */}
+              {(() => {
+                const strengthFields = [
+                  { label: "Event title", pts: 15, done: !!form.title.trim() && form.title.trim().length >= 4 },
+                  { label: "Event category & format", pts: 10, done: !!form.type && !!form.mode },
+                  { label: "Host association", pts: 10, done: !!(form.host_id || form.custom_host_name) },
+                  { label: "Date & timetable", pts: 15, done: !!(form.dates[0]?.date && form.dates[0]?.starts_time) },
+                  { label: "Location / Venue", pts: 10, done: form.mode === "Online" || !!(form.address || form.city || form.venue_name) },
+                  { label: "Ticket tier configuration", pts: 15, done: form.tickets.length > 0 && !!form.tickets[0]?.name },
+                  { label: "Event promotional banner", pts: 15, done: !!form.cover_url },
+                  { label: "Event overview / description", pts: 10, done: !!form.description.trim() },
+                ];
+
+                const totalPoints = strengthFields.reduce((sum, f) => sum + f.pts, 0);
+                const earnedPoints = strengthFields.filter(f => f.done).reduce((sum, f) => sum + f.pts, 0);
+                const scorePercent = Math.round((earnedPoints / totalPoints) * 100);
+                const missingFields = strengthFields.filter(f => !f.done);
+                const tipText = missingFields.length > 0
+                  ? `Add ${missingFields.slice(0, 2).map(f => f.label.toLowerCase()).join(' & ')} to boost attendance.`
+                  : "Your event listing is complete and ready for launch!";
+
+                return (
+                  <div className="scard" style={{ padding: "22px", borderRadius: "20px", border: "1.5px solid #ebebf0", background: "#fff", position: "sticky", top: "20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                      <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--cn-gray)", letterSpacing: "0.05em" }}>
+                        EVENT LISTING COMPLETION
+                      </div>
+                      <div style={{ fontSize: "26px", fontWeight: 800, background: "linear-gradient(135deg, #e11d48, #7c3aed)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                        {scorePercent}%
+                      </div>
+                    </div>
+
+                    <div style={{ height: "9px", background: "#f1f0f5", borderRadius: "6px", overflow: "hidden", marginBottom: "14px" }}>
+                      <div style={{ height: "100%", width: `${scorePercent}%`, background: "linear-gradient(135deg, #e11d48, #7c3aed)", transition: "width 0.5s cubic-bezier(.2,.7,.3,1)" }}></div>
+                    </div>
+
+                    <div style={{ fontSize: "12.5px", color: "var(--cn-gray)", marginBottom: "18px", lineHeight: 1.5 }}>
+                      {tipText}
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "7px", marginBottom: "22px" }}>
+                      {strengthFields.map((f) => (
+                        <div
+                          key={f.label}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "8px 11px",
+                            borderRadius: "10px",
+                            background: f.done ? "#f0fdf4" : "#f9fafb",
+                            border: `1px solid ${f.done ? "#bbf7d0" : "#eef0f3"}`
+                          }}
+                        >
+                          <i className={`ti ${f.done ? "ti-circle-check-filled" : "ti-circle"}`} style={{ fontSize: "15px", color: f.done ? "#16a34a" : "#cbd0d8" }}></i>
+                          <span style={{ fontSize: "12px", fontWeight: 600, color: f.done ? "var(--cn-ink)" : "var(--cn-gray-light)" }}>{f.label}</span>
+                          <span style={{ marginLeft: "auto", fontSize: "11px", fontWeight: 700, color: f.done ? "#16a34a" : "#cbd0d8" }}>+{f.pts}%</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Action buttons inside right panel */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      <button
+                        onClick={handlePublish}
+                        disabled={publishing}
+                        className="btn-primary"
+                        style={{
+                          width: "100%",
+                          padding: "14px 20px",
+                          fontSize: "14.5px",
+                          fontWeight: 700,
+                          borderRadius: "12px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                          background: "linear-gradient(135deg, #e11d48, #7c3aed)",
+                          opacity: publishing ? 0.75 : 1,
+                          cursor: publishing ? "not-allowed" : "pointer"
+                        }}
+                      >
+                        {publishing ? (
+                          <>
+                            <i className="ti ti-loader-2" style={{ fontSize: "18px", animation: "spin 1s linear infinite" }}></i>
+                            {form.id ? "Saving Changes..." : "Publishing Event..."}
+                          </>
+                        ) : (
+                          <>
+                            <i className="ti ti-rocket" style={{ fontSize: "18px" }}></i>
+                            {form.id ? "Save & Update Event" : "Publish Event Live"}
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => setStep(3)}
+                        disabled={publishing}
+                        className="btn-secondary"
+                        style={{
+                          width: "100%",
+                          padding: "11px 18px",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          borderRadius: "12px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px"
+                        }}
+                      >
+                        <i className="ti ti-pencil" style={{ fontSize: "14px" }}></i>
+                        Keep Editing Details
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}

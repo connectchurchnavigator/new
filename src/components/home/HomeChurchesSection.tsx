@@ -236,7 +236,7 @@ export default function HomeChurchesSection({ initialChurches }: HomeChurchesSec
                   <div
                     style={{
                       height: "150px",
-                      background: coverImage ? `url('${coverImage}') center/cover` : "linear-gradient(135deg, #7c3aed, #ec4899)",
+                      background: coverImage ? `url('${coverImage}') top center / cover` : "linear-gradient(135deg, #7c3aed, #ec4899)",
                       position: "relative",
                     }}
                   >

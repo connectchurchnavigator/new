@@ -112,9 +112,20 @@ async function getPastor(slug: string): Promise<PastorProfile | null> {
       }
     } catch {}
   }
+  let extraMeta: Record<string, any> = {};
+  if (rawVision.includes('<!--PASTOR_EXTRA_META:')) {
+    try {
+      const match = rawVision.match(/<!--PASTOR_EXTRA_META:(.*?)-->/);
+      if (match && match[1]) {
+        extraMeta = JSON.parse(match[1]);
+      }
+    } catch {}
+  }
+
   const cleanVision = rawVision
     .replace(/<!--CORE_VALUES:.*?-->/g, '')
     .replace(/<!--ASSOCIATED_CHURCHES:.*?-->/g, '')
+    .replace(/<!--PASTOR_EXTRA_META:.*?-->/g, '')
     .trim();
 
   // Fire-and-forget view increment
@@ -128,6 +139,16 @@ async function getPastor(slug: string): Promise<PastorProfile | null> {
     ...pastor,
     vision_statement: cleanVision,
     core_values: coreValues,
+    denomination: extraMeta.denomination || pastor.denomination || null,
+    worship_styles: extraMeta.worship_styles || [],
+    skills: extraMeta.skills || [],
+    certifications: extraMeta.certifications || [],
+    training: extraMeta.training || [],
+    ministry_experience: extraMeta.ministry_experience || [],
+    years_in_ministry_tags: extraMeta.years_in_ministry_tags || [],
+    passion_areas: extraMeta.passion_areas || [],
+    roles_interested: extraMeta.roles_interested || [],
+    congregation_size: pastor.congregation_size ?? extraMeta.congregation_size ?? null,
     associated_churches: associatedChurches.length > 0 ? associatedChurches : (pastor.church_name_cache ? [{ name: pastor.church_name_cache, location: pastor.city || '', image: '', link: '' }] : []),
     languages: (languagesRes.data ?? []).map((r) => r.language),
     tags: tagsRes.data ?? [],
@@ -270,8 +291,6 @@ export default async function PastorProfilePage(props: {
 
   return (
     <>
-      {isOwner && <div style={{ height: '48px', width: '100%' }} />}
-
       {/* ===== NAV ===== */}
       <TopNav />
 
@@ -283,9 +302,14 @@ export default async function PastorProfilePage(props: {
           </Link>
           <div style={{ display: 'flex', gap: '12px' }}>
             {isActualOwner && isOwner && (
-              <Link href="/dashboard" style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none' }}>
-                <i className="ti ti-chart-bar"></i> Pastor Dashboard
-              </Link>
+              <>
+                <Link href={`/onboarding/pastor?edit=${pastor.slug}`} style={{ background: '#fbbf24', color: '#000', border: '1px solid #f59e0b', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none' }}>
+                  <i className="ti ti-pencil"></i> Edit Profile
+                </Link>
+                <Link href="/dashboard" style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', textDecoration: 'none' }}>
+                  <i className="ti ti-chart-bar"></i> Pastor Dashboard
+                </Link>
+              </>
             )}
             {isActualOwner && (
               <Link href={`/pastor/${pastor.slug}${isOwner ? '?owner=false' : '?owner=true'}`} scroll={false} style={{ textDecoration: 'none', background: isOwner ? '#7e22ce' : '#f3e8ff', color: isOwner ? '#fff' : '#7e22ce', border: '1px solid #e9d5ff', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
@@ -295,93 +319,85 @@ export default async function PastorProfilePage(props: {
           </div>
         </div>
 
-        <div className="wrap" style={{ paddingTop: '16px' }}>
-          <div className="pastor-header-card">
-            {/* Top Cover Banner */}
-            <div className="pastor-cover-banner">
-              <HeroCarousel coverUrls={coverUrls} />
-              <div className="pastor-cover-overlay" />
-            </div>
+        <div className="wrap" id="tour-hero-banner" style={{ paddingTop: '14px' }}>
+          <div className="hero" id="hero" style={{ borderRadius: '24px', position: 'relative', overflow: 'hidden', minHeight: '460px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '40px' }}>
+            <HeroCarousel coverUrls={coverUrls} />
 
-            {/* Overlapping Profile Info Container */}
-            <div className="pastor-profile-body">
-              <div className="pastor-profile-top-row">
-                {/* Overlapping Avatar */}
-                <div className="pastor-avatar-wrapper">
-                  {pastor.avatar_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={pastor.avatar_url} alt={pastor.full_name} className="pastor-avatar-img" />
-                  ) : (
-                    <div className="pastor-avatar-fallback">
-                      {pastor.initials}
-                    </div>
-                  )}
-                </div>
-
-                {/* Primary Actions (Right aligned on desktop, full width on mobile) */}
-                <div className="pastor-actions-row">
-                  <EnquiryForm
-                    pastorSlug={pastor.slug}
-                    pastorFirstName={firstName}
-                    trigger={
-                      <button className="pastor-btn-primary">
-                        <i className="ti ti-mail" style={{ fontSize: '17px' }}></i>
-                        <span>Send enquiry</span>
-                      </button>
-                    }
-                  />
-                  <div className="pastor-btn-secondary-wrapper">
-                    <ShareButton title={pastor.full_name} />
-                  </div>
-                  {isOwner && (
-                    <Link href={`/onboarding/pastor?edit=${pastor.slug}`} className="pastor-btn-edit">
-                      <i className="ti ti-pencil" style={{ fontSize: '16px' }}></i>
-                      <span>Edit profile</span>
-                    </Link>
-                  )}
-                </div>
+            <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Avatar Inside Hero */}
+              <div style={{ width: '80px', height: '80px', borderRadius: '20px', border: '3px solid #fff', overflow: 'hidden', background: pastor.avatar_url ? `url(${pastor.avatar_url}) center/cover` : 'linear-gradient(135deg, #7c3aed, #ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 800, boxShadow: '0 8px 20px rgba(0,0,0,0.3)' }}>
+                {!pastor.avatar_url && (pastor.initials || pastor.full_name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase())}
               </div>
 
-              {/* Title & Metadata */}
-              <div className="pastor-identity">
-                <div className="pastor-name-row">
-                  <h1 className="pastor-title-name">
-                    {pastor.full_name}
-                  </h1>
-                  {pastor.is_verified && (
-                    <span className="pastor-verified-pill" title="Verified Minister">
-                      <i className="ti ti-rosette-discount-check-filled" style={{ fontSize: '15px' }}></i>
-                      <span>Verified Minister</span>
-                    </span>
-                  )}
-                </div>
+              {/* Title & Verified Pill */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                <h1 style={{ color: '#fff', fontSize: 'clamp(28px, 5vw, 56px)', fontWeight: 800, margin: 0, letterSpacing: '-0.03em', textShadow: '0 2px 10px rgba(0,0,0,0.5)', wordBreak: 'break-word', lineHeight: 1.15 }}>
+                  {pastor.full_name}
+                </h1>
+                {pastor.is_verified && (
+                  <span title="Verified Minister" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', padding: '6px 14px', borderRadius: '30px', fontSize: '13px', fontWeight: 800, boxShadow: '0 4px 15px rgba(16, 185, 129, 0.45)', border: '1.5px solid rgba(255,255,255,0.4)', backdropFilter: 'blur(8px)' }}>
+                    <i className="ti ti-rosette-discount-check-filled" style={{ fontSize: '17px', color: '#fff' }}></i> Verified
+                  </span>
+                )}
+              </div>
 
-                {/* Chips / Metadata Row */}
-                <div className="pastor-meta-row">
-                  {pastor.title && (
-                    <span className="pastor-meta-pill pastor-meta-accent">
-                      <i className="ti ti-sparkles"></i>
-                      <span>{pastor.title}</span>
-                    </span>
-                  )}
-                  {(pastor.city || pastor.country) && (
-                    <span className="pastor-meta-pill">
-                      <i className="ti ti-map-pin"></i>
-                      <span>{cleanPublicLocation(pastor.city, pastor.country)}</span>
-                    </span>
-                  )}
-                  {pastor.years_in_ministry && (
-                    <span className="pastor-meta-pill">
-                      <i className="ti ti-history"></i>
-                      <span>{pastor.years_in_ministry}+ Years Ministry</span>
-                    </span>
-                  )}
-                  {pastor.is_verified && (
-                    <span className="pastor-meta-pill pastor-meta-verified">
-                      <i className="ti ti-shield-check"></i>
-                      <span>Platform Verified</span>
-                    </span>
-                  )}
+              {/* Badges / Meta Pills */}
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {pastor.is_verified && (
+                  <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#34d399', backdropFilter: 'blur(12px)', border: '1px solid rgba(16, 185, 129, 0.4)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ti ti-check"></i> Platform Verified
+                  </span>
+                )}
+                {pastor.title && (
+                  <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ti ti-sparkles"></i> {pastor.title}
+                  </span>
+                )}
+                {(pastor.city || pastor.country) && (
+                  <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ti ti-map-pin"></i> {cleanPublicLocation(pastor.city, pastor.country)}
+                  </span>
+                )}
+                {pastor.denomination && (
+                  <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ti ti-cross"></i> {pastor.denomination}
+                  </span>
+                )}
+                {pastor.years_in_ministry && (
+                  <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ti ti-history"></i> {pastor.years_in_ministry} Years Ministry
+                  </span>
+                )}
+              </div>
+
+              {/* Action Buttons Row */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '14px', flexWrap: 'wrap', gap: '16px' }}>
+                <div id="tour-hero-info" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  {/* Button 1: Solid Vibrant Pill - Smooth scroll anchor to contact section */}
+                  <a
+                    href="#contact-form"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: '#7c3aed',
+                      color: '#fff',
+                      padding: '12px 24px',
+                      borderRadius: '30px',
+                      fontSize: '14px',
+                      fontWeight: 800,
+                      border: 'none',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 15px rgba(124, 58, 237, 0.4)',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    <i className="ti ti-mail" style={{ fontSize: '18px' }}></i>
+                    <span>Send enquiry</span>
+                  </a>
+
+                  {/* Button 2: Translucent Glass Pill */}
+                  <ShareButton title={pastor.full_name} />
                 </div>
               </div>
             </div>
@@ -395,7 +411,7 @@ export default async function PastorProfilePage(props: {
               <div className="stats-strip" style={{ gridTemplateColumns: `repeat(${[pastor.years_in_ministry, pastor.churches_planted, pastor.nations_reached, pastor.events_spoken, pastor.congregation_size, pastor.youtube_subscribers, pastor.languages.length > 0, pastor.sermons.length > 0].filter(Boolean).length}, 1fr)` }}>
                 {pastor.years_in_ministry && (
                   <div className="stat-cell">
-                    <div className="v">{pastor.years_in_ministry}+</div>
+                    <div className="v">{pastor.years_in_ministry}</div>
                     <div className="l">Years ministry</div>
                   </div>
                 )}
@@ -407,13 +423,13 @@ export default async function PastorProfilePage(props: {
                 )}
                 {pastor.nations_reached && (
                   <div className="stat-cell">
-                    <div className="v">{pastor.nations_reached}+</div>
+                    <div className="v">{pastor.nations_reached}</div>
                     <div className="l">Nations reached</div>
                   </div>
                 )}
                 {pastor.events_spoken && (
                   <div className="stat-cell">
-                    <div className="v">{pastor.events_spoken}+</div>
+                    <div className="v">{pastor.events_spoken}</div>
                     <div className="l">Events spoken</div>
                   </div>
                 )}
@@ -446,25 +462,6 @@ export default async function PastorProfilePage(props: {
           </div>
         )}
 
-        {/* ENQUIRY BANNER - EXACT FROM MOCKUP */}
-        <div className="wrap">
-          <div className="enquiry-banner">
-            <div>
-              <div className="t">Book {pastor.full_name} for your event</div>
-              <div className="s">Conferences &middot; Retreats &middot; Sunday services &middot; International &mdash; usually replies within 24 hours</div>
-            </div>
-            <EnquiryForm
-              pastorSlug={pastor.slug}
-              pastorFirstName={firstName}
-              trigger={
-                <button style={{ background: '#fff', color: '#6d28d9', fontWeight: 800, fontSize: '13.5px', padding: '11px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                  Send enquiry
-                </button>
-              }
-            />
-          </div>
-        </div>
-
         {/* MAIN CONTENT GRID */}
         <div>
           <ProfileTabs
@@ -489,7 +486,7 @@ export default async function PastorProfilePage(props: {
           />
         </div>
 
-        <div className="wrap">
+        <div className="wrap" id="contact-form" style={{ scrollMarginTop: '100px' }}>
           <ContactSection
             churchName={pastor.full_name}
             email={pastor.email || undefined}
@@ -574,7 +571,7 @@ function AboutPane({
         <div className="pastor-card">
           <div className="pastor-card-h">
             <div className="ic"><i className="ti ti-microphone-2"></i></div>
-            <h3>Preaching specialisms</h3>
+            <h3>Preaching Specialisms</h3>
           </div>
           <div className="pastor-chips">
             {preachingTags.map((t) => (
@@ -588,11 +585,109 @@ function AboutPane({
         <div className="pastor-card">
           <div className="pastor-card-h">
             <div className="ic"><i className="ti ti-heart-handshake"></i></div>
-            <h3>Ministry areas</h3>
+            <h3>Ministry Areas</h3>
           </div>
           <div className="pastor-chips">
             {ministryTags.map((t) => (
               <span key={t.id} className="pastor-chip amber">{t.label}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {Array.isArray(pastor.worship_styles) && pastor.worship_styles.length > 0 && (
+        <div className="pastor-card">
+          <div className="pastor-card-h">
+            <div className="ic"><i className="ti ti-music"></i></div>
+            <h3>Worship Styles</h3>
+          </div>
+          <div className="pastor-chips">
+            {pastor.worship_styles.map((ws, idx) => (
+              <span key={idx} className="pastor-chip purple">{ws}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {Array.isArray(pastor.skills) && pastor.skills.length > 0 && (
+        <div className="pastor-card">
+          <div className="pastor-card-h">
+            <div className="ic"><i className="ti ti-award"></i></div>
+            <h3>Skills &amp; Capabilities</h3>
+          </div>
+          <div className="pastor-chips">
+            {pastor.skills.map((skill, idx) => (
+              <span key={idx} className="pastor-chip blue">{skill}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {Array.isArray(pastor.certifications) && pastor.certifications.length > 0 && (
+        <div className="pastor-card">
+          <div className="pastor-card-h">
+            <div className="ic"><i className="ti ti-certificate"></i></div>
+            <h3>Certifications</h3>
+          </div>
+          <div className="pastor-chips">
+            {pastor.certifications.map((cert, idx) => (
+              <span key={idx} className="pastor-chip green">{cert}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {Array.isArray(pastor.training) && pastor.training.length > 0 && (
+        <div className="pastor-card">
+          <div className="pastor-card-h">
+            <div className="ic"><i className="ti ti-school"></i></div>
+            <h3>Specialized Training</h3>
+          </div>
+          <div className="pastor-chips">
+            {pastor.training.map((tr, idx) => (
+              <span key={idx} className="pastor-chip teal">{tr}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {Array.isArray(pastor.ministry_experience) && pastor.ministry_experience.length > 0 && (
+        <div className="pastor-card">
+          <div className="pastor-card-h">
+            <div className="ic"><i className="ti ti-briefcase"></i></div>
+            <h3>Ministry Experience</h3>
+          </div>
+          <div className="pastor-chips">
+            {pastor.ministry_experience.map((exp, idx) => (
+              <span key={idx} className="pastor-chip amber">{exp}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {Array.isArray(pastor.passion_areas) && pastor.passion_areas.length > 0 && (
+        <div className="pastor-card">
+          <div className="pastor-card-h">
+            <div className="ic"><i className="ti ti-flame"></i></div>
+            <h3>Passion Areas</h3>
+          </div>
+          <div className="pastor-chips">
+            {pastor.passion_areas.map((p, idx) => (
+              <span key={idx} className="pastor-chip coral">{p}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {Array.isArray(pastor.roles_interested) && pastor.roles_interested.length > 0 && (
+        <div className="pastor-card">
+          <div className="pastor-card-h">
+            <div className="ic"><i className="ti ti-target"></i></div>
+            <h3>Roles Interested in</h3>
+          </div>
+          <div className="pastor-chips">
+            {pastor.roles_interested.map((role, idx) => (
+              <span key={idx} className="pastor-chip indigo">{role}</span>
             ))}
           </div>
         </div>
@@ -632,7 +727,7 @@ function AboutPane({
             >
               <i className="ti ti-chart-line" style={{ fontSize: '20px' }}></i>
             </div>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f0f1a' }}>Ministry journey</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f0f1a' }}>Ministry Journey</h3>
           </div>
           <div style={{ marginTop: '24px', position: 'relative', paddingLeft: '4px' }}>
             {pastor.timeline.map((entry, idx) => {
@@ -728,15 +823,20 @@ function Sidebar({ pastor }: { pastor: PastorProfile }) {
       <div className="contact-dark">
         <h3>Contact {firstName}</h3>
         <div className="s">Responds within 24 hours</div>
-        <EnquiryForm
-          pastorSlug={pastor.slug}
-          pastorFirstName={firstName}
-          trigger={
-            <button className="enq" style={{ width: '100%' }}>
-              Send enquiry
-            </button>
-          }
-        />
+        <a
+          href="#contact-form"
+          className="enq"
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textDecoration: 'none',
+            boxSizing: 'border-box'
+          }}
+        >
+          Send enquiry
+        </a>
         {(() => {
           const availableTags = pastor.tags.filter((t) => t.category === 'available_for');
           if (availableTags.length === 0) return null;
@@ -827,7 +927,7 @@ function Sidebar({ pastor }: { pastor: PastorProfile }) {
       <div className="pastor-card">
         <div className="pastor-card-h">
           <div className="ic"><i className="ti ti-plane"></i></div>
-          <h3>Travel &amp; availability</h3>
+          <h3>Travel &amp; Availability</h3>
         </div>
         <div style={{ marginTop: '8px' }}>
           {(pastor.city || pastor.country) && (
@@ -863,7 +963,7 @@ function Sidebar({ pastor }: { pastor: PastorProfile }) {
             <div className="ic" style={{ background: '#4f46e5', color: '#fff', borderRadius: '12px' }}>
               <i className="ti ti-certificate"></i>
             </div>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f0f1a' }}>Ministerial affiliation</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f0f1a' }}>Ministerial Affiliation</h3>
           </div>
           <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {pastor.affiliations.map((a, idx) => {
@@ -941,7 +1041,7 @@ function Sidebar({ pastor }: { pastor: PastorProfile }) {
               <i className="ti ti-award"></i>
             </div>
             <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f0f1a', margin: 0 }}>
-              Awards &amp; recognition
+              Awards &amp; Recognition
             </h3>
           </div>
           <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1010,7 +1110,7 @@ function SermonsPane({ pastor }: { pastor: PastorProfile }) {
           <div className="ic" style={{ background: '#ef4444', color: '#fff', borderRadius: '12px' }}>
             <i className="ti ti-player-play"></i>
           </div>
-          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f0f1a' }}>Sermons &amp; messages</h3>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f0f1a' }}>Sermons &amp; Messages</h3>
         </div>
 
         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -1130,13 +1230,6 @@ function VisionPane({ pastor }: { pastor: PastorProfile }) {
             <div className="vlabel">VISION STATEMENT</div>
             <div className="vstmt">&quot;{pastor.vision_statement}&quot;</div>
             <div className="vattr">— {pastor.full_name}</div>
-          </div>
-        )}
-
-        {pastor.availability_status === 'available' && (
-          <div className="avail-pill" style={{ marginTop: '16px' }}>
-            <div className="d"></div>
-            <span>Available for ministry</span>
           </div>
         )}
 

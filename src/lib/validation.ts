@@ -50,6 +50,7 @@ export const pastorOnboardingSchema = z.object({
   title: optionalString,
   church_id: z.string().uuid().optional().or(z.literal('')).transform((v) => (v === '' ? undefined : v)),
   church_name_cache: optionalString,
+  denomination: optionalString,
   associated_churches: z.array(z.object({
     image: optionalString,
     name: z.string().trim().max(160).optional().default(''),
@@ -83,6 +84,7 @@ export const pastorOnboardingSchema = z.object({
   preaching_tags: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
   ministry_area_tags: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
   available_for_tags: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
+  worship_styles: z.array(z.string().trim().min(1).max(60)).default([]),
   timeline_items: z.array(z.object({
     year: z.string().trim().max(20),
     title: z.string().trim().max(200),
@@ -96,6 +98,15 @@ export const pastorOnboardingSchema = z.object({
 
   // Step 4 — Languages
   languages: z.array(z.string().trim().min(1).max(40)).min(1, 'Add at least one language').max(15),
+
+  // Step 3 Skills, Certifications & Ministry Experience
+  skills: z.array(z.string().trim().max(100)).default([]),
+  certifications: z.array(z.string().trim().max(100)).default([]),
+  training: z.array(z.string().trim().max(100)).default([]),
+  ministry_experience: z.array(z.string().trim().max(100)).default([]),
+  years_in_ministry_tags: z.array(z.string().trim().max(100)).default([]),
+  passion_areas: z.array(z.string().trim().max(100)).default([]),
+  roles_interested: z.array(z.string().trim().max(100)).default([]),
 
   // Sermons, Qualifications, Awards & Honors
   sermon_links: z.array(z.string().trim().max(500)).optional().default([]),

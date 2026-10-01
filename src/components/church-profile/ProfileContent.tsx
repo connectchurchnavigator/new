@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import Gallery from "./Gallery";
 import EditTextModal from "./EditTextModal";
 import EditTagsModal from "./EditTagsModal";
@@ -42,7 +43,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
         <div className="sec" style={{ marginBottom: "40px" }}>
           <div className="sec-head" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
             <span className="ic c-purple" style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)", color: "white", width: "34px", height: "34px", borderRadius: "10px", display: "grid", placeItems: "center", flexShrink: 0 }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 7.4H22l-6 4.5 2.3 7.1-6.3-4.6L5.7 21 8 14 2 9.4h7.6z" stroke="#fff" strokeWidth="1.8" strokeLinejoin="round"/></svg></span>
-            <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>About this church</h2>
+            <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>About This Church</h2>
             {renderEditButton("about")}
           </div>
           <div className="panel" style={{ background: "white", padding: "24px", borderRadius: "20px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", fontSize: "16px", lineHeight: "1.7", color: "#334155" }}>
@@ -62,7 +63,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
             <span className="ic c-indigo" style={{ background: "linear-gradient(135deg, #6366f1, #818cf8)", color: "white", width: "34px", height: "34px", borderRadius: "10px", display: "grid", placeItems: "center", flexShrink: 0 }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="#fff" strokeWidth="1.8"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>
             </span>
-            <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Pastor</h2>
+            <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>Pastor</h2>
             {renderEditButton("leadership")}
           </div>
 
@@ -87,32 +88,119 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
                 );
               }
 
-              return leadersList.map((leader: any, i: number) => (
-                <div key={i} className="panel" style={{ background: "white", padding: "24px", borderRadius: "20px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", display: "flex", gap: "20px", alignItems: "flex-start" }}>
-                  {leader.photo_url ? (
-                    <img src={leader.photo_url} alt={leader.name} style={{ width: "80px", height: "80px", borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid #7c3aed" }} />
-                  ) : (
-                    <div style={{ width: "80px", height: "80px", borderRadius: "50%", background: "linear-gradient(135deg, #7c3aed, #a855f7)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px", fontWeight: 800, flexShrink: 0 }}>
-                      {leader.name ? leader.name.charAt(0).toUpperCase() : "P"}
-                    </div>
-                  )}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>{leader.name}</h3>
-                      {leader.role && leader.role !== "Senior Pastor" && (
-                        <span style={{ background: "#f3e8ff", color: "#7e22ce", fontSize: "12px", fontWeight: 700, padding: "3px 10px", borderRadius: "12px" }}>
-                          {leader.role}
-                        </span>
-                      )}
-                    </div>
-                    {leader.bio ? (
-                      <p style={{ fontSize: "15px", lineHeight: "1.6", color: "#334155", margin: "8px 0 0" }}>{leader.bio}</p>
+              return leadersList.map((leader: any, i: number) => {
+                // If link is embedded in bio as <!--PASTOR_LINK:xxx--> or in pastor_link/church.pastor_link
+                let cleanBio = leader.bio || "";
+                let extractedLink = leader.profile_slug || leader.pastor_link || leader.pastorLink || church.pastor_link || church.pastorLink || "";
+                if (cleanBio.includes("<!--PASTOR_LINK:")) {
+                  const m = cleanBio.match(/<!--PASTOR_LINK:(.*?)-->/);
+                  if (m && m[1]) {
+                    extractedLink = extractedLink || m[1].trim();
+                  }
+                  cleanBio = cleanBio.replace(/<!--PASTOR_LINK:(.*?)-->/g, "").trim();
+                }
+
+                return (
+                  <div key={i} className="panel" style={{ background: "white", padding: "24px", borderRadius: "20px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", display: "flex", gap: "20px", alignItems: "flex-start" }}>
+                    {leader.photo_url ? (
+                      <img src={leader.photo_url} alt={leader.name} style={{ width: "80px", height: "80px", borderRadius: "50%", objectFit: "cover", objectPosition: "top", flexShrink: 0, border: "2px solid #7c3aed" }} />
                     ) : (
-                      <p style={{ fontSize: "14px", color: "var(--muted)", fontStyle: "italic", margin: "8px 0 0" }}>No intro provided.</p>
+                      <div style={{ width: "80px", height: "80px", borderRadius: "50%", background: "linear-gradient(135deg, #7c3aed, #a855f7)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px", fontWeight: 800, flexShrink: 0 }}>
+                        {leader.name ? leader.name.charAt(0).toUpperCase() : "P"}
+                      </div>
                     )}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>{leader.name}</h3>
+                        {leader.role && leader.role !== "Senior Pastor" && (
+                          <span style={{ background: "#f3e8ff", color: "#7e22ce", fontSize: "12px", fontWeight: 700, padding: "3px 10px", borderRadius: "12px" }}>
+                            {leader.role}
+                          </span>
+                        )}
+                      </div>
+                      {cleanBio ? (
+                        <p style={{ fontSize: "15px", lineHeight: "1.6", color: "#334155", margin: "8px 0 0" }}>{cleanBio}</p>
+                      ) : (
+                        <p style={{ fontSize: "14px", color: "var(--muted)", fontStyle: "italic", margin: "8px 0 0" }}>No intro provided.</p>
+                      )}
+                      {(() => {
+                        const link = (extractedLink || "").trim();
+                        if (!link) return null;
+
+                        const slugMatch = link.match(/pastor\/([a-zA-Z0-9_-]+)/);
+                        let finalHref = "";
+                        let isExternal = false;
+
+                        if (slugMatch) {
+                          finalHref = `/pastor/${slugMatch[1]}`;
+                        } else if (link.startsWith('/') || link.startsWith('#')) {
+                          finalHref = link;
+                        } else if (link.startsWith('http://') || link.startsWith('https://')) {
+                          finalHref = link;
+                          isExternal = true;
+                        } else if (/\.[a-z]{2,}(\/.*)?$/i.test(link) || link.includes('.com') || link.includes('.org') || link.includes('.net') || link.includes('.io') || link.includes('.co')) {
+                          // e.g. "k.com", "mychurch.org/pastor", etc.
+                          finalHref = `https://${link}`;
+                          isExternal = true;
+                        } else {
+                          // internal slug without /pastor prefix
+                          finalHref = `/pastor/${link}`;
+                        }
+
+                        return (
+                          <div style={{ marginTop: "12px" }}>
+                            {isExternal ? (
+                              <a
+                                href={finalHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                  padding: "6px 14px",
+                                  background: "#f5f3ff",
+                                  color: "#6d28d9",
+                                  border: "1px solid #ddd6fe",
+                                  borderRadius: "8px",
+                                  fontSize: "12.5px",
+                                  fontWeight: 700,
+                                  textDecoration: "none",
+                                  transition: "all 0.15s ease"
+                                }}
+                              >
+                                <i className="ti ti-user-check" style={{ fontSize: "14px" }} />
+                                View Pastor Profile &rarr;
+                              </a>
+                            ) : (
+                              <Link
+                                href={finalHref}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                  padding: "6px 14px",
+                                  background: "#f5f3ff",
+                                  color: "#6d28d9",
+                                  border: "1px solid #ddd6fe",
+                                  borderRadius: "8px",
+                                  fontSize: "12.5px",
+                                  fontWeight: 700,
+                                  textDecoration: "none",
+                                  transition: "all 0.15s ease"
+                                }}
+                              >
+                                <i className="ti ti-user-check" style={{ fontSize: "14px" }} />
+                                View Pastor Profile &rarr;
+                              </Link>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
-                </div>
-              ));
+                );
+              });
             })()}
           </div>
         </div>
@@ -122,7 +210,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
         <div className="sec" style={{ marginBottom: "40px" }}>
           <div className="sec-head" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
             <span className="ic c-amber" style={{ background: "linear-gradient(135deg, #f59e0b, #fbbf24)", color: "white", width: "34px", height: "34px", borderRadius: "10px", display: "grid", placeItems: "center", flexShrink: 0 }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2a5 5 0 0 0-5 5c0 3 5 8 5 8s5-5 5-8a5 5 0 0 0-5-5zM5 21h14" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
-            <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Ministries</h2>
+            <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>Ministries</h2>
             {renderEditButton("ministries")}
           </div>
           {church.ministries && church.ministries.length > 0 ? (
@@ -153,7 +241,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
               <span className="ic c-coral" style={{ background: "linear-gradient(135deg, #e11d48, #f43f5e)", color: "white", width: "34px", height: "34px", borderRadius: "10px", display: "grid", placeItems: "center", flexShrink: 0 }}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm12 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </span>
-              <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Worship Styles</h2>
+              <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>Worship Styles</h2>
               {renderEditButton("worshipStyles")}
             </div>
             {worshipStylesList.length > 0 ? (
@@ -173,7 +261,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
         <div className="sec" style={{ marginBottom: "40px" }}>
           <div className="sec-head" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
             <span className="ic c-blue" style={{ background: "linear-gradient(135deg, #2563eb, #3b82f6)", color: "white", width: "34px", height: "34px", borderRadius: "10px", display: "grid", placeItems: "center", flexShrink: 0 }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M5 8h14M5 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2M5 8v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M9 12h6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
-            <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Languages spoken</h2>
+            <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>Languages Spoken</h2>
             {renderEditButton("languages")}
           </div>
           {church.languages && church.languages.length > 0 ? (
@@ -192,7 +280,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
         <div className="sec" style={{ marginBottom: "40px" }}>
           <div className="sec-head" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
             <span className="ic c-green" style={{ background: "linear-gradient(135deg, #059669, #10b981)", color: "white", width: "34px", height: "34px", borderRadius: "10px", display: "grid", placeItems: "center", flexShrink: 0 }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 21V9l9-6 9 6v12M9 21v-6h6v6" stroke="#fff" strokeWidth="1.8" strokeLinejoin="round"/></svg></span>
-            <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Facilities</h2>
+            <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>Facilities</h2>
             {renderEditButton("facilities")}
           </div>
           {church.facilities && church.facilities.length > 0 ? (
@@ -218,7 +306,7 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
         return (isEditing || galleryList.length > 0) && (
           <div style={{ marginTop: "32px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f172a", margin: 0 }}>Gallery</h2>
+              <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", margin: 0 }}>Gallery</h2>
               {renderEditButton("gallery")}
             </div>
             {galleryList.length > 0 ? (
@@ -310,26 +398,44 @@ export default function ProfileContent({ initialChurch, isEditing, onChurchChang
 
       {editingField === "leadership" && (
         <EditLeadershipModal
-          initialLeader={
-            (church.leaders && church.leaders[0]) 
-              ? church.leaders[0] 
-              : {
-                  name: church.pastor_name || church.pastorName || "",
-                  role: church.pastor_role || "",
-                  bio: church.pastor_bio || church.pastorBio || church.pastor_intro || "",
-                  photo_url: church.pastor_photo || church.pastorPhoto || church.pastor_photo_url || ""
-                }
-          }
+          initialLeader={(() => {
+            const firstLeader = (church.leaders && church.leaders[0]) ? church.leaders[0] : null;
+            let bio = firstLeader?.bio || church.pastor_bio || church.pastorBio || church.pastor_intro || "";
+            let link = firstLeader?.profile_slug || firstLeader?.pastor_link || firstLeader?.pastorLink || church.pastor_link || church.pastorLink || "";
+            if (bio.includes("<!--PASTOR_LINK:")) {
+              const m = bio.match(/<!--PASTOR_LINK:(.*?)-->/);
+              if (m && m[1]) link = link || m[1].trim();
+              bio = bio.replace(/<!--PASTOR_LINK:(.*?)-->/g, "").trim();
+            }
+            return {
+              name: firstLeader?.name || church.pastor_name || church.pastorName || "",
+              role: firstLeader?.role || church.pastor_role || "",
+              bio: bio,
+              photo_url: firstLeader?.photo_url || church.pastor_photo || church.pastorPhoto || church.pastor_photo_url || "",
+              pastor_link: link,
+            };
+          })()}
           onClose={() => setEditingField(null)}
           onSave={(leader) => {
-            const updatedLeaders = [{ ...leader, is_lead: true, display_order: 0 }];
+            const linkTag = leader.pastor_link ? `\n\n<!--PASTOR_LINK:${leader.pastor_link}-->` : "";
+            const storedBio = leader.bio ? `${leader.bio}${linkTag}` : (linkTag ? `<!--PASTOR_LINK:${leader.pastor_link}-->` : "");
+            
+            const updatedLeader = {
+              ...leader,
+              bio: storedBio,
+              is_lead: true,
+              display_order: 0,
+              pastor_link: leader.pastor_link
+            };
+            const updatedLeaders = [updatedLeader];
             const updatedChurch = {
               ...church,
               leaders: updatedLeaders,
               pastor_name: leader.name,
               pastor_role: leader.role,
-              pastor_bio: leader.bio,
-              pastor_photo: leader.photo_url
+              pastor_bio: storedBio,
+              pastor_photo: leader.photo_url,
+              pastor_link: leader.pastor_link
             };
             setChurch(updatedChurch);
             onChurchChange?.(updatedChurch);

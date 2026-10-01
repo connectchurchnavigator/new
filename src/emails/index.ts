@@ -17,6 +17,10 @@ import {
   EventRegistrationProps,
   WelcomeUserProps,
 } from "./templates/events";
+import {
+  buildVisitorWelcomeEmail,
+  VisitorWelcomeEmailProps,
+} from "./templates/visitors";
 
 /**
  * Send an Enquiry Email notification to the Church / Pastor / Organizer
@@ -162,3 +166,28 @@ export async function sendWelcomeEmail(to: string, props: WelcomeUserProps) {
     return { success: false, error: err.message };
   }
 }
+
+/**
+ * Send Welcome Email to a Registered Visitor from Visitor Insights
+ */
+export async function sendVisitorWelcomeEmail(to: string, props: VisitorWelcomeEmailProps) {
+  try {
+    const { subject, html } = buildVisitorWelcomeEmail(props);
+    const { data, error } = await resend.emails.send({
+      from: DEFAULT_FROM_EMAIL,
+      to,
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error("[Email] Failed to send visitor welcome email:", error);
+      return { success: false, error };
+    }
+    return { success: true, id: data?.id };
+  } catch (err: any) {
+    console.error("[Email] Error dispatching visitor welcome email:", err);
+    return { success: false, error: err.message };
+  }
+}
+

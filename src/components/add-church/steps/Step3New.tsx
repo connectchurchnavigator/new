@@ -85,6 +85,7 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
   const pastorPhotoInputRef = useRef<HTMLInputElement>(null);
   const [pastorPhotoPreview, setPastorPhotoPreview] = useState<string | null>(formData.pastorPhoto || formData.pastor_photo || null);
   const [pastorName, setPastorName] = useState(formData.pastorName || formData.pastor_name || "");
+  const [pastorLink, setPastorLink] = useState(formData.pastorLink || formData.pastor_link || "");
   const [pastorBio, setPastorBio] = useState(formData.pastorBio || formData.pastor_bio || "");
 
   const handlePastorPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -199,6 +200,7 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
     if (formData.description !== undefined) setDescription(formData.description);
     if (formData.establishedYear !== undefined) setEstablishedYear(formData.establishedYear);
     if (formData.pastorName !== undefined || formData.pastor_name !== undefined) setPastorName(formData.pastorName || formData.pastor_name || "");
+    if (formData.pastorLink !== undefined || formData.pastor_link !== undefined) setPastorLink(formData.pastorLink || formData.pastor_link || "");
     if (formData.pastorBio !== undefined || formData.pastor_bio !== undefined) setPastorBio(formData.pastorBio || formData.pastor_bio || "");
     if (formData.pastorPhoto || formData.pastor_photo) setPastorPhotoPreview(formData.pastorPhoto || formData.pastor_photo);
     if (formData.logo) setLogoPreview(formData.logo);
@@ -466,6 +468,8 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
       pastor_photo: pastorPhotoPreview,
       pastorName,
       pastor_name: pastorName,
+      pastorLink,
+      pastor_link: pastorLink,
       pastorBio,
       pastor_bio: pastorBio,
       ministries: activeMinistries,
@@ -659,6 +663,33 @@ export default function Step3New({ onBack, onNext }: Step3NewProps) {
                 updateFormData({ pastorName: val, pastor_name: val });
               }}
             />
+          </div>
+
+          {/* ChurchNavigator Link */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+              <label style={{ fontSize: "13.5px", fontWeight: 700, color: "var(--cn-ink)", margin: 0 }}>
+                ChurchNavigator Link
+              </label>
+              <span style={{ fontSize: "12px", color: "var(--cn-gray)", fontWeight: 500 }}>Optional</span>
+            </div>
+            <div style={{ position: "relative" }}>
+              <input 
+                type="text"
+                placeholder="e.g. church-navigator.com/pastor/emmanuel-adeyemi or /pastor/emmanuel-adeyemi"
+                value={pastorLink}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPastorLink(val);
+                  updateFormData({ pastorLink: val, pastor_link: val });
+                }}
+                style={{ paddingLeft: "38px" }}
+              />
+              <i className="ti ti-link" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--cn-purple)", fontSize: "16px", pointerEvents: "none" }} />
+            </div>
+            <p style={{ margin: "5px 0 0", fontSize: "12px", color: "var(--cn-gray)", lineHeight: 1.4 }}>
+              Manually enter the pastor's ChurchNavigator profile link or slug so their profile is directly connected to this church.
+            </p>
           </div>
 
           {/* Brief Intro */}

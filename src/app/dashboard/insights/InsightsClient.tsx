@@ -126,6 +126,58 @@ export default function InsightsClient({
   const [visitors, setVisitors] = useState(initialVisitors);
   const [isLoadingChurch, setIsLoadingChurch] = useState(false);
 
+  // Email sending states (visitorId -> 'sending' | 'sent' | 'error')
+  const [sendingEmailMap, setSendingEmailMap] = useState<Record<string, 'sending' | 'sent' | 'error'>>({});
+  const [toastMsg, setToastMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleSendWelcome = async (v: any) => {
+    if (!v.email) {
+      setToastMsg({ type: 'error', text: `No email address registered for ${v.name || 'this visitor'}.` });
+      setTimeout(() => setToastMsg(null), 4000);
+      return;
+    }
+
+    setSendingEmailMap(prev => ({ ...prev, [v.id]: 'sending' }));
+
+    try {
+      const res = await fetch('/api/dashboard/send-visitor-welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visitorId: v.id,
+          churchId: currentChurchId,
+          email: v.email,
+          name: v.name,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setSendingEmailMap(prev => ({ ...prev, [v.id]: 'sent' }));
+        setToastMsg({
+          type: 'success',
+          text: `Welcome email sent successfully to ${v.name} (${v.email})!`,
+        });
+        setTimeout(() => setToastMsg(null), 5000);
+      } else {
+        setSendingEmailMap(prev => ({ ...prev, [v.id]: 'error' }));
+        setToastMsg({
+          type: 'error',
+          text: data.error || 'Failed to send welcome email.',
+        });
+        setTimeout(() => setToastMsg(null), 5000);
+      }
+    } catch (err: any) {
+      setSendingEmailMap(prev => ({ ...prev, [v.id]: 'error' }));
+      setToastMsg({
+        type: 'error',
+        text: err.message || 'Error triggering welcome email.',
+      });
+      setTimeout(() => setToastMsg(null), 5000);
+    }
+  };
+
   // Sync if initial props change
   React.useEffect(() => {
     setCurrentChurchId(initialChurchId);
@@ -621,7 +673,55 @@ export default function InsightsClient({
                     <td style={{ color: 'var(--cn-gray)' }}>{v.source || 'Unknown'}</td>
                     <td><span className="stage-pill" style={{ background: ss[0], color: ss[1] }}>{stageLabel.toLowerCase()}</span></td>
                     <td style={{ color: 'var(--cn-gray)' }}>{timeAgo(v.last_seen || v.created_at)}</td>
-                    <td>{getFollowUp(v.stage)}</td>
+                    <td>
+                      {(() => {
+                        const status = sendingEmailMap[v.id];
+
+                        if (status === 'sending') {
+                          return (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#7c3aed', fontSize: '13px', fontWeight: 700 }}>
+                              <i className="ti ti-loader-2" style={{ animation: 'spin 1s linear infinite' }}></i> Sending...
+                            </span>
+                          );
+                        }
+
+                        if (status === 'sent') {
+                          return (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#16a34a', fontSize: '13px', fontWeight: 700, background: '#f0fdf4', padding: '4px 10px', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
+                              <i className="ti ti-check"></i> Welcome sent!
+                            </span>
+                          );
+                        }
+
+                        if (v.stage === 'first' || v.stage === 'returning') {
+                          return (
+                            <button
+                              onClick={() => handleSendWelcome(v)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                padding: 0,
+                                cursor: 'pointer',
+                                color: 'var(--cn-purple, #7c3aed)',
+                                fontWeight: 700,
+                                fontSize: '13.5px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'transform 0.15s ease'
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+                              onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+                              title={`Send branded welcome email to ${v.email || v.name}`}
+                            >
+                              Send welcome &rarr;
+                            </button>
+                          );
+                        }
+
+                        return getFollowUp(v.stage);
+                      })()}
+                    </td>
                   </tr>
                 );
               }) : (
@@ -631,6 +731,40 @@ export default function InsightsClient({
           </table>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div style={{
+          position: 'fixed',
+          bottom: '28px',
+          right: '28px',
+          zIndex: 9999,
+          background: toastMsg.type === 'success' ? '#0f172a' : '#991b1b',
+          color: '#ffffff',
+          padding: '14px 22px',
+          borderRadius: '14px',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.25)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          fontSize: '14px',
+          fontWeight: 600,
+          animation: 'cnFadeIn 0.2s ease',
+          maxWidth: '420px',
+        }}>
+          <i
+            className={`ti ${toastMsg.type === 'success' ? 'ti-circle-check' : 'ti-alert-circle'}`}
+            style={{ fontSize: '20px', color: toastMsg.type === 'success' ? '#4ade80' : '#fecaca' }}
+          ></i>
+          <span style={{ flex: 1 }}>{toastMsg.text}</span>
+          <button
+            onClick={() => setToastMsg(null)}
+            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', padding: 0 }}
+          >
+            <i className="ti ti-x" style={{ fontSize: '16px' }}></i>
+          </button>
+        </div>
+      )}
     </>
   );
 }

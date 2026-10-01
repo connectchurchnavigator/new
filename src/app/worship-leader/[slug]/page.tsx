@@ -125,40 +125,67 @@ export default async function WorshipLeaderProfilePage(props: {
           </div>
         </div>
 
-        <div className="wrap" style={{ paddingTop: '16px' }}>
-          <div className="pastor-header-card">
-            {/* Top Cover Banner */}
-            <div className="pastor-cover-banner">
-              <HeroCarousel coverUrls={coverUrls} />
-              <div className="pastor-cover-overlay" />
-            </div>
+        <div className="wrap" id="tour-hero-banner" style={{ paddingTop: '14px' }}>
+          <div className="hero" id="hero" style={{ borderRadius: '24px', position: 'relative', overflow: 'hidden', minHeight: '460px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '40px' }}>
+            <HeroCarousel coverUrls={coverUrls} />
 
-            {/* Overlapping Profile Info Container */}
-            <div className="pastor-profile-body">
-              <div className="pastor-profile-top-row">
-                {/* Overlapping Avatar */}
-                <div className="pastor-avatar-wrapper">
-                  {leader.avatar_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={leader.avatar_url} alt={leader.display_name} className="pastor-avatar-img" />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={`https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=200&auto=format&fit=crop`} alt={leader.display_name} className="pastor-avatar-img" />
-                  )}
-                </div>
+            <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Avatar Inside Hero */}
+              <div style={{ width: '80px', height: '80px', borderRadius: '20px', border: '3px solid #fff', overflow: 'hidden', background: leader.avatar_url ? `url(${leader.avatar_url}) center/cover` : 'linear-gradient(135deg, #10b981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 800, boxShadow: '0 8px 20px rgba(0,0,0,0.3)' }}>
+                {!leader.avatar_url && leader.display_name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+              </div>
 
-                {/* Primary Actions */}
-                <div className="pastor-actions-row">
+              {/* Title & Verified Pill */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                <h1 style={{ color: '#fff', fontSize: 'clamp(28px, 5vw, 56px)', fontWeight: 800, margin: 0, letterSpacing: '-0.03em', textShadow: '0 2px 10px rgba(0,0,0,0.5)', wordBreak: 'break-word', lineHeight: 1.15 }}>
+                  {leader.display_name}
+                </h1>
+                {leader.is_verified && (
+                  <span title="Verified Leader" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', padding: '6px 14px', borderRadius: '30px', fontSize: '13px', fontWeight: 800, boxShadow: '0 4px 15px rgba(16, 185, 129, 0.45)', border: '1.5px solid rgba(255,255,255,0.4)', backdropFilter: 'blur(8px)' }}>
+                    <i className="ti ti-rosette-discount-check-filled" style={{ fontSize: '17px', color: '#fff' }}></i> Verified
+                  </span>
+                )}
+              </div>
+
+              {/* Badges / Meta Row */}
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {leader.is_verified && (
+                  <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#34d399', backdropFilter: 'blur(12px)', border: '1px solid rgba(16, 185, 129, 0.4)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ti ti-check"></i> Platform Verified
+                  </span>
+                )}
+                {leader.tagline && (
+                  <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ti ti-sparkles"></i> {leader.tagline}
+                  </span>
+                )}
+                {leader.city && (
+                  <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ti ti-map-pin"></i> {leader.city}, {leader.country}
+                  </span>
+                )}
+                {leader.travel_range && (
+                  <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="ti ti-plane"></i> {leader.travel_range}
+                  </span>
+                )}
+              </div>
+
+              {/* Action Buttons Row */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '14px', flexWrap: 'wrap', gap: '16px' }}>
+                <div id="tour-hero-info" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  {/* Button 1: Solid Vibrant Pill */}
                   <EnquiryForm
                     pastorSlug={leader.slug}
                     pastorFirstName={firstName}
                     trigger={
-                      <button className="pastor-btn-primary">
-                        <i className="ti ti-mail" style={{ fontSize: '17px' }}></i>
+                      <button style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#7c3aed', color: '#fff', padding: '12px 24px', borderRadius: '30px', fontSize: '14px', fontWeight: 800, border: 'none', cursor: 'pointer', boxShadow: '0 4px 15px rgba(124, 58, 237, 0.4)' }}>
+                        <i className="ti ti-mail" style={{ fontSize: '18px' }}></i>
                         <span>Send enquiry</span>
                       </button>
                     }
                   />
+
                   {leader.spotify_url && (
                     <a
                       href={leader.spotify_url}
@@ -167,77 +194,35 @@ export default async function WorshipLeaderProfilePage(props: {
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '7px',
+                        gap: '8px',
                         background: '#1db954',
                         color: '#fff',
                         textDecoration: 'none',
-                        padding: '11px 20px',
+                        padding: '12px 24px',
                         borderRadius: '30px',
                         fontSize: '14px',
-                        fontWeight: 700,
+                        fontWeight: 800,
                         cursor: 'pointer',
                         boxShadow: '0 4px 14px rgba(29, 185, 84, 0.35)',
-                        transition: 'all 0.2s ease',
                       }}
                     >
                       <i className="ti ti-brand-spotify" style={{ fontSize: '18px' }}></i>
                       <span>Spotify</span>
                     </a>
                   )}
-                  <div className="pastor-btn-secondary-wrapper">
-                    <ShareButton title={leader.display_name} />
-                  </div>
+
+                  {/* Button 2: Translucent Glass Pill */}
+                  <ShareButton title={leader.display_name} />
+
+                  {/* Button 3: Owner Edit Access (if owner) */}
                   {isOwner && (
                     <Link
                       href={`/onboarding/worship-leader/${leader.slug}/edit`}
-                      className="pastor-btn-edit"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#fbbf24', color: '#000', border: 'none', padding: '12px 24px', borderRadius: '30px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 15px rgba(251, 191, 36, 0.4)', textDecoration: 'none' }}
                     >
-                      <i className="ti ti-pencil" style={{ fontSize: '16px' }}></i>
+                      <i className="ti ti-pencil" style={{ fontSize: '18px' }}></i>
                       <span>Edit profile</span>
                     </Link>
-                  )}
-                </div>
-              </div>
-
-              {/* Title & Metadata */}
-              <div className="pastor-identity">
-                <div className="pastor-name-row">
-                  <h1 className="pastor-title-name">
-                    {leader.display_name}
-                  </h1>
-                  {leader.is_verified && (
-                    <span className="pastor-verified-pill" title="Verified Minister">
-                      <i className="ti ti-rosette-discount-check-filled" style={{ fontSize: '15px' }}></i>
-                      <span>Verified Leader</span>
-                    </span>
-                  )}
-                </div>
-
-                {/* Chips / Metadata Row */}
-                <div className="pastor-meta-row">
-                  {leader.tagline && (
-                    <span className="pastor-meta-pill pastor-meta-accent">
-                      <i className="ti ti-sparkles"></i>
-                      <span>{leader.tagline}</span>
-                    </span>
-                  )}
-                  {leader.city && (
-                    <span className="pastor-meta-pill">
-                      <i className="ti ti-map-pin"></i>
-                      <span>{leader.city}, {leader.country}</span>
-                    </span>
-                  )}
-                  {leader.travel_range && (
-                    <span className="pastor-meta-pill">
-                      <i className="ti ti-plane"></i>
-                      <span>{leader.travel_range}</span>
-                    </span>
-                  )}
-                  {leader.is_verified && (
-                    <span className="pastor-meta-pill pastor-meta-verified">
-                      <i className="ti ti-shield-check"></i>
-                      <span>Platform Verified</span>
-                    </span>
                   )}
                 </div>
               </div>

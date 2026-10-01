@@ -102,6 +102,21 @@ export async function POST(req: NextRequest) {
         if (Array.isArray(data.associated_churches) && data.associated_churches.length > 0) {
           stmt = `${stmt.trim()} <!--ASSOCIATED_CHURCHES:${JSON.stringify(data.associated_churches)}-->`;
         }
+        const extraMeta: Record<string, any> = {};
+        if (data.denomination) extraMeta.denomination = data.denomination;
+        if (Array.isArray(data.worship_styles) && data.worship_styles.length > 0) extraMeta.worship_styles = data.worship_styles;
+        if (Array.isArray(data.skills) && data.skills.length > 0) extraMeta.skills = data.skills;
+        if (Array.isArray(data.certifications) && data.certifications.length > 0) extraMeta.certifications = data.certifications;
+        if (Array.isArray(data.training) && data.training.length > 0) extraMeta.training = data.training;
+        if (Array.isArray(data.ministry_experience) && data.ministry_experience.length > 0) extraMeta.ministry_experience = data.ministry_experience;
+        if (Array.isArray(data.years_in_ministry_tags) && data.years_in_ministry_tags.length > 0) extraMeta.years_in_ministry_tags = data.years_in_ministry_tags;
+        if (Array.isArray(data.passion_areas) && data.passion_areas.length > 0) extraMeta.passion_areas = data.passion_areas;
+        if (Array.isArray(data.roles_interested) && data.roles_interested.length > 0) extraMeta.roles_interested = data.roles_interested;
+        if (data.congregation_size !== undefined && data.congregation_size !== null) extraMeta.congregation_size = data.congregation_size;
+
+        if (Object.keys(extraMeta).length > 0) {
+          stmt = `${stmt.trim()} <!--PASTOR_EXTRA_META:${JSON.stringify(extraMeta)}-->`;
+        }
         return stmt || null;
       })(),
       years_in_ministry: data.years_in_ministry ?? null,

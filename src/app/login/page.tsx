@@ -46,19 +46,40 @@ function LoginForm() {
     };
   }, [nextUrl, router, supabase]);
 
+  const [existingUserPrompt, setExistingUserPrompt] = useState(false);
+
   async function handleAuth(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg("");
     setInfoMsg("");
+    setExistingUserPrompt(false);
     setBusy(true);
     setAuthStep(0);
 
     try {
       if (activeTab === "register") {
+        // First check if the email already belongs to an existing user
+        try {
+          const checkRes = await fetch("/api/auth/check-user", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          });
+          const checkData = await checkRes.json();
+          if (checkData?.exists) {
+            setBusy(false);
+            setExistingUserPrompt(true);
+            return;
+          }
+        } catch (checkErr) {
+          console.warn("Could not pre-check user email, proceeding with standard registration:", checkErr);
+        }
+
         const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+        const targetNext = searchParams.get("next") || "/add-church";
         const redirectUrl = typeof window !== "undefined"
-          ? `${window.location.origin}/add-church`
-          : "https://churchnavigator.com/add-church";
+          ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(targetNext)}`
+          : `https://churchnavigator.com/auth/callback?next=${encodeURIComponent(targetNext)}`;
 
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
@@ -70,7 +91,18 @@ function LoginForm() {
             },
           },
         });
-        if (signUpError) throw signUpError;
+        if (signUpError) {
+          // If Supabase returns user already registered error
+          if (
+            signUpError.message?.toLowerCase().includes("already registered") ||
+            signUpError.message?.toLowerCase().includes("user already exists")
+          ) {
+            setBusy(false);
+            setExistingUserPrompt(true);
+            return;
+          }
+          throw signUpError;
+        }
 
         // Try to immediately log in the user so they bypass confirmation if enabled/possible
         const { data: signInData } = await supabase.auth.signInWithPassword({
@@ -92,7 +124,15 @@ function LoginForm() {
         window.location.href = nextUrl;
       }
     } catch (err: any) {
-      setErrorMsg(err.message || "An error occurred during authentication.");
+      const msg = err.message || "An error occurred during authentication.";
+      if (
+        msg.toLowerCase().includes("already registered") ||
+        msg.toLowerCase().includes("user already exists")
+      ) {
+        setExistingUserPrompt(true);
+      } else {
+        setErrorMsg(msg);
+      }
       setBusy(false);
     }
   }
@@ -114,6 +154,7 @@ function LoginForm() {
               setActiveTab("signin");
               setErrorMsg("");
               setInfoMsg("");
+              setExistingUserPrompt(false);
             }}
             style={{
               flex: 1,
@@ -137,6 +178,7 @@ function LoginForm() {
               setActiveTab("register");
               setErrorMsg("");
               setInfoMsg("");
+              setExistingUserPrompt(false);
             }}
             style={{
               flex: 1,
@@ -155,6 +197,56 @@ function LoginForm() {
             Register
           </button>
         </div>
+
+        {existingUserPrompt && (
+          <div style={{
+            background: "#eff6ff",
+            border: "1px solid #bfdbfe",
+            borderRadius: "14px",
+            padding: "14px 16px",
+            marginBottom: "20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px"
+          }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+              <i className="ti ti-info-circle" style={{ fontSize: "20px", color: "#2563eb", marginTop: "2px", flexShrink: 0 }}></i>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e3a8a", marginBottom: "2px" }}>
+                  Account already exists
+                </div>
+                <div style={{ fontSize: "13px", color: "#3b82f6", lineHeight: 1.4 }}>
+                  An account is already registered with <strong>{email}</strong>. Please sign in instead.
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("signin");
+                setExistingUserPrompt(false);
+                setErrorMsg("");
+              }}
+              style={{
+                alignSelf: "flex-start",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                background: "#2563eb",
+                color: "#ffffff",
+                border: "none",
+                fontSize: "13px",
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: "0 1px 3px rgba(37,99,235,0.2)"
+              }}
+            >
+              Sign In to Your Account <i className="ti ti-arrow-right" style={{ fontSize: "14px" }}></i>
+            </button>
+          </div>
+        )}
 
         {errorMsg && (
           <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c", fontSize: "14px", padding: "12px", borderRadius: "12px", marginBottom: "20px" }}>

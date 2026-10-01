@@ -2798,7 +2798,7 @@ export default function ExploreClient({
 
                     return (
                       <Link key={leader.id} href={`/worship-leader/${leader.slug}`} className={`pastor-grid-card ${isSelected ? "selected" : ""}`} style={{ textDecoration: 'none' }}>
-                        <div style={{ width: "100%", height: "220px", background: avatarImage ? `url('${avatarImage}') center/cover` : coverImage ? `url('${coverImage}') center/cover` : "linear-gradient(135deg, #f43f5e, #db2777)", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ width: "100%", height: "220px", background: avatarImage ? `url('${avatarImage}') top center / cover` : coverImage ? `url('${coverImage}') top center / cover` : "linear-gradient(135deg, #f43f5e, #db2777)", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           {!avatarImage && !coverImage && <i className="ti ti-user" style={{ fontSize: "42px", color: "rgba(255,255,255,0.45)" }}></i>}
                         </div>
                         <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "10px" }}>
@@ -2903,7 +2903,7 @@ export default function ExploreClient({
                             width: "100%",
                             height: "135px",
                             background: coverImage
-                              ? `url('${coverImage}') center/cover`
+                              ? `url('${coverImage}') top center / cover`
                               : "#f1f5f9",
                             position: "relative",
                             display: "flex",
@@ -2999,7 +2999,7 @@ export default function ExploreClient({
 
                     return (
                       <Link key={pastor.id} href={`/pastor/${pastor.slug}`} className={`pastor-grid-card ${isSelected ? "selected" : ""}`}>
-                        <div style={{ width: "100%", height: "220px", background: avatarImage ? `url('${avatarImage}') center/cover` : coverImage ? `url('${coverImage}') center/cover` : "linear-gradient(135deg, #a855f7, #6366f1)", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ width: "100%", height: "220px", background: avatarImage ? `url('${avatarImage}') top center / cover` : coverImage ? `url('${coverImage}') top center / cover` : "linear-gradient(135deg, #a855f7, #6366f1)", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           {!avatarImage && !coverImage && <i className="ti ti-user" style={{ fontSize: "42px", color: "rgba(255,255,255,0.45)" }}></i>}
                         </div>
                         <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "10px" }}>
@@ -3046,7 +3046,7 @@ export default function ExploreClient({
 
                     return (
                       <div key={event.id} onClick={() => setSelectedChurchId(event.id)} onMouseEnter={() => setHoveredChurchId(event.id)} onMouseLeave={() => setHoveredChurchId(null)} style={{ display: "flex", flexDirection: "column", borderRadius: "16px", border: isSelected ? "2px solid #7c3aed" : "1.5px solid #e2e8f0", background: isSelected ? "#faf5ff" : "#fff", overflow: "hidden", cursor: "pointer", transition: "all 0.2s", boxShadow: isSelected ? "0 8px 20px rgba(124, 58, 237, 0.12)" : "0 2px 5px rgba(0,0,0,0.03)" }}>
-                        <div style={{ width: "100%", height: "200px", background: coverImage ? `url('${coverImage}') center/cover` : "linear-gradient(135deg, #e11d48, #fb7185)", position: "relative" }}>
+                        <div style={{ width: "100%", height: "200px", background: coverImage ? `url('${coverImage}') top center / cover` : "linear-gradient(135deg, #e11d48, #fb7185)", position: "relative" }}>
                           <span style={{ position: "absolute", top: "12px", left: "12px", background: "rgba(15, 23, 42, 0.8)", color: "#fff", fontSize: "10px", fontWeight: 800, padding: "4px 8px", borderRadius: "6px" }}>{event.type || "Event"}</span>
                         </div>
                         <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: "12px" }}>

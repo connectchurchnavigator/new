@@ -524,93 +524,6 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
     });
   };
 
-  // Sample data loader matching Church Listing format
-  const handleLoadSampleData = () => {
-    if (currentStep === 1) {
-      setDisplayName("David Okonkwo");
-      setTagline("Contemporary & Afro-Gospel Worship Leader, Songwriter & Producer");
-      setCountry("United Kingdom");
-      setCity("London");
-      setArea("Mayfair");
-      setPostcode("W1J 7NT");
-      setAddress("Westminster, London, UK");
-      setAddressDetails("Flat 12, Victoria Mansions");
-      setLatitude(51.4995);
-      setLongitude(-0.1338);
-      setYearsLeading("12");
-      setBio("David is a passionate worship leader and songwriter with over 12 years of leading congregations in deep, spirit-led atmospheres of worship across the UK and internationally.");
-      setAvatarPreview("https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80");
-      setCoverPreview("https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200&auto=format&fit=crop");
-      setToastMsg("✨ Sample basics & bio loaded for Step 1!");
-    } else if (currentStep === 2) {
-      setStyles(["Contemporary", "Gospel", "Afro-Gospel", "Acoustic"]);
-      setInstruments(["Vocals", "Acoustic guitar", "Piano"]);
-      setLanguages(["English", "Yoruba"]);
-      setAvailableFor(["Sundays", "Events & conferences", "Worship nights"]);
-      setFeeModel(["Fixed fee", "Love offering"]);
-      setTravelRange("UK-wide");
-      setLeadTime("2 weeks preferred");
-      setEmail("david.okonkwo@worshipministry.co.uk");
-      setPhone("07700 900123");
-      setWebsiteUrl("https://davidokonkwoministries.org");
-      setFacebookUrl("https://facebook.com/davidokonkwoworship");
-      setInstagramUrl("https://instagram.com/davidokonkwo_live");
-      setYoutubeUrl("https://youtube.com/@davidokonkwo_worship");
-      setTwitterUrl("https://x.com/davidokonkwo");
-      setLinkedinUrl("https://linkedin.com/in/davidokonkwo");
-      setTiktokUrl("https://tiktok.com/@davidokonkwolive");
-      setContactErrors({});
-      setContactVerified({
-        email: true,
-        phone: true,
-        website_url: true,
-        facebook_url: true,
-        instagram_url: true,
-        youtube_url: true,
-        twitter_url: true,
-        linkedin_url: true,
-        tiktok_url: true,
-      });
-      setToastMsg("✨ Sample sound, availability & direct contact loaded for Step 2!");
-    } else if (currentStep === 3) {
-      setYoutubeUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
-      setSpotifyUrl("https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT");
-      setToastMsg("✨ Sample live video & Spotify recordings loaded for Step 3!");
-    } else {
-      // Step 4 (Review): populate everything
-      setDisplayName("David Okonkwo");
-      setTagline("Contemporary & Afro-Gospel Worship Leader, Songwriter & Producer");
-      setCountry("United Kingdom");
-      setCity("London");
-      setArea("Mayfair");
-      setPostcode("W1J 7NT");
-      setAddress("Westminster, London, UK");
-      setAddressDetails("Flat 12, Victoria Mansions");
-      setYearsLeading("12");
-      setBio("David is a passionate worship leader and songwriter with over 12 years of leading congregations across the UK.");
-      setAvatarPreview("https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80");
-      setCoverPreview("https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=1200&auto=format&fit=crop");
-      setStyles(["Contemporary", "Gospel", "Afro-Gospel"]);
-      setInstruments(["Vocals", "Acoustic guitar", "Piano"]);
-      setLanguages(["English", "Yoruba"]);
-      setAvailableFor(["Sundays", "Events & conferences", "Worship nights"]);
-      setFeeModel(["Fixed fee", "Love offering"]);
-      setTravelRange("UK-wide");
-      setLeadTime("2 weeks preferred");
-      setEmail("david.okonkwo@worshipministry.co.uk");
-      setPhone("07700 900123");
-      setWebsiteUrl("https://davidokonkwoministries.org");
-      setFacebookUrl("https://facebook.com/davidokonkwoworship");
-      setInstagramUrl("https://instagram.com/davidokonkwo_live");
-      setYoutubeUrl("https://youtube.com/@davidokonkwo_worship");
-      setTwitterUrl("https://x.com/davidokonkwo");
-      setLinkedinUrl("https://linkedin.com/in/davidokonkwo");
-      setTiktokUrl("https://tiktok.com/@davidokonkwolive");
-      setToastMsg("✨ Full sample worship leader profile loaded!");
-    }
-
-    setTimeout(() => setToastMsg(""), 4500);
-  };
 
   const handleClearDraft = () => {
     if (window.confirm("Are you sure you want to clear your current draft? All entered worship leader details will be reset.")) {
@@ -917,7 +830,11 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
 
       setCurrentPublishStep(4);
       clearInterval(stepInterval);
-      router.push(`/worship-leader/${initialEditSlug || data.slug}?owner=true`);
+      if (initialEditSlug) {
+        router.push(`/worship-leader/${initialEditSlug}?owner=true`);
+      } else {
+        router.push(`/onboarding/worship-leader/success?slug=${data.slug}&name=${encodeURIComponent(displayName || "Worship Leader")}`);
+      }
     } catch (err: any) {
       clearInterval(stepInterval);
       setSubmitError(err.message || "An unexpected error occurred while publishing.");
@@ -969,7 +886,7 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
                 {isEditMode ? "Edit Worship Leader Profile" : "Add Worship Leader Profile"}
               </div>
               <div style={{ fontSize: "12.5px", color: "var(--cn-gray)" }}>
-                {currentStep === 4 ? (isEditMode ? "Review & Save" : "Review & Publish") : `Step ${currentStep} of 3`}
+                {currentStep === 4 ? (isEditMode ? "Review & Save" : "Review & Publish") : `Step ${currentStep} of 4`}
               </div>
             </div>
           </div>
@@ -996,29 +913,6 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
             >
               <i className="ti ti-trash" style={{ fontSize: "15px", color: "#dc2626" }}></i>
               Clear Draft
-            </button>
-            <button
-              type="button"
-              onClick={handleLoadSampleData}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "7px",
-                padding: "8px 16px",
-                borderRadius: "12px",
-                border: "1.5px solid #a855f7",
-                background: "linear-gradient(135deg, #f5f3ff, #faf5ff)",
-                color: "#7e22ce",
-                fontSize: "13.5px",
-                fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(168, 85, 247, 0.15)",
-                transition: "all 0.2s",
-              }}
-              title={`Pre-fill Step ${currentStep} with sample worship leader details`}
-            >
-              <i className="ti ti-sparkles" style={{ fontSize: "16px", color: "#9333ea" }}></i>
-              Load Sample Data
             </button>
             <button className="btn-secondary" onClick={() => router.push("/add-listing")}>
               <i className="ti ti-x" style={{ fontSize: "14px" }}></i> Exit
@@ -1559,7 +1453,6 @@ export default function WorshipLeaderOnboardingPage({ initialEditSlug }: { initi
               subtitle="Provide ways for church members, guest invitation teams, and leadership to reach you"
               icon="ti-phone"
               badge="Direct Access"
-              onLoadSample={handleLoadSampleData}
             >
               <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "18px" }}>
@@ -2645,11 +2538,10 @@ interface CardProps {
   icon?: string;
   iconBg?: string;
   badge?: string;
-  onLoadSample?: () => void;
   children: React.ReactNode;
 }
 
-function Card({ title, subtitle, icon, iconBg, badge, onLoadSample, children }: CardProps) {
+function Card({ title, subtitle, icon, iconBg, badge, children }: CardProps) {
   return (
     <div className="scard" style={{
       background: "#fff",
@@ -2698,29 +2590,6 @@ function Card({ title, subtitle, icon, iconBg, badge, onLoadSample, children }: 
               )}
             </div>
           </div>
-          {onLoadSample && (
-            <button
-              type="button"
-              onClick={onLoadSample}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "6px 14px",
-                borderRadius: "10px",
-                border: "1.5px solid #d8b4fe",
-                background: "#faf5ff",
-                color: "#7e22ce",
-                fontSize: "12.5px",
-                fontWeight: 700,
-                cursor: "pointer",
-                transition: "all 0.15s"
-              }}
-            >
-              <i className="ti ti-sparkles" style={{ fontSize: "14px", color: "#9333ea" }}></i>
-              Load Sample Data
-            </button>
-          )}
         </div>
       )}
       {children}

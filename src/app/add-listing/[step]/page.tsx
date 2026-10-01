@@ -41,84 +41,6 @@ export default function StepPage() {
     }
   };
 
-  const handleLoadSampleData = () => {
-    if (currentStep === 1) {
-      updateFormData({
-        churchName: "Grace Cathedral International",
-        customSlug: "grace-cathedral-international",
-        denomination: "Pentecostal",
-        country: "United Kingdom",
-        address: "124 Westminster Bridge Road, London, SE1 7XW",
-        phone: "+44 20 7946 0912",
-        email: "info@gracecathedral.org.uk",
-        website: "https://gracecathedral.org.uk",
-        establishedYear: "1998",
-        latitude: 51.4988,
-        longitude: -0.1165,
-      });
-      setToastMsg("✨ Sample basic info & address loaded for Step 1!");
-    } else if (currentStep === 2) {
-      updateFormData({
-        services: [
-          { id: 1, day: "Sunday", name: "Morning Celebration Service", from: "10:00 AM", to: "12:00 PM", format: "inperson" },
-          { id: 2, day: "Wednesday", name: "Midweek Bible Study & Prayer", from: "07:00 PM", to: "08:30 PM", format: "hybrid" },
-          { id: 3, day: "Friday", name: "Youth Night & Fellowship", from: "06:30 PM", to: "08:30 PM", format: "inperson" }
-        ]
-      });
-      setToastMsg("✨ Sample service schedule loaded for Step 2!");
-    } else if (currentStep === 3) {
-      updateFormData({
-        description: "Grace Cathedral International is a vibrant, multi-generational community dedicated to worship, empowering families, and impacting our community with the love and truth of Jesus Christ.",
-        establishedYear: "1998",
-        pastorName: "Dr. Emmanuel Adeyemi",
-        pastorBio: "Dr. Emmanuel Adeyemi has ministered for over 22 years, mentoring church leaders and passionately proclaiming the Gospel of grace.",
-        pastorPhoto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80",
-        logo: "https://images.unsplash.com/photo-1548625361-195fe5787123?w=200&q=80",
-        coverBanners: ["https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200&q=80"],
-        galleryImages: [
-          "https://images.unsplash.com/photo-1548625361-195fe5787123?w=800&q=80",
-          "https://images.unsplash.com/photo-1519817650390-64a93db51149?w=800&q=80",
-          "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80"
-        ],
-        ministries: ["Youth & Young Adults", "Children & Family", "Community Foodbank", "Worship & Creative Arts", "Men's Fellowship", "Women of Grace"],
-        languages: ["English", "French", "Spanish"],
-        socialFacebook: "https://facebook.com/gracecathedral",
-        socialInstagram: "https://instagram.com/gracecathedral",
-        socialYouTube: "https://youtube.com/@gracecathedral",
-        socialX: "https://x.com/gracecathedral",
-        socialWebsite: "https://gracecathedral.org.uk",
-        liveStreamUrl: "https://youtube.com/live/gracecathedral",
-      });
-      setToastMsg("✨ Sample media, ministries & pastor profile loaded for Step 3!");
-    } else {
-      updateFormData({
-        churchName: "Grace Cathedral International",
-        customSlug: "grace-cathedral-international",
-        denomination: "Pentecostal",
-        country: "United Kingdom",
-        address: "124 Westminster Bridge Road, London, SE1 7XW",
-        phone: "+44 20 7946 0912",
-        email: "info@gracecathedral.org.uk",
-        website: "https://gracecathedral.org.uk",
-        establishedYear: "1998",
-        latitude: 51.4988,
-        longitude: -0.1165,
-        services: [
-          { id: 1, day: "Sunday", name: "Morning Celebration Service", from: "10:00 AM", to: "12:00 PM", format: "inperson" },
-          { id: 2, day: "Wednesday", name: "Midweek Bible Study & Prayer", from: "07:00 PM", to: "08:30 PM", format: "hybrid" }
-        ],
-        description: "Grace Cathedral International is a vibrant community dedicated to worship and community empowerment.",
-        pastorName: "Dr. Emmanuel Adeyemi",
-        pastorBio: "Dr. Emmanuel Adeyemi has ministered for over 22 years.",
-        ministries: ["Youth & Young Adults", "Children & Family", "Community Foodbank"],
-        languages: ["English", "French"]
-      });
-      setToastMsg("✨ Full sample church profile loaded!");
-    }
-
-    setTimeout(() => setToastMsg(""), 4500);
-  };
-
   return (
     <div style={{ background: "#fff", minHeight: "100vh", position: "relative" }}>
       {/* Top Header */}
@@ -154,29 +76,6 @@ export default function StepPage() {
             >
               <i className="ti ti-trash" style={{ fontSize: "15px", color: "#dc2626" }}></i>
               Clear Draft
-            </button>
-            <button
-              type="button"
-              onClick={handleLoadSampleData}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "7px",
-                padding: "8px 16px",
-                borderRadius: "12px",
-                border: "1.5px solid #a855f7",
-                background: "linear-gradient(135deg, #f5f3ff, #faf5ff)",
-                color: "#7e22ce",
-                fontSize: "13.5px",
-                fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(168, 85, 247, 0.15)",
-                transition: "all 0.2s",
-              }}
-              title={`Pre-fill Step ${currentStep} with sample church details`}
-            >
-              <i className="ti ti-sparkles" style={{ fontSize: "16px", color: "#9333ea" }}></i>
-              Load Sample Data
             </button>
             <button className="btn-secondary" onClick={() => router.push('/add-listing')}>
               <i className="ti ti-x" style={{ fontSize: "14px" }}></i> Exit

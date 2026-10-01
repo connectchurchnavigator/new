@@ -68,7 +68,7 @@ export function HomeEventsSection({ events }: HomeEventsSectionProps) {
                   >
                     <div style={{
                       height: "140px",
-                      background: ev.cover_url ? `url('${ev.cover_url}') center/cover` : "linear-gradient(135deg, #e11d48, #fb7185)",
+                      background: ev.cover_url ? `url('${ev.cover_url}') top center / cover` : "linear-gradient(135deg, #e11d48, #fb7185)",
                       position: "relative",
                     }}>
                       <span style={{

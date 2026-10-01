@@ -188,12 +188,21 @@ export default async function ChurchProfilePage({ params, searchParams }: { para
   const ministries = safeParseJsonArray<string>(church.ministries);
   const worshipStyles = safeParseJsonArray<string>(church.worship_styles || church.worship_style);
 
-  // Attach normalized array properties to church object
+  // Attach normalized array properties & deserialized socials to church object
   church.languages = languages;
   church.facilities = facilities;
   church.ministries = ministries;
   church.worship_styles = worshipStyles;
   church.worshipStyles = worshipStyles;
+  church.youtube = realYoutube;
+  church.social_youtube = realYoutube;
+  church.live_stream_url = liveStreamUrl;
+  church.twitter = twitterUrl;
+  church.social_twitter = twitterUrl;
+  church.tiktok = tiktokUrl;
+  church.social_tiktok = tiktokUrl;
+  church.telegram = telegramUrl;
+  church.social_telegram = telegramUrl;
 
   return (
     <>

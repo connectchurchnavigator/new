@@ -165,6 +165,15 @@ export interface PastorEnquiry {
  * the profile page needs in a single request.
  */
 export interface PastorProfile extends Pastor {
+  denomination?: string | null;
+  worship_styles?: string[];
+  skills?: string[];
+  certifications?: string[];
+  training?: string[];
+  ministry_experience?: string[];
+  years_in_ministry_tags?: string[];
+  passion_areas?: string[];
+  roles_interested?: string[];
   languages: string[];
   tags: PastorTag[];
   education: PastorEducation[];

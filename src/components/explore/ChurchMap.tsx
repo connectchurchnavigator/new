@@ -138,7 +138,7 @@ export default function ChurchMap({
           <div style="font-family: system-ui, -apple-system, sans-serif; width: 220px; padding: 2px;">
             ${
               church.cover_url
-                ? `<div style="height: 90px; width: 100%; border-radius: 8px; background: url('${church.cover_url.split("|||")[0]}') center/cover; margin-bottom: 8px;"></div>`
+                ? `<div style="height: 90px; width: 100%; border-radius: 8px; background: url('${church.cover_url.split("|||")[0]}') top center / cover; margin-bottom: 8px;"></div>`
                 : `<div style="height: 70px; width: 100%; border-radius: 8px; background: linear-gradient(135deg, #7c3aed, #ec4899); margin-bottom: 8px;"></div>`
             }
             <div style="font-weight: 800; font-size: 15px; color: #0f172a; margin-bottom: 4px; line-height: 1.2;">

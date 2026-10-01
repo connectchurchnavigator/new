@@ -100,15 +100,15 @@ export default function SidebarContent({ initialChurch, isEditing, onChurchChang
         </div>
       )}
 
-      {/* Location & Contact */}
+      {/* Location */}
       <div className="scard" style={{ background: "white", padding: "0", borderRadius: "20px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", marginBottom: "24px", overflow: "hidden" }}>
         <div className="scard-h" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "24px 24px 16px 24px", margin: 0 }}>
           <span className="ic c-coral" style={{ background: "#f43f5e", color: "white", width: "32px", height: "32px", borderRadius: "9px", display: "grid", placeItems: "center", flexShrink: 0 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-5.5 7-12a7 7 0 1 0-14 0c0 6.5 7 12 7 12z" stroke="#fff" strokeWidth="2"/><circle cx="12" cy="9" r="2.5" stroke="#fff" strokeWidth="2"/></svg></span>
-          <h4 style={{ fontSize: "16px", fontWeight: 800, textTransform: church.address_line || (church.latitude && church.longitude) ? "capitalize" : "uppercase", letterSpacing: "0", color: "#0f172a", margin: 0 }}>Location & Contact</h4>
+          <h4 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: 0 }}>Location</h4>
           {renderEditButton("contact")}
         </div>
         
-        {church.address_line || (church.latitude && church.longitude) ? (
+        {(church.address_line || (church.latitude && church.longitude)) && (
           <div style={{ width: "100%", height: "200px", background: "#f1f5f9" }}>
             <iframe 
               width="100%" 
@@ -119,27 +119,23 @@ export default function SidebarContent({ initialChurch, isEditing, onChurchChang
               src={`https://maps.google.com/maps?q=${church.latitude && church.longitude ? `${church.latitude},${church.longitude}` : encodeURIComponent(church.address_line + (church.city ? ", " + church.city : ""))}&hl=en&z=14&output=embed`}
             ></iframe>
           </div>
-        ) : (
-          <div style={{ padding: "0 24px" }}>
-            <div style={{ marginBottom: "16px", color: "#334155", fontSize: "14px", lineHeight: "1.6" }}>
-              <strong>Address:</strong><br/>
-              {church.address_line || "Address not provided"}
-            </div>
-            {church.phone && (
-              <div style={{ marginBottom: "16px", color: "#334155", fontSize: "14px" }}>
-                <strong>Phone:</strong> <a href={`tel:${church.phone}`} style={{ color: "#9333ea", textDecoration: "none" }}>{church.phone}</a>
-              </div>
-            )}
-            {church.email && (
-              <div style={{ marginBottom: "16px", color: "#334155", fontSize: "14px" }}>
-                <strong>Email:</strong> <a href={`mailto:${church.email}`} style={{ color: "#9333ea", textDecoration: "none" }}>{church.email}</a>
-              </div>
-            )}
-          </div>
         )}
 
+        {/* Address details */}
+        <div style={{ padding: "18px 24px 0 24px" }}>
+          {church.address_line && (
+            <div style={{ display: "flex", gap: "10px", alignItems: "flex-start", marginBottom: "6px" }}>
+              <i className="ti ti-map-pin" style={{ fontSize: "18px", color: "#f43f5e", marginTop: "2px", flexShrink: 0 }}></i>
+              <div style={{ fontSize: "13.5px", color: "#334155", lineHeight: "1.5" }}>
+                <strong style={{ display: "block", color: "#0f172a", fontWeight: 700, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "2px" }}>Address</strong>
+                {church.address_line}
+              </div>
+            </div>
+          )}
+        </div>
+
         <div style={{ padding: "16px 24px 24px 24px", display: "flex", justifyContent: "center" }}>
-           <a href={`https://maps.google.com/?q=${encodeURIComponent(church.address_line + (church.city ? ", " + church.city : ""))}`} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 24px", background: "#f8fafc", border: "1px solid var(--line)", borderRadius: "12px", color: "var(--ink)", fontWeight: 700, fontSize: "14px", textDecoration: "none" }}>
+           <a href={`https://maps.google.com/?q=${encodeURIComponent(church.address_line + (church.city ? ", " + church.city : ""))}`} target="_blank" rel="noreferrer" style={{ width: "100%", justifyContent: "center", display: "flex", alignItems: "center", gap: "8px", padding: "12px 24px", background: "#f8fafc", border: "1px solid var(--line)", borderRadius: "12px", color: "var(--ink)", fontWeight: 700, fontSize: "14px", textDecoration: "none", transition: "all 0.15s ease" }}>
              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 20v-7M3 10l9-7 9 7v10a2 2 0 01-2 2H5a2 2 0 01-2-2v-10z"/></svg>
              Open in Google Maps
            </a>

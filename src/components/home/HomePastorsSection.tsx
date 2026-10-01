@@ -56,7 +56,7 @@ export default function HomePastorsSection({ pastors }: HomePastorsSectionProps)
               {/* 1. Cover Photo Area */}
               <div style={{
                 height: "120px",
-                background: coverImage ? `url('${coverImage}') center/cover` : "linear-gradient(135deg, #a855f7, #6366f1)",
+                background: coverImage ? `url('${coverImage}') top center / cover` : "linear-gradient(135deg, #a855f7, #6366f1)",
                 position: "relative",
               }} />
 
@@ -70,7 +70,7 @@ export default function HomePastorsSection({ pastors }: HomePastorsSectionProps)
                       width: "52px",
                       height: "52px",
                       borderRadius: "14px",
-                      background: `url('${pastor.avatar_url}') center/cover`,
+                      background: `url('${pastor.avatar_url}') top center / cover`,
                       border: "3px solid #ffffff",
                       boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
                       overflow: "hidden",

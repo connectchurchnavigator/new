@@ -94,9 +94,10 @@ export async function GET(
 
   const combinedEvents = [...directEvents, ...hostedEvents];
 
-  // Parse core values & associated churches
+  // Parse core values & associated churches & extra meta
   let coreValues: string[] = [];
   let associatedChurches: any[] = [];
+  let extraMeta: Record<string, any> = {};
   const rawVision = pastor.vision_statement || '';
   if (rawVision.includes('<!--CORE_VALUES:')) {
     try {
@@ -114,15 +115,34 @@ export async function GET(
       }
     } catch {}
   }
+  if (rawVision.includes('<!--PASTOR_EXTRA_META:')) {
+    try {
+      const match = rawVision.match(/<!--PASTOR_EXTRA_META:(.*?)-->/);
+      if (match && match[1]) {
+        extraMeta = JSON.parse(match[1]);
+      }
+    } catch {}
+  }
   const cleanVision = rawVision
     .replace(/<!--CORE_VALUES:.*?-->/g, '')
     .replace(/<!--ASSOCIATED_CHURCHES:.*?-->/g, '')
+    .replace(/<!--PASTOR_EXTRA_META:.*?-->/g, '')
     .trim();
 
   const profile: any = {
     ...pastor,
     vision_statement: cleanVision,
     core_values: coreValues,
+    denomination: extraMeta.denomination || pastor.denomination || null,
+    worship_styles: extraMeta.worship_styles || [],
+    skills: extraMeta.skills || [],
+    certifications: extraMeta.certifications || [],
+    training: extraMeta.training || [],
+    ministry_experience: extraMeta.ministry_experience || [],
+    years_in_ministry_tags: extraMeta.years_in_ministry_tags || [],
+    passion_areas: extraMeta.passion_areas || [],
+    roles_interested: extraMeta.roles_interested || [],
+    congregation_size: pastor.congregation_size ?? extraMeta.congregation_size ?? null,
     associated_churches: associatedChurches.length > 0 ? associatedChurches : (pastor.church_name_cache ? [{ name: pastor.church_name_cache, location: pastor.city || '', image: '', link: '' }] : []),
     languages: (languagesRes.data ?? []).map((r) => r.language),
     tags: tagsRes.data ?? [],

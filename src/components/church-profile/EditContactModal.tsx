@@ -42,7 +42,7 @@ export default function EditContactModal({ initialContact, onClose, onSave }: Ed
         
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: "1px solid var(--line)" }}>
-          <h2 style={{ fontSize: "20px", fontWeight: 800, color: "var(--ink)", margin: 0, letterSpacing: "-0.01em" }}>Edit Contact & Location</h2>
+          <h2 style={{ fontSize: "20px", fontWeight: 800, color: "var(--ink)", margin: 0, letterSpacing: "-0.01em" }}>Edit Location</h2>
           <button onClick={onClose} style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", border: "none", cursor: "pointer" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
@@ -64,18 +64,6 @@ export default function EditContactModal({ initialContact, onClose, onSave }: Ed
               onUpdateCity={(val) => setFormData((prev) => ({ ...prev, city: val }))}
               onUpdateCoordinates={(lat, lng) => setFormData((prev) => ({ ...prev, latitude: lat, longitude: lng }))}
             />
-          </div>
-
-          {/* Phone & Email */}
-          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: "220px" }}>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: 800, color: "var(--ink)", marginBottom: "8px" }}>Phone</label>
-              <input name="phone" value={formData.phone || ""} onChange={handleChange} placeholder="+1 (555) 000-0000" style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1px solid var(--line)", outline: "none", fontSize: "14.5px" }} />
-            </div>
-            <div style={{ flex: 1, minWidth: "220px" }}>
-              <label style={{ display: "block", fontSize: "14px", fontWeight: 800, color: "var(--ink)", marginBottom: "8px" }}>Email</label>
-              <input name="email" value={formData.email || ""} onChange={handleChange} placeholder="info@church.org" style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1px solid var(--line)", outline: "none", fontSize: "14.5px" }} />
-            </div>
           </div>
 
           {/* Social Links */}

@@ -71,7 +71,7 @@ export function HomeWorshipLeadersSection({ worshipLeaders }: HomeWorshipLeaders
                     {/* Cover */}
                     <div style={{
                       height: "120px",
-                      background: coverImage ? `url('${coverImage}') center/cover` : "linear-gradient(135deg, #f43f5e, #db2777)",
+                      background: coverImage ? `url('${coverImage}') top center / cover` : "linear-gradient(135deg, #f43f5e, #db2777)",
                       position: "relative",
                     }} />
 
@@ -83,7 +83,7 @@ export function HomeWorshipLeadersSection({ worshipLeaders }: HomeWorshipLeaders
                             width: "52px",
                             height: "52px",
                             borderRadius: "14px",
-                            background: `url('${leader.avatar_url}') center/cover`,
+                            background: `url('${leader.avatar_url}') top center / cover`,
                             border: "3px solid #ffffff",
                             boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
                             overflow: "hidden",

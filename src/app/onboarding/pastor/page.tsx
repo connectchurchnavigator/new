@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import TopNav from '@/components/layout/TopNav';
@@ -21,6 +21,7 @@ interface FormState {
   full_name: string;
   title: string;
   church_name_cache: string;
+  denomination: string;
   associated_churches: AssociatedChurchItem[];
   city: string;
   country: string;
@@ -49,11 +50,19 @@ interface FormState {
   preaching_tags: string[];
   ministry_area_tags: string[];
   available_for_tags: string[];
+  worship_styles: string[];
   timeline_items: { year: string; title: string; description: string }[];
   affiliation_items: { organisation: string; role: string }[];
   core_values?: string[];
 
   languages: string[];
+  skills: string[];
+  certifications: string[];
+  training: string[];
+  ministry_experience: string[];
+  years_in_ministry_tags: string[];
+  passion_areas: string[];
+  roles_interested: string[];
   sermon_links?: string[];
   sermon_items?: { title: string; description: string; link: string }[];
   education_items?: { degree: string; university: string }[];
@@ -79,9 +88,15 @@ const AI_HINTS: Record<number, string> = {
   1: "Let's start with the basics. Use your full title and name — it's how members and event organisers will find you.",
   2: "Tell your story. Add tags for what you preach on, the ministry areas you lead, and what kinds of events you're open to.",
   3: "Add your contact channels, languages, availability, sermons, and photos all in one place.",
+  4: "Review your pastor profile before publishing. Check the public preview card and profile strength score.",
 };
 
-const COMMON_LANGUAGES = ['Arabic', 'English', 'French', 'German', 'Hindi', 'Mandarin', 'Portuguese', 'Spanish'];
+const TOP_5_LANGUAGES = ['English', 'Spanish', 'French', 'Hindi', 'German'];
+const ALL_COMMON_LANGUAGES = [
+  'English', 'Spanish', 'French', 'Portuguese', 'German', 'Italian', 'Yoruba', 'Igbo', 'Twi',
+  'Swahili', 'Arabic', 'Mandarin', 'Cantonese', 'Korean', 'Tagalog', 'Hindi', 'Urdu', 'Tamil',
+  'Telugu', 'Polish', 'Romanian', 'Russian', 'Ukrainian'
+];
 const PREACHING_SUGGESTIONS = ['Evangelism', 'Expository teaching', 'Faith & healing', 'Leadership', 'Prophetic preaching'];
 const MINISTRY_SUGGESTIONS = ['Community outreach', 'Marriage & family', "Men's network", 'Prison ministry', "Women's ministry", 'Youth ministry'];
 const AVAILABLE_FOR_SUGGESTIONS = ['Conferences', 'Funerals', 'Retreats', 'Revival meetings', 'Sunday services', 'Weddings'];
@@ -90,6 +105,7 @@ const initialState: FormState = {
   full_name: '',
   title: 'Senior Pastor',
   church_name_cache: '',
+  denomination: '',
   associated_churches: [
     { image: '', name: '', location: '', link: '' }
   ],
@@ -115,10 +131,18 @@ const initialState: FormState = {
   preaching_tags: [],
   ministry_area_tags: [],
   available_for_tags: [],
+  worship_styles: [],
   timeline_items: [],
   affiliation_items: [],
   core_values: [],
   languages: ['English'],
+  skills: [],
+  certifications: [],
+  training: [],
+  ministry_experience: [],
+  years_in_ministry_tags: [],
+  passion_areas: [],
+  roles_interested: [],
   sermon_links: [''],
   sermon_items: [{ title: '', description: '', link: '' }],
   education_items: [{ degree: '', university: '' }],
@@ -167,7 +191,24 @@ function PastorOnboardingContent() {
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const taxonomies = useTaxonomies();
 
-  // Keep edit slug synced if searchParams updates
+  // Searchable Denomination state matching church style
+  const [isDenomOpen, setIsDenomOpen] = useState(false);
+  const [denomSearch, setDenomSearch] = useState("");
+  const denomRef = useRef<HTMLDivElement>(null);
+
+  const sortedDenominations = React.useMemo(() => {
+    return [...taxonomies.denominations].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [taxonomies.denominations]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (denomRef.current && !denomRef.current.contains(event.target as Node)) {
+        setIsDenomOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   useEffect(() => {
     const slugFromQuery = searchParams.get('edit');
     if (slugFromQuery && slugFromQuery !== editSlug) {
@@ -194,6 +235,7 @@ function PastorOnboardingContent() {
           full_name: data.full_name || '',
           title: data.title || '',
           church_name_cache: data.church_name_cache || '',
+          denomination: data.denomination || '',
           associated_churches: Array.isArray(data.associated_churches) && data.associated_churches.length > 0
             ? data.associated_churches
             : data.church_name_cache
@@ -220,6 +262,9 @@ function PastorOnboardingContent() {
           preaching_tags: (data.tags || []).filter((t: any) => t.category === 'preaching').map((t: any) => t.label),
           ministry_area_tags: (data.tags || []).filter((t: any) => t.category === 'ministry_area').map((t: any) => t.label),
           available_for_tags: (data.tags || []).filter((t: any) => t.category === 'available_for').map((t: any) => t.label),
+          worship_styles: Array.isArray(data.worship_styles)
+            ? data.worship_styles
+            : (data.tags || []).filter((t: any) => t.category === 'worship_style').map((t: any) => t.label),
           timeline_items: (data.timeline || []).map((t: any) => ({ year: t.year || '', title: t.title || '', description: t.description || '' })),
           affiliation_items: (data.affiliations || []).map((a: any) => ({ organisation: a.organisation || '', role: a.role || '' })),
           core_values: Array.isArray(data.core_values) && data.core_values.length > 0
@@ -228,6 +273,27 @@ function PastorOnboardingContent() {
           linkedin_url: data.linkedin_url || '',
           tiktok_url: data.tiktok_url || '',
           languages: data.languages && data.languages.length > 0 ? data.languages : ['English'],
+          skills: Array.isArray(data.skills)
+            ? data.skills
+            : (data.tags || []).filter((t: any) => t.category === 'skill').map((t: any) => t.label),
+          certifications: Array.isArray(data.certifications)
+            ? data.certifications
+            : (data.tags || []).filter((t: any) => t.category === 'certification').map((t: any) => t.label),
+          training: Array.isArray(data.training)
+            ? data.training
+            : (data.tags || []).filter((t: any) => t.category === 'training').map((t: any) => t.label),
+          ministry_experience: Array.isArray(data.ministry_experience)
+            ? data.ministry_experience
+            : (data.tags || []).filter((t: any) => t.category === 'ministry_experience').map((t: any) => t.label),
+          years_in_ministry_tags: Array.isArray(data.years_in_ministry_tags)
+            ? data.years_in_ministry_tags
+            : (data.tags || []).filter((t: any) => t.category === 'years_in_ministry').map((t: any) => t.label),
+          passion_areas: Array.isArray(data.passion_areas)
+            ? data.passion_areas
+            : (data.tags || []).filter((t: any) => t.category === 'passion_area').map((t: any) => t.label),
+          roles_interested: Array.isArray(data.roles_interested)
+            ? data.roles_interested
+            : (data.tags || []).filter((t: any) => t.category === 'role_interested').map((t: any) => t.label),
           sermon_links: data.sermons && data.sermons.length > 0
             ? data.sermons.map((s: any) => s.youtube_url || s.video_url || s.url || '')
             : [''],
@@ -271,101 +337,7 @@ function PastorOnboardingContent() {
     };
   }, [editSlug]);
 
-  const handleLoadSampleData = () => {
-    if (step === 1) {
-      setForm(prev => ({
-        ...prev,
-        full_name: "Pastor Emmanuel Adeyemi",
-        title: "Senior Pastor",
-        church_name_cache: "Kingsway International Christian Centre",
-        associated_churches: [
-          {
-            image: "https://images.unsplash.com/photo-1548625361-195feee15f9b?w=400&q=80",
-            name: "Kingsway International Christian Centre",
-            location: "London, United Kingdom",
-            link: "https://kicc.org.uk"
-          },
-          {
-            image: "https://images.unsplash.com/photo-1519491050282-cf00c82424b4?w=400&q=80",
-            name: "Grace City Fellowship",
-            location: "Manchester, United Kingdom",
-            link: "https://gracecity.org.uk"
-          }
-        ],
-        city: "London",
-        country: "United Kingdom",
-        address: "Waterberry Drive, Waterlooville, PO7 7XX",
-        latitude: 50.8805,
-        longitude: -1.0261
-      }));
-      setErrors(prev => ({ ...prev, full_name: "", country: "", address: "" }));
-      setVerified(prev => ({ ...prev, full_name: true, country: true, address: true }));
-      setToastMsg("✨ Sample pastor profile & church details loaded for Step 1!");
-    } else if (step === 2) {
-      setForm(prev => ({
-        ...prev,
-        bio: "Pastor Emmanuel Adeyemi has been serving the body of Christ for over 22 years, preaching dynamic messages of faith, purpose, and spiritual renewal. He is committed to raising kingdom leaders and transforming communities through the Gospel.",
-        vision_statement: "To empower believers to walk in authentic dominion and manifest God's love in every sphere of influence.",
-        years_in_ministry: "22",
-        churches_planted: "8",
-        nations_reached: "16",
-        events_spoken: "140",
-        congregation_size: "1200",
-        preaching_tags: ["Prophetic preaching", "Faith & healing", "Leadership", "Expository teaching"],
-        ministry_area_tags: ["Community outreach", "Youth ministry", "Men's network", "Marriage & family"],
-        available_for_tags: ["Sunday services", "Conferences", "Revival meetings", "Leadership Retreats"],
-        timeline_items: [
-          { year: "2006", title: "Ordained into Pastoral Ministry", description: "Ordained under the Apostolic Council after completing ministerial leadership training." },
-          { year: "2012", title: "Planted London Grace Chapel", description: "Pioneered outreach in South London growing the congregation to over 400 members." },
-          { year: "2018", title: "Appointed Regional Director", description: "Overseeing church planting networks and mentorship programs across Greater London." },
-          { year: "2024", title: "Global Apostolic Convocation Speaker", description: "Keynote minister on transformative revival and kingdom leadership across Europe." }
-        ],
-        affiliation_items: [
-          { organisation: "RCCG", role: "Ordained member · Since 2006" },
-          { organisation: "Pentecostal Fellowship UK", role: "Member · Since 2012" },
-          { organisation: "ICGC", role: "International partner" },
-          { organisation: "Evangelical Alliance UK", role: "Affiliate member" }
-        ],
-      }));
-      setToastMsg("✨ Sample ministry bio, numbers, timeline & affiliations loaded for Step 2!");
-    } else if (step === 3) {
-      setForm(prev => ({
-        ...prev,
-        phone: "+44 20 8525 0000",
-        email: "pastor.emmanuel@kicc.org.uk",
-        website_url: "https://emmanueladeyemi.org",
-        facebook_url: "https://facebook.com/pastoremmanuel",
-        instagram_url: "https://instagram.com/pastoremmanuel",
-        youtube_url: "https://youtube.com/@pastoremmanuel",
-        twitter_url: "https://x.com/pastoremmanuel",
-        linkedin_url: "https://linkedin.com/in/pastoremmanuel",
-        tiktok_url: "https://tiktok.com/@pastoremmanuel",
-        sermon_items: [
-          { title: "Walking in Supernatural Favor", description: "Faith & Dominion Series · Part 1", link: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" },
-          { title: "The Power of Persistent Prayer", description: "Kingdom Living · Part 4", link: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }
-        ],
-        sermon_links: [
-          "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-          "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-        ],
-        languages: ["English", "French", "Yoruba", "Spanish"],
-        travel_range: "International",
-        lead_time: "2-4 weeks",
-        availability_status: "available",
-        availability_note: "Available for international apostolic conferences and regional leadership summits with advance notice.",
-        avatar_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80",
-        cover_photo_urls: ["https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200&q=80"],
-        gallery_photo_urls: [
-          "https://images.unsplash.com/photo-1519817650390-64a93db51149?w=800&q=80",
-          "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80"
-        ]
-      }));
-      setErrors(prev => ({ ...prev, email: "", phone: "", website_url: "", facebook_url: "", instagram_url: "", youtube_url: "", twitter_url: "", languages: "" }));
-      setVerified(prev => ({ ...prev, email: true, phone: true, website_url: true, facebook_url: true, instagram_url: true, youtube_url: true, twitter_url: true }));
-      setToastMsg("✨ Sample contact, media, travel & languages loaded for Step 3!");
-    }
-    setTimeout(() => setToastMsg(""), 4500);
-  };
+
 
   const handleClearDraft = () => {
     if (window.confirm("Are you sure you want to clear your current draft? All entered pastor details will be reset.")) {
@@ -579,6 +551,7 @@ function PastorOnboardingContent() {
     if (id === 1) return form.full_name.trim().length >= 3 ? 'done' : 'empty';
     if (id === 2) return form.bio || form.preaching_tags.length ? 'done' : 'empty';
     if (id === 3) return (form.email || form.phone) && form.languages.length > 0 ? 'done' : 'empty';
+    if (id === 4) return 'done';
     return 'empty';
   }
 
@@ -622,7 +595,11 @@ function PastorOnboardingContent() {
 
       setCurrentPublishStep(4);
       clearInterval(stepInterval);
-      router.push(`/pastor/${data.slug}`);
+      if (isEditing) {
+        router.push(`/pastor/${data.slug}?owner=true`);
+      } else {
+        router.push(`/onboarding/pastor/success?slug=${data.slug}&name=${encodeURIComponent(form.full_name || 'Pastor')}`);
+      }
     } catch (err) {
       clearInterval(stepInterval);
       setSubmitError(err instanceof Error ? err.message : 'Something went wrong.');
@@ -661,7 +638,9 @@ function PastorOnboardingContent() {
               <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--cn-ink)" }}>
                 {isEditing ? 'Edit Pastor Profile' : 'Add Pastor Profile'}
               </div>
-              <div style={{ fontSize: "12.5px", color: "var(--cn-gray)" }}>Step {step} of {STEPS.length}</div>
+              <div style={{ fontSize: "12.5px", color: "var(--cn-gray)" }}>
+                {step === 4 ? 'Review & Publish' : `Step ${step} of 3`}
+              </div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -687,29 +666,6 @@ function PastorOnboardingContent() {
             >
               <i className="ti ti-trash" style={{ fontSize: "15px", color: "#dc2626" }}></i>
               Clear Draft
-            </button>
-            <button
-              type="button"
-              onClick={handleLoadSampleData}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "7px",
-                padding: "8px 16px",
-                borderRadius: "12px",
-                border: "1.5px solid #a855f7",
-                background: "linear-gradient(135deg, #f5f3ff, #faf5ff)",
-                color: "#7e22ce",
-                fontSize: "13.5px",
-                fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(168, 85, 247, 0.15)",
-                transition: "all 0.2s",
-              }}
-              title={`Pre-fill Step ${step} with sample pastor data`}
-            >
-              <i className="ti ti-sparkles" style={{ fontSize: "16px", color: "#9333ea" }}></i>
-              Load Sample Data
             </button>
             <button className="btn-secondary" onClick={() => router.push('/add-listing')}>
               <i className="ti ti-x" style={{ fontSize: "14px" }}></i> Exit
@@ -824,7 +780,6 @@ function PastorOnboardingContent() {
               subtitle="Introduce yourself with your full title, legal/preferred name, and home ministry"
               icon="ti-user"
               badge="Core Info"
-              onLoadSample={handleLoadSampleData}
             >
               <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "18px" }}>
@@ -1119,6 +1074,188 @@ function PastorOnboardingContent() {
                 >
                   <i className="ti ti-plus" style={{ fontSize: "16px" }}></i> Add More Church
                 </button>
+
+                {/* Subtle Divider */}
+                <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "8px 0" }}></div>
+
+                {/* Denomination Field (Custom Searchable Combobox) */}
+                <div>
+                  <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "var(--cn-ink)", marginBottom: "6px" }}>
+                    Denomination <span style={{ color: "var(--cn-gray)", fontWeight: 400 }}>(Optional)</span>
+                  </label>
+                  <p style={{ fontSize: "12px", color: "var(--cn-gray)", margin: "0 0 8px 0" }}>
+                    Select the church tradition or movement you and your home ministry align with.
+                  </p>
+                  <div ref={denomRef} style={{ position: "relative" }}>
+                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                      <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#7c3aed", pointerEvents: "none", zIndex: 1 }}>
+                        <i className="ti ti-cross" style={{ fontSize: "16px" }}></i>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Select or search denomination..."
+                        value={isDenomOpen ? denomSearch : (form.denomination || "")}
+                        onChange={(e) => {
+                          setDenomSearch(e.target.value);
+                          if (!isDenomOpen) setIsDenomOpen(true);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            if (denomSearch.trim()) {
+                              update('denomination', denomSearch.trim());
+                              setIsDenomOpen(false);
+                            }
+                          }
+                        }}
+                        onFocus={() => {
+                          setDenomSearch(form.denomination || "");
+                          setIsDenomOpen(true);
+                        }}
+                        style={{
+                          width: "100%",
+                          paddingLeft: "40px",
+                          paddingRight: "36px",
+                          height: "44px",
+                          borderRadius: "12px",
+                          border: isDenomOpen ? "1.5px solid #7e22ce" : "1.5px solid var(--cn-border)",
+                          backgroundColor: "#fff",
+                          fontSize: "13.5px",
+                          outline: "none",
+                          cursor: "pointer",
+                          textOverflow: "ellipsis"
+                        }}
+                        autoComplete="off"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setIsDenomOpen(!isDenomOpen)}
+                        style={{
+                          position: "absolute",
+                          right: "10px",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: "6px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "var(--cn-gray)"
+                        }}
+                      >
+                        <i className={`ti ${isDenomOpen ? 'ti-chevron-up' : 'ti-chevron-down'}`} style={{ fontSize: "14px" }}></i>
+                      </button>
+                    </div>
+
+                    {isDenomOpen && (
+                      <div
+                        className="autocomplete-dropdown"
+                        style={{
+                          position: "absolute",
+                          top: "calc(100% + 4px)",
+                          left: 0,
+                          right: 0,
+                          maxHeight: "240px",
+                          overflowY: "auto",
+                          background: "#fff",
+                          borderRadius: "12px",
+                          border: "1.5px solid var(--cn-border)",
+                          boxShadow: "0 10px 25px -5px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)",
+                          zIndex: 1000,
+                          padding: "4px 0"
+                        }}
+                      >
+                        <div
+                          onClick={() => {
+                            update('denomination', "");
+                            setDenomSearch("");
+                            setIsDenomOpen(false);
+                          }}
+                          className="autocomplete-item"
+                          style={{
+                            padding: "9px 14px",
+                            cursor: "pointer",
+                            fontSize: "13.5px",
+                            color: "var(--cn-gray)",
+                            borderBottom: "1px solid #f1f5f9"
+                          }}
+                        >
+                          Clear selection
+                        </div>
+                        {(() => {
+                          const filtered = sortedDenominations.filter(d => !denomSearch.trim() || d.toLowerCase().includes(denomSearch.toLowerCase()));
+                          const trimmedSearch = denomSearch.trim();
+                          const exactMatch = sortedDenominations.some(d => d.toLowerCase() === trimmedSearch.toLowerCase());
+
+                          return (
+                            <>
+                              {filtered.length === 0 ? (
+                                <div style={{ padding: "12px 14px", fontSize: "13px", color: "var(--cn-gray)" }}>
+                                  No denomination found
+                                </div>
+                              ) : (
+                                filtered.map((d) => {
+                                  const isSelected = form.denomination === d;
+                                  return (
+                                    <div
+                                      key={d}
+                                      onClick={() => {
+                                        update('denomination', d);
+                                        setDenomSearch(d);
+                                        setIsDenomOpen(false);
+                                      }}
+                                      className="autocomplete-item"
+                                      style={{
+                                        padding: "9px 14px",
+                                        cursor: "pointer",
+                                        fontSize: "13.5px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        background: isSelected ? "#f3e8ff" : "transparent",
+                                        color: isSelected ? "#7e22ce" : "var(--cn-ink)",
+                                        fontWeight: isSelected ? 600 : 400
+                                      }}
+                                    >
+                                      <span>{d}</span>
+                                      {isSelected && <i className="ti ti-check" style={{ fontSize: "14px", color: "#7e22ce" }}></i>}
+                                    </div>
+                                  );
+                                })
+                              )}
+
+                              {trimmedSearch && !exactMatch && (
+                                <div
+                                  onClick={() => {
+                                    update('denomination', trimmedSearch);
+                                    setDenomSearch(trimmedSearch);
+                                    setIsDenomOpen(false);
+                                  }}
+                                  className="autocomplete-item"
+                                  style={{
+                                    padding: "10px 14px",
+                                    cursor: "pointer",
+                                    fontSize: "13.5px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                    borderTop: "1px solid #e2e8f0",
+                                    background: "#faf5ff",
+                                    color: "#7e22ce",
+                                    fontWeight: 700
+                                  }}
+                                >
+                                  <i className="ti ti-plus" style={{ fontSize: "14px" }}></i>
+                                  <span>Add &quot;{trimmedSearch}&quot; as denomination</span>
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </Card>
 
@@ -1171,10 +1308,35 @@ function PastorOnboardingContent() {
               subtitle="Share your calling, pastoral journey, and God-given mission"
               icon="ti-book"
               badge="Storytelling"
-              onLoadSample={handleLoadSampleData}
             >
               <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                <Field label="Biography">
+                <Field
+                  label="Biography"
+                  rightAction={
+                    <button
+                      type="button"
+                      onClick={() => update('bio', "Pastor Emmanuel Adeyemi has been serving the body of Christ for over 22 years, preaching dynamic messages of faith, purpose, and spiritual renewal. He is committed to raising kingdom leaders and transforming communities through the Gospel.")}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        border: "1px solid #d8b4fe",
+                        background: "#faf5ff",
+                        color: "#7e22ce",
+                        padding: "3px 10px",
+                        borderRadius: "8px",
+                        fontSize: "11.5px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        transition: "all 0.15s"
+                      }}
+                      title="Load sample biography text"
+                    >
+                      <i className="ti ti-sparkles" style={{ fontSize: "12px", color: "#9333ea" }}></i>
+                      Load sample bio
+                    </button>
+                  }
+                >
                   <textarea
                     value={form.bio}
                     onChange={(e) => update('bio', e.target.value)}
@@ -1192,7 +1354,33 @@ function PastorOnboardingContent() {
                 {/* Subtle Divider */}
                 <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "4px 0" }}></div>
 
-                <Field label="Vision Statement">
+                <Field
+                  label="Vision Statement"
+                  rightAction={
+                    <button
+                      type="button"
+                      onClick={() => update('vision_statement', "To empower believers to walk in authentic dominion and manifest God's love in every sphere of influence.")}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        border: "1px solid #d8b4fe",
+                        background: "#faf5ff",
+                        color: "#7e22ce",
+                        padding: "3px 10px",
+                        borderRadius: "8px",
+                        fontSize: "11.5px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        transition: "all 0.15s"
+                      }}
+                      title="Load sample vision statement quote"
+                    >
+                      <i className="ti ti-sparkles" style={{ fontSize: "12px", color: "#9333ea" }}></i>
+                      Load sample vision
+                    </button>
+                  }
+                >
                   <div style={{ position: "relative" }}>
                     <textarea
                       value={form.vision_statement}
@@ -1404,8 +1592,22 @@ function PastorOnboardingContent() {
                     value={form.ministry_area_tags}
                     onChange={(v) => update('ministry_area_tags', v)}
                     placeholder="Type a ministry area (e.g. Youth ministry) and press Enter..."
-                    suggestions={Array.from(new Set([...taxonomies.ministries, ...MINISTRY_SUGGESTIONS]))}
+                    suggestions={['Youth Ministry', 'Community Outreach', 'Evangelism / Street Outreach', 'Discipleship Ministry', 'Marriage & Family']}
                     labelPrefix="SELECTED MINISTRY AREAS"
+                  />
+                </Field>
+
+                {/* Subtle Divider */}
+                <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "4px 0" }}></div>
+
+                <Field label="Worship Styles">
+                  <TagInput
+                    value={form.worship_styles}
+                    onChange={(v) => update('worship_styles', v)}
+                    placeholder="Type or select worship style (e.g. Contemporary Worship)..."
+                    suggestions={['Contemporary Worship', 'Traditional Worship', 'Charismatic / Spirit-Filled Worship', 'Gospel Worship', 'Blended Worship']}
+                    allOptions={taxonomies.worshipStyles}
+                    labelPrefix="SELECTED WORSHIP STYLES"
                   />
                 </Field>
 
@@ -1699,7 +1901,6 @@ function PastorOnboardingContent() {
               subtitle="Provide ways for church members, guest invitation teams, and leadership to reach you"
               icon="ti-phone"
               badge="Direct Access"
-              onLoadSample={handleLoadSampleData}
             >
               <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "18px" }}>
@@ -1870,7 +2071,7 @@ function PastorOnboardingContent() {
 
 
             {/* Section 2: Languages, Sermons & Education */}
-            <Card title="Languages, Sermons & Education" icon="ti-school">
+            <Card title="Languages, Ministry Skills & Experience" icon="ti-school">
               <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
                 <div id="f-languages" data-field="languages">
                   <Field label="Languages you minister in" required>
@@ -1881,12 +2082,103 @@ function PastorOnboardingContent() {
                         if (errors.languages) setErrors(prev => ({ ...prev, languages: '' }));
                       }}
                       placeholder="Search or type language and press Enter..."
-                      suggestions={Array.from(new Set([...taxonomies.languages, ...COMMON_LANGUAGES]))}
+                      suggestions={TOP_5_LANGUAGES}
+                      allOptions={Array.from(new Set([...taxonomies.languages, ...ALL_COMMON_LANGUAGES]))}
                       labelPrefix="SELECTED LANGUAGES"
                     />
                     {errors.languages && <p style={{ color: "#ef4444", fontSize: "13px", marginTop: "6px", fontWeight: 600 }}>{errors.languages}</p>}
                   </Field>
                 </div>
+
+                {/* Subtle Divider */}
+                <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "4px 0" }}></div>
+
+                {/* Skills */}
+                <Field label="Skills">
+                  <TagInput
+                    value={form.skills}
+                    onChange={(v) => update('skills', v)}
+                    placeholder="Search or type skill and press Enter..."
+                    suggestions={['Preaching / Teaching', 'Church Leadership', 'Pastoral Care', 'Discipleship', 'Vision Casting']}
+                    allOptions={taxonomies.skills || []}
+                    labelPrefix="SELECTED SKILLS"
+                  />
+                </Field>
+
+                {/* Subtle Divider */}
+                <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "4px 0" }}></div>
+
+                {/* Certifications */}
+                <Field label="Certifications">
+                  <TagInput
+                    value={form.certifications}
+                    onChange={(v) => update('certifications', v)}
+                    placeholder="Type certification (e.g. Certified Pastoral Counselor) and press Enter..."
+                    suggestions={[]}
+                    labelPrefix="SELECTED CERTIFICATIONS"
+                  />
+                </Field>
+
+                {/* Subtle Divider */}
+                <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "4px 0" }}></div>
+
+                {/* Training */}
+                <Field label="Training">
+                  <TagInput
+                    value={form.training}
+                    onChange={(v) => update('training', v)}
+                    placeholder="Search or type training and press Enter..."
+                    suggestions={['Ordination Training', 'Leadership Development Training', 'Counseling / Pastoral Care Training', 'Chaplaincy Training', 'Missionary Training']}
+                    allOptions={taxonomies.training || []}
+                    labelPrefix="SELECTED TRAINING"
+                  />
+                </Field>
+
+                {/* Subtle Divider */}
+                <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "4px 0" }}></div>
+
+                {/* Ministry Experience */}
+                <Field label="Ministry Experience">
+                  <TagInput
+                    value={form.ministry_experience}
+                    onChange={(v) => update('ministry_experience', v)}
+                    placeholder="Search or type ministry experience and press Enter..."
+                    suggestions={['Pastoral Care', 'Youth Ministry', 'Evangelism / Outreach', "Children's Ministry", 'Worship Ministry']}
+                    allOptions={taxonomies.ministryExperience || []}
+                    labelPrefix="SELECTED MINISTRY EXPERIENCE"
+                  />
+                </Field>
+
+
+
+                {/* Subtle Divider */}
+                <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "4px 0" }}></div>
+
+                {/* Passion Areas */}
+                <Field label="Passion Areas">
+                  <TagInput
+                    value={form.passion_areas}
+                    onChange={(v) => update('passion_areas', v)}
+                    placeholder="Type passion area (e.g. Community Revival, Youth Mentorship) and press Enter..."
+                    suggestions={[]}
+                    labelPrefix="SELECTED PASSION AREAS"
+                  />
+                </Field>
+
+                {/* Subtle Divider */}
+                <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "4px 0" }}></div>
+
+                {/* Roles Interested in */}
+                <Field label="Roles Interested in">
+                  <TagInput
+                    value={form.roles_interested}
+                    onChange={(v) => update('roles_interested', v)}
+                    placeholder="Search or type roles interested in and press Enter..."
+                    suggestions={['Lead Pastor / Senior Pastor', 'Associate Pastor / Assistant Pastor', 'Outreach / Evangelism Pastor', 'Teaching / Bible Study Leader', 'Worship Pastor / Music Director']}
+                    allOptions={taxonomies.rolesInterested || []}
+                    labelPrefix="SELECTED ROLES INTERESTED IN"
+                  />
+                </Field>
 
                 {/* Subtle Divider */}
                 <div style={{ height: "1px", background: "linear-gradient(90deg, #f1f1f5, #e5e5eb, #f1f1f5)", margin: "4px 0" }}></div>
@@ -2336,6 +2628,356 @@ function PastorOnboardingContent() {
           </div>
         )}
 
+        {/* Step 4: Review Your Pastor Profile (Matching Church Listing Review Step 4) */}
+        {!loadingProfile && step === 4 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "24px", animation: "slideUp 0.35s ease" }}>
+            <div style={{ textAlign: "center", marginBottom: "12px" }}>
+              <div style={{ fontSize: "28px", fontWeight: 800, color: "var(--cn-ink)", marginBottom: "6px" }}>
+                Review Your Pastor Profile
+              </div>
+              <div style={{ fontSize: "14px", color: "var(--cn-gray)" }}>
+                Here is how your profile will appear on ChurchNavigator — verify all details before publishing
+              </div>
+            </div>
+
+            {/* Review Grid: Live Preview Card on Left (1.4fr) + Profile Strength on Right (1fr) */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px", alignItems: "start" }}>
+              
+              {/* Left Column: Public Listing Preview Card */}
+              <div className="scard" style={{ padding: 0, overflow: "hidden", border: "1.5px solid #e2e8f0", borderRadius: "20px", background: "#fff", boxShadow: "0 10px 30px rgba(0,0,0,0.06)" }}>
+                {/* Hero / Cover Banner */}
+                <div style={{ height: "170px", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "linear-gradient(135deg, #7c3aed, #9333ea, #c026d3)" }}>
+                  {form.cover_photo_urls && form.cover_photo_urls.length > 0 ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={form.cover_photo_urls[0]}
+                      alt="Cover"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", color: "rgba(255,255,255,0.7)" }}>
+                      <i className="ti ti-photo" style={{ fontSize: "32px" }}></i>
+                      <span style={{ fontSize: "12px", fontWeight: 600 }}>Pastor Profile Cover</span>
+                    </div>
+                  )}
+
+                  {form.cover_photo_urls && form.cover_photo_urls.length > 1 && (
+                    <div style={{ position: "absolute", bottom: "10px", right: "10px", background: "rgba(15,23,42,0.75)", color: "#fff", padding: "3px 9px", borderRadius: "10px", fontSize: "11px", fontWeight: 700 }}>
+                      {form.cover_photo_urls.length} photos
+                    </div>
+                  )}
+                </div>
+
+                {/* Profile Identity Row: Avatar + Title + Badges */}
+                <div style={{ padding: "22px" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "16px", marginBottom: "16px" }}>
+                    <div style={{
+                      width: "68px",
+                      height: "68px",
+                      borderRadius: "18px",
+                      background: form.avatar_url ? `url(${form.avatar_url}) center/cover no-repeat` : "linear-gradient(135deg, #7c3aed, #a855f7)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      overflow: "hidden",
+                      marginTop: "-46px",
+                      border: "3.5px solid #fff",
+                      boxShadow: "0 6px 16px rgba(15,15,26,0.14)",
+                      position: "relative",
+                      zIndex: 5
+                    }}>
+                      {!form.avatar_url && <i className="ti ti-user" style={{ fontSize: "30px", color: "#fff" }}></i>}
+                    </div>
+
+                    <div style={{ flex: 1, paddingTop: "2px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                        <div style={{ fontSize: "20px", fontWeight: 800, color: "var(--cn-ink)" }}>
+                          {form.full_name || "Pastor Full Name"}
+                        </div>
+                        {form.title && (
+                          <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#7c3aed", background: "#f5f3ff", border: "1px solid #ddd6fe", padding: "2px 9px", borderRadius: "20px" }}>
+                            {form.title}
+                          </span>
+                        )}
+                        {form.denomination && (
+                          <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#0d9488", background: "#f0fdfa", border: "1px solid #ccfbf1", padding: "2px 9px", borderRadius: "20px" }}>
+                            {form.denomination}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ fontSize: "12.5px", color: "var(--cn-gray)", marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <i className="ti ti-map-pin" style={{ fontSize: "14px", color: "#64748b" }}></i>
+                        <span>{form.address || form.city || "Primary Ministry Location"}, {form.country}</span>
+                      </div>
+
+                      {form.church_name_cache && (
+                        <div style={{ fontSize: "12.5px", color: "#7c3aed", marginTop: "3px", fontWeight: 600, display: "flex", alignItems: "center", gap: "5px" }}>
+                          <i className="ti ti-building-church" style={{ fontSize: "14px" }}></i>
+                          <span>{form.church_name_cache}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Highlight Stats Strip */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", padding: "12px", background: "#f8fafc", borderRadius: "14px", border: "1px solid #e2e8f0", marginBottom: "16px", textAlign: "center" }}>
+                    <div>
+                      <div style={{ fontSize: "17px", fontWeight: 800, color: "#7c3aed" }}>{form.years_in_ministry || "—"}</div>
+                      <div style={{ fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Yrs Ministry</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "17px", fontWeight: 800, color: "#059669" }}>{form.churches_planted || "—"}</div>
+                      <div style={{ fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Plants</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "17px", fontWeight: 800, color: "#ea580c" }}>{form.nations_reached || "—"}</div>
+                      <div style={{ fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Nations</div>
+                    </div>
+                  </div>
+
+                  {/* Detailed Section Blocks */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                    {/* Bio */}
+                    {form.bio && (
+                      <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "#7c3aed", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "6px" }}>
+                          <i className="ti ti-info-circle" style={{ fontSize: "13px" }}></i> Ministry Biography
+                        </div>
+                        <p style={{ fontSize: "12.5px", color: "#334155", lineHeight: 1.6, margin: 0 }}>
+                          {form.bio}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Languages */}
+                    {form.languages && form.languages.length > 0 && (
+                      <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "#7c3aed", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "8px" }}>
+                          <i className="ti ti-language" style={{ fontSize: "13px" }}></i> Languages Ministered In
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                          {form.languages.map((lang) => (
+                            <span key={lang} style={{ fontSize: "12px", fontWeight: 600, color: "#7c3aed", background: "#f5f3ff", border: "1px solid #ede9fe", padding: "4px 10px", borderRadius: "16px" }}>
+                              {lang}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Preaching Tags */}
+                    {form.preaching_tags && form.preaching_tags.length > 0 && (
+                      <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "#7c3aed", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "8px" }}>
+                          <i className="ti ti-flame" style={{ fontSize: "13px" }}></i> Preaching Specialisms
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                          {form.preaching_tags.map((tag) => (
+                            <span key={tag} style={{ fontSize: "12px", fontWeight: 600, color: "#166534", background: "#f0fdf4", border: "1px solid #dcfce7", padding: "4px 10px", borderRadius: "16px" }}>
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Ministry Areas */}
+                    {form.ministry_area_tags && form.ministry_area_tags.length > 0 && (
+                      <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "#7c3aed", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "8px" }}>
+                          <i className="ti ti-heart-handshake" style={{ fontSize: "13px" }}></i> Ministry Areas Led
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                          {form.ministry_area_tags.map((area) => (
+                            <span key={area} style={{ fontSize: "12px", fontWeight: 600, color: "#9a3412", background: "#fff7ed", border: "1px solid #ffedd5", padding: "4px 10px", borderRadius: "16px" }}>
+                              {area}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Skills */}
+                    {form.skills && form.skills.length > 0 && (
+                      <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "#7c3aed", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "8px" }}>
+                          <i className="ti ti-sparkles" style={{ fontSize: "13px" }}></i> Ministry Skills
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                          {form.skills.map((skill) => (
+                            <span key={skill} style={{ fontSize: "12px", fontWeight: 600, color: "#1e40af", background: "#eff6ff", border: "1px solid #dbeafe", padding: "4px 10px", borderRadius: "16px" }}>
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Roles Interested In */}
+                    {form.roles_interested && form.roles_interested.length > 0 && (
+                      <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "#7c3aed", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "8px" }}>
+                          <i className="ti ti-briefcase" style={{ fontSize: "13px" }}></i> Roles Interested In
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                          {form.roles_interested.map((role) => (
+                            <span key={role} style={{ fontSize: "12px", fontWeight: 600, color: "#6b21a8", background: "#faf5ff", border: "1px solid #f3e8ff", padding: "4px 10px", borderRadius: "16px" }}>
+                              {role}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Contact & Socials Summary */}
+                    <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 800, color: "#7c3aed", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: "8px" }}>
+                        <i className="ti ti-address-book" style={{ fontSize: "13px" }}></i> Contact &amp; Channels
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "12.5px", color: "#334155" }}>
+                        {form.email && <div style={{ display: "flex", alignItems: "center", gap: "7px" }}><i className="ti ti-mail" style={{ color: "#7c3aed" }}></i> {form.email}</div>}
+                        {form.phone && <div style={{ display: "flex", alignItems: "center", gap: "7px" }}><i className="ti ti-phone" style={{ color: "#16a34a" }}></i> {form.phone}</div>}
+                        {form.website_url && <div style={{ display: "flex", alignItems: "center", gap: "7px" }}><i className="ti ti-world" style={{ color: "#0284c7" }}></i> {form.website_url}</div>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Profile Strength Score & Readiness Checklist */}
+              {(() => {
+                const strengthFields = [
+                  { label: 'Pastor full name', pts: 10, done: !!form.full_name?.trim() && form.full_name.trim().length >= 3 },
+                  { label: 'Primary denomination', pts: 10, done: !!form.denomination },
+                  { label: 'Church affiliation', pts: 10, done: !!form.associated_churches?.length && !!form.associated_churches[0]?.name },
+                  { label: 'Country & Location', pts: 10, done: !!form.country && !!(form.address || form.city) },
+                  { label: 'Official email', pts: 10, done: !!form.email?.trim() },
+                  { label: 'Phone / WhatsApp', pts: 5, done: !!form.phone?.trim() },
+                  { label: 'Languages ministered in', pts: 10, done: !!form.languages?.length },
+                  { label: 'Ministry bio', pts: 10, done: !!form.bio?.trim() },
+                  { label: 'Preaching specialisms', pts: 5, done: !!form.preaching_tags?.length },
+                  { label: 'Ministry skills', pts: 5, done: !!form.skills?.length },
+                  { label: 'Profile avatar photo', pts: 10, done: !!form.avatar_url?.trim() },
+                  { label: 'Cover header photo', pts: 5, done: !!form.cover_photo_urls?.length },
+                ];
+
+                const totalPoints = strengthFields.reduce((sum, f) => sum + f.pts, 0);
+                const earnedPoints = strengthFields.filter(f => f.done).reduce((sum, f) => sum + f.pts, 0);
+                const scorePercent = Math.round((earnedPoints / totalPoints) * 100);
+                const missingFields = strengthFields.filter(f => !f.done);
+                const tipText = missingFields.length > 0
+                  ? `Add ${missingFields.slice(0, 2).map(f => f.label.toLowerCase()).join(' & ')} to increase discovery.`
+                  : 'Outstanding! Your pastor profile is 100% complete and ready for global reach.';
+
+                return (
+                  <div className="scard" style={{ padding: "22px", borderRadius: "20px", border: "1.5px solid #ebebf0", background: "#fff", position: "sticky", top: "20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                      <div style={{ fontSize: "12px", fontWeight: 800, color: "var(--cn-gray)", letterSpacing: "0.05em" }}>
+                        PASTOR PROFILE STRENGTH
+                      </div>
+                      <div style={{ fontSize: "26px", fontWeight: 800, background: "var(--cn-grad)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                        {scorePercent}%
+                      </div>
+                    </div>
+
+                    <div style={{ height: "9px", background: "#f1f0f5", borderRadius: "6px", overflow: "hidden", marginBottom: "14px" }}>
+                      <div style={{ height: "100%", width: `${scorePercent}%`, background: "linear-gradient(135deg, #7c3aed, #a855f7)", transition: "width 0.5s cubic-bezier(.2,.7,.3,1)" }}></div>
+                    </div>
+
+                    <div style={{ fontSize: "12.5px", color: "var(--cn-gray)", marginBottom: "18px", lineHeight: 1.5 }}>
+                      {tipText}
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "7px", marginBottom: "22px" }}>
+                      {strengthFields.map((f) => (
+                        <div
+                          key={f.label}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "8px 11px",
+                            borderRadius: "10px",
+                            background: f.done ? '#f0fdf4' : '#f9fafb',
+                            border: `1px solid ${f.done ? '#bbf7d0' : '#eef0f3'}`
+                          }}
+                        >
+                          <i className={`ti ${f.done ? 'ti-circle-check-filled' : 'ti-circle'}`} style={{ fontSize: "15px", color: f.done ? '#16a34a' : '#cbd0d8' }}></i>
+                          <span style={{ fontSize: "12px", fontWeight: 600, color: f.done ? 'var(--cn-ink)' : 'var(--cn-gray-light)' }}>{f.label}</span>
+                          <span style={{ marginLeft: "auto", fontSize: "11px", fontWeight: 700, color: f.done ? '#16a34a' : '#cbd0d8' }}>+{f.pts}%</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Action buttons inside right panel */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      <button
+                        onClick={handleSubmit}
+                        disabled={submitting}
+                        className="btn-primary"
+                        style={{
+                          width: "100%",
+                          padding: "14px 20px",
+                          fontSize: "14.5px",
+                          fontWeight: 700,
+                          borderRadius: "12px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                          opacity: submitting ? 0.75 : 1,
+                          cursor: submitting ? "not-allowed" : "pointer"
+                        }}
+                      >
+                        {submitting ? (
+                          <>
+                            <i className="ti ti-loader-2" style={{ fontSize: "18px", animation: "spin 1s linear infinite" }}></i>
+                            {isEditing ? 'Updating Profile…' : 'Publishing Pastor Profile…'}
+                          </>
+                        ) : (
+                          <>
+                            <i className="ti ti-check" style={{ fontSize: "18px" }}></i>
+                            {isEditing ? 'Save & Update Profile' : 'Publish Pastor Profile'}
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => goToStep(3)}
+                        disabled={submitting}
+                        className="btn-secondary"
+                        style={{
+                          width: "100%",
+                          padding: "11px 18px",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          borderRadius: "12px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px"
+                        }}
+                      >
+                        <i className="ti ti-pencil" style={{ fontSize: "14px" }}></i>
+                        Keep Editing Details
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+            </div>
+
+            {submitError && (
+              <div style={{ padding: "14px", background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: "12px", fontSize: "13.5px", textAlign: "center", fontWeight: 600 }}>
+                {submitError}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Nav buttons */}
         <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "28px" }}>
           {step > 1 && (
@@ -2345,7 +2987,15 @@ function PastorOnboardingContent() {
           )}
           {step < STEPS.length ? (
             <button onClick={() => { if (validateStep(step)) goToStep(step + 1); }} className="btn-primary">
-              Next Step <i className="ti ti-arrow-right" style={{ fontSize: "16px" }}></i>
+              {step === 3 ? (
+                <>
+                  Review Profile <i className="ti ti-arrow-right" style={{ fontSize: "16px" }}></i>
+                </>
+              ) : (
+                <>
+                  Next Step <i className="ti ti-arrow-right" style={{ fontSize: "16px" }}></i>
+                </>
+              )}
             </button>
           ) : (
             <button onClick={handleSubmit} disabled={submitting} className="btn-primary" style={{ opacity: submitting ? 0.7 : 1, cursor: submitting ? "not-allowed" : "pointer" }}>
@@ -2422,11 +3072,10 @@ interface CardProps {
   icon?: string;
   iconBg?: string;
   badge?: string;
-  onLoadSample?: () => void;
   children: React.ReactNode;
 }
 
-function Card({ title, subtitle, icon, iconBg, badge, onLoadSample, children }: CardProps) {
+function Card({ title, subtitle, icon, iconBg, badge, children }: CardProps) {
   return (
     <div className="scard" style={{
       background: "#fff",
@@ -2475,29 +3124,6 @@ function Card({ title, subtitle, icon, iconBg, badge, onLoadSample, children }: 
               )}
             </div>
           </div>
-          {onLoadSample && (
-            <button
-              type="button"
-              onClick={onLoadSample}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "6px 14px",
-                borderRadius: "10px",
-                border: "1.5px solid #d8b4fe",
-                background: "#faf5ff",
-                color: "#7e22ce",
-                fontSize: "12.5px",
-                fontWeight: 700,
-                cursor: "pointer",
-                transition: "all 0.15s"
-              }}
-            >
-              <i className="ti ti-sparkles" style={{ fontSize: "14px", color: "#9333ea" }}></i>
-              Load Sample Data
-            </button>
-          )}
         </div>
       )}
       {children}
@@ -2505,12 +3131,15 @@ function Card({ title, subtitle, icon, iconBg, badge, onLoadSample, children }: 
   );
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({ label, required, rightAction, children }: { label: string; required?: boolean; rightAction?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
-      <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)", marginBottom: "7px", display: "block" }}>
-        {label} {required && <span style={{ color: "#ef4444", fontWeight: 800 }}>*</span>}
-      </label>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "7px" }}>
+        <label style={{ fontSize: "13px", fontWeight: 700, color: "var(--cn-ink)", margin: 0 }}>
+          {label} {required && <span style={{ color: "#ef4444", fontWeight: 800 }}>*</span>}
+        </label>
+        {rightAction}
+      </div>
       {children}
     </div>
   );

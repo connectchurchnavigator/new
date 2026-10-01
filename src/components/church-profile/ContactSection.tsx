@@ -62,7 +62,7 @@ export default function ContactSection({ churchName, email, phone, address, soci
       <div className="contact-grid">
         {/* Left column - Form */}
         <div>
-          <h2>Send a message</h2>
+          <h2>Send a Message</h2>
           <p className="sub">Have a question, a prayer request, or planning your first visit? We'd love to hear from you.</p>
           
           <form onSubmit={handleSubmit}>
@@ -123,7 +123,7 @@ export default function ContactSection({ churchName, email, phone, address, soci
         {/* Right column - Info */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <h2 style={{ margin: 0 }}>Get in touch</h2>
+            <h2 style={{ margin: 0 }}>Get in Touch</h2>
             {isEditing && (
               <button
                 onClick={() => setShowEditModal(true)}
