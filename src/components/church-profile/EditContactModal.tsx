@@ -6,6 +6,7 @@ import SharedAddressField from "@/components/add-church/steps/SharedAddressField
 interface EditContactModalProps {
   initialContact: {
     address: string;
+    addressDetails?: string;
     phone: string;
     email: string;
     facebook: string;
@@ -26,6 +27,7 @@ interface EditContactModalProps {
 export default function EditContactModal({ initialContact, onClose, onSave }: EditContactModalProps) {
   const [formData, setFormData] = useState({
     ...initialContact,
+    addressDetails: initialContact.addressDetails || initialContact.address || "",
     country: initialContact.country || "GB",
     city: initialContact.city || "",
     latitude: initialContact.latitude,
@@ -57,10 +59,12 @@ export default function EditContactModal({ initialContact, onClose, onSave }: Ed
               idPrefix="edit-contact-modal"
               country={formData.country || "GB"}
               address={formData.address || ""}
+              addressDetails={formData.addressDetails || ""}
               latitude={formData.latitude}
               longitude={formData.longitude}
               onUpdateCountry={(val) => setFormData((prev) => ({ ...prev, country: val }))}
               onUpdateAddress={(val) => setFormData((prev) => ({ ...prev, address: val }))}
+              onUpdateAddressDetails={(val) => setFormData((prev) => ({ ...prev, addressDetails: val }))}
               onUpdateCity={(val) => setFormData((prev) => ({ ...prev, city: val }))}
               onUpdateCoordinates={(lat, lng) => setFormData((prev) => ({ ...prev, latitude: lat, longitude: lng }))}
             />
@@ -111,7 +115,18 @@ export default function EditContactModal({ initialContact, onClose, onSave }: Ed
         {/* Footer */}
         <div style={{ padding: "16px 24px", display: "flex", justifyContent: "flex-end", gap: "12px", borderTop: "1px solid var(--line)", background: "#fff", borderRadius: "0 0 20px 20px" }}>
           <button onClick={onClose} style={{ padding: "10px 20px", borderRadius: "12px", fontSize: "14.5px", fontWeight: 700, border: "1px solid var(--line)", background: "#fff", color: "var(--ink)", cursor: "pointer" }}>Cancel</button>
-          <button onClick={() => onSave(formData)} style={{ padding: "10px 24px", borderRadius: "12px", fontSize: "14.5px", fontWeight: 700, background: "var(--purple)", color: "#fff", border: "none", cursor: "pointer" }}>Save</button>
+          <button
+            onClick={() => {
+              const finalAddress = formData.addressDetails?.trim() || formData.address?.trim() || "";
+              onSave({
+                ...formData,
+                address: finalAddress,
+              });
+            }}
+            style={{ padding: "10px 24px", borderRadius: "12px", fontSize: "14.5px", fontWeight: 700, background: "var(--purple)", color: "#fff", border: "none", cursor: "pointer" }}
+          >
+            Save
+          </button>
         </div>
       </div>
     </div>

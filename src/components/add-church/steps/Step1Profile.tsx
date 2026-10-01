@@ -92,6 +92,9 @@ export default function Step1Profile({ onNext }: Step1ProfileProps) {
     }
     
     setErrors({});
+    if (formData.addressDetails?.trim()) {
+      updateFormData({ address: formData.addressDetails.trim() });
+    }
     onNext();
   };
 

@@ -197,6 +197,9 @@ export default function Step1New({ onNext }: Step1NewProps) {
     }
     
     setErrors({});
+    if (formData.addressDetails?.trim()) {
+      updateFormData({ address: formData.addressDetails.trim() });
+    }
     onNext();
   };
 

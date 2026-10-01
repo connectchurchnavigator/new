@@ -59,17 +59,46 @@ export default function SidebarContent({ initialChurch, isEditing, onChurchChang
           </div>
           <div>
             {church.church_services && church.church_services.length > 0 ? (
-              church.church_services.map((svc: any, i: number) => (
-                <div key={i} className="sched-row" style={{ borderBottom: i < church.church_services.length - 1 ? "1px dashed #e2e8f0" : "none", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0" }}>
-                  <div>
-                    <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--ink)" }}>{svc.day}</div>
-                    <div style={{ fontSize: "12.5px", color: "var(--muted)", fontWeight: 500 }}>{svc.name}</div>
+              church.church_services.map((svc: any, i: number) => {
+                const rawFmt = (svc.format || "In-Person").toString().toLowerCase();
+                const isOnline = rawFmt === "online";
+                const isHybrid = rawFmt === "hybrid";
+                const formatLabel = isOnline ? "Online" : isHybrid ? "Hybrid" : "In-Person";
+                
+                const badgeBg = isOnline ? "#eff6ff" : isHybrid ? "#f5f3ff" : "#f0fdf4";
+                const badgeColor = isOnline ? "#2563eb" : isHybrid ? "#7c3aed" : "#16a34a";
+                const badgeBorder = isOnline ? "#bfdbfe" : isHybrid ? "#ddd6fe" : "#bbf7d0";
+                const badgeIcon = isOnline ? "📶" : isHybrid ? "🔄" : "⛪";
+
+                return (
+                  <div key={i} className="sched-row" style={{ borderBottom: i < church.church_services.length - 1 ? "1px dashed #e2e8f0" : "none", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", gap: "12px" }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "2px" }}>
+                        <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--ink)" }}>{svc.day}</span>
+                        <span style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          padding: "2px 8px",
+                          borderRadius: "12px",
+                          backgroundColor: badgeBg,
+                          color: badgeColor,
+                          border: `1px solid ${badgeBorder}`,
+                          letterSpacing: "0.02em"
+                        }}>
+                          <span>{badgeIcon}</span> {formatLabel}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "12.5px", color: "var(--muted)", fontWeight: 500 }}>{svc.name}</div>
+                    </div>
+                    <div style={{ background: "#f8fafc", padding: "6px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, color: "var(--ink)", border: "1px solid var(--line)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                      {svc.start_time} {svc.end_time ? `— ${svc.end_time}` : ""}
+                    </div>
                   </div>
-                  <div style={{ background: "#f8fafc", padding: "6px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 700, color: "var(--ink)", border: "1px solid var(--line)" }}>
-                    {svc.start_time} {svc.end_time ? `— ${svc.end_time}` : ""}
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div style={{ color: "var(--muted)", fontStyle: "italic", fontSize: "14px" }}>No schedule listed.</div>
             )}
@@ -88,10 +117,7 @@ export default function SidebarContent({ initialChurch, isEditing, onChurchChang
           </div>
           <div>
             <a href={liveStreamUrl || realYoutube || "#"} target="_blank" rel="noreferrer" style={{ display: "block", position: "relative", borderRadius: "16px", overflow: "hidden", height: "200px", textDecoration: "none" }}>
-              <img src={coverUrls[0] || "https://media.istockphoto.com/id/1754468293/photo/trinity-church-wall-street-new-york-city.jpg?s=612x612&w=0&k=20&c=H-i60dq3cOm_rz5J4IlOfYpYc_QrA1zfF_PvBzu6NGc="} alt="Live Stream" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              <div style={{ position: "absolute", top: 0, left: 0, background: "#e11d48", color: "white", padding: "6px 14px", borderBottomRightRadius: "16px", fontSize: "12px", fontWeight: 800, display: "flex", alignItems: "center", gap: "6px", letterSpacing: "0.02em" }}>
-                <span style={{ width: "6px", height: "6px", background: "white", borderRadius: "50%" }}></span> LIVE
-              </div>
+              <img src={coverUrls[0] || "https://media.istockphoto.com/id/1754468293/photo/trinity-church-wall-street-new-york-city.jpg?s=612x612&w=0&k=20&c=H-i60dq3cOm_rz5J4IlOfYpYc_QrA1zfF_PvBzu6NGc="} alt="YouTube Channel" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "56px", height: "56px", background: "#fff", boxShadow: "0 8px 24px rgba(0,0,0,0.15)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ marginLeft: "4px" }}><path d="M5 3l14 9-14 9V3z" fill="#e11d48"/></svg>
               </div>

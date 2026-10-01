@@ -106,6 +106,7 @@ export default function ChurchProfileClient({
               churchName={church.name}
               churchId={church.id}
               getChurchState={() => churchRef.current}
+              currentChurch={church}
             />
           )}
 

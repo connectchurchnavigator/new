@@ -6,14 +6,35 @@ interface AdminEditBarProps {
   churchName: string;
   churchId: string;
   getChurchState: () => any; // callback to get current church state from parent
+  currentChurch?: any;
 }
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
-export default function AdminEditBar({ churchName, churchId, getChurchState }: AdminEditBarProps) {
+export default function AdminEditBar({ churchName, churchId, getChurchState, currentChurch }: AdminEditBarProps) {
   const [visible, setVisible] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [initialSnapshot] = useState<string>(() => {
+    try {
+      const state = currentChurch || getChurchState?.();
+      return JSON.stringify(state || {});
+    } catch {
+      return "";
+    }
+  });
+
+  const [hasEdits, setHasEdits] = useState(false);
+
+  useEffect(() => {
+    try {
+      const current = currentChurch || getChurchState?.();
+      const currentStr = JSON.stringify(current || {});
+      setHasEdits(initialSnapshot !== "" && currentStr !== initialSnapshot);
+    } catch {
+      setHasEdits(false);
+    }
+  }, [currentChurch, initialSnapshot, getChurchState]);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 100);
@@ -42,6 +63,7 @@ export default function AdminEditBar({ churchName, churchId, getChurchState }: A
         throw new Error(json.error ?? "Save failed");
       }
       setSaveStatus("saved");
+      setHasEdits(false);
       setTimeout(() => setSaveStatus("idle"), 3000);
     } catch (err: any) {
       setSaveStatus("error");
@@ -50,8 +72,8 @@ export default function AdminEditBar({ churchName, churchId, getChurchState }: A
     }
   };
 
-
   const handleUndo = () => {
+    if (!hasEdits) return;
     window.location.reload();
   };
 
@@ -71,22 +93,23 @@ export default function AdminEditBar({ churchName, churchId, getChurchState }: A
       <button
         type="button"
         onClick={handleUndo}
-        title="Reload to undo all unsaved changes"
-        disabled={saveStatus === "saving"}
+        title={hasEdits ? "Reload to undo all unsaved changes" : "No recent edits to undo"}
+        disabled={!hasEdits || saveStatus === "saving"}
         style={{
           display: "inline-flex",
           alignItems: "center",
           gap: "6px",
-          background: "#f1f5f9",
-          border: "1px solid #cbd5e1",
-          color: "#475569",
+          background: hasEdits ? "#f1f5f9" : "#f8fafc",
+          border: hasEdits ? "1.5px solid #cbd5e1" : "1px solid #e2e8f0",
+          color: hasEdits ? "#475569" : "#94a3b8",
           padding: "6px 14px",
           borderRadius: "20px",
           fontSize: "13px",
           fontWeight: 700,
-          cursor: saveStatus === "saving" ? "not-allowed" : "pointer",
-          opacity: saveStatus === "saving" ? 0.6 : 1,
+          cursor: (!hasEdits || saveStatus === "saving") ? "not-allowed" : "pointer",
+          opacity: (!hasEdits || saveStatus === "saving") ? 0.45 : 1,
           transition: "all 0.15s ease",
+          boxShadow: hasEdits ? "0 1px 3px rgba(0,0,0,0.05)" : "none"
         }}
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
